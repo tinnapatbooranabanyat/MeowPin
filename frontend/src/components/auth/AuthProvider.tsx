@@ -3,9 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PawPrint } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthState } from '../../hooks/useAuth'
-import { acceptTerms, checkIsAdmin, fetchProfile } from '../../lib/api'
+import { acceptTerms, checkIsAdmin, fetchProfile, tagSessionLocation } from '../../lib/api'
 import { isGoogleSignInEnabled, supabase } from '../../lib/supabase'
 import { TERMS_VERSION } from '../../lib/terms'
+import { sessionIdOf } from '../../lib/userAgent'
 import { useI18n } from '../../hooks/useI18n'
 import { translate, type TParams } from '../../i18n'
 import { Modal } from '../ui/Modal'
@@ -75,6 +76,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const userId = session?.user.id ?? null
+  const sessionId = session ? sessionIdOf(session.access_token) : null
+
+  // บันทึกตำแหน่งโดยประมาณของเครื่องนี้ครั้งเดียวต่อการล็อกอิน (ให้เห็นในหน้า "อุปกรณ์ที่เข้าสู่ระบบ")
+  useEffect(() => {
+    if (!sessionId) return
+    const key = 'meowpin.locatedSession'
+    try {
+      if (localStorage.getItem(key) === sessionId) return
+    } catch {
+      // private mode — ทำซ้ำได้ ฐานข้อมูลรับแค่ครั้งแรกอยู่แล้ว
+    }
+    tagSessionLocation()
+      .then((done) => {
+        if (!done) return
+        try {
+          localStorage.setItem(key, sessionId)
+        } catch {
+          // ไม่เป็นไร
+        }
+      })
+      .catch(() => {})
+  }, [sessionId])
+
+  // ถูกสั่งออกจากระบบจากเครื่องอื่น: refresh token ใช้ไม่ได้แล้ว แต่ access token ยังไม่หมดอายุ
+  // — เช็กกับ Supabase ทุกครั้งที่กลับมาที่แท็บนี้ แล้วออกจากระบบเฉพาะเครื่องนี้
+  useEffect(() => {
+    if (!supabase || !sessionId) return
+    const client = supabase
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return
+      const { error } = await client.auth.getUser()
+      if (!error || (error.status !== 403 && error.code !== 'session_not_found')) return
+      await client.auth.signOut({ scope: 'local' })
+      setLoginReason(translate('อุปกรณ์นี้ถูกสั่งออกจากระบบจากอุปกรณ์อื่น เข้าสู่ระบบใหม่เพื่อใช้งานต่อ'))
+    }
+    check()
+    document.addEventListener('visibilitychange', check)
+    return () => document.removeEventListener('visibilitychange', check)
+  }, [sessionId])
 
   const profileQuery = useQuery({
     queryKey: ['profile', userId],
@@ -118,9 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    await supabase?.auth.signOut()
+    // ออกเฉพาะเครื่องนี้ — อยากให้เครื่องอื่นออกด้วยให้ไปกดที่ "อุปกรณ์ที่เข้าสู่ระบบ"
+    await supabase?.auth.signOut({ scope: 'local' })
     queryClient.removeQueries({ queryKey: ['profile'] })
     queryClient.removeQueries({ queryKey: ['isAdmin'] })
+    queryClient.removeQueries({ queryKey: ['mySessions'] })
   }, [queryClient])
 
   const profile = profileQuery.data ?? null

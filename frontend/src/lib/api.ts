@@ -1,4 +1,6 @@
 import type {
+  ActivityAction,
+  ActivityEntry,
   BugReport,
   Cat,
   CatPhoto,
@@ -6,6 +8,7 @@ import type {
   CatReportReason,
   CatSummary,
   CatTraits,
+  DeviceSession,
   FurColor,
   LatLng,
   Neutered,
@@ -566,4 +569,95 @@ export async function fetchAdminCounts(): Promise<AdminCounts> {
   }
   const [catReports, bugReports] = await Promise.all([count('cat_reports'), count('bug_reports')])
   return { catReports, bugReports }
+}
+
+// ═══════════════ อุปกรณ์ที่เข้าสู่ระบบ ═══════════════
+interface DeviceSessionRow {
+  id: string
+  user_agent: string | null
+  ip: string | null
+  created_at: string
+  last_active_at: string | null
+  city: string | null
+  region: string | null
+  country: string | null
+  is_current: boolean
+}
+
+export async function fetchMySessions(): Promise<DeviceSession[]> {
+  const { data, error } = await db().rpc('my_sessions')
+  if (error) throw new ApiError('โหลดรายการอุปกรณ์ไม่สำเร็จ', 500)
+  return (data as DeviceSessionRow[]).map((r) => ({
+    id: r.id,
+    userAgent: r.user_agent,
+    ip: r.ip,
+    createdAt: r.created_at,
+    lastActiveAt: r.last_active_at ?? r.created_at,
+    city: r.city,
+    region: r.region,
+    country: r.country,
+    isCurrent: r.is_current,
+  }))
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  const { error } = await db().rpc('revoke_session', { p_session_id: sessionId })
+  if (error) throw new ApiError('ออกจากระบบอุปกรณ์นั้นไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export async function revokeOtherSessions(): Promise<number> {
+  const { data, error } = await db().rpc('revoke_other_sessions')
+  if (error) throw new ApiError('ออกจากระบบอุปกรณ์นั้นไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  return data as number
+}
+
+/** บันทึกตำแหน่งโดยประมาณของเครื่องนี้ (จาก Vercel /api/geo) — คืน true ถ้าเสร็จแล้วไม่ต้องทำซ้ำ */
+export async function tagSessionLocation(): Promise<boolean> {
+  const res = await fetch('/api/geo').catch(() => null)
+  // ตอนรันในเครื่อง (vite dev) ไม่มี /api/geo — ได้ index.html กลับมา
+  if (!res?.ok || !res.headers.get('content-type')?.includes('json')) return false
+  const geo = (await res.json()) as { city: string | null; region: string | null; country: string | null }
+  if (!geo.city && !geo.country) return false
+  const { error } = await db().rpc('tag_session_location', {
+    p_city: geo.city ?? '',
+    p_region: geo.region ?? '',
+    p_country: geo.country ?? '',
+  })
+  return !error
+}
+
+// ═══════════════ บันทึกกิจกรรม (admin) ═══════════════
+interface ActivityRow {
+  id: number
+  action: ActivityAction
+  cat_id: string | null
+  created_at: string
+  detail: ActivityEntry['detail'] | null
+  profiles: { id: string; display_name: string; avatar_url: string | null; avatar_path?: string | null } | null
+}
+
+export const ACTIVITY_PAGE_SIZE = 50
+
+export async function fetchActivity(options: {
+  actions: ActivityAction[] | null
+  userId: string | null
+  page: number
+}): Promise<ActivityEntry[]> {
+  let query = db()
+    .from('activity_log')
+    .select('id, action, cat_id, created_at, detail, profiles(id, display_name, avatar_url, avatar_path)')
+    .order('created_at', { ascending: false })
+    .range(options.page * ACTIVITY_PAGE_SIZE, (options.page + 1) * ACTIVITY_PAGE_SIZE - 1)
+  if (options.actions) query = query.in('action', options.actions)
+  if (options.userId) query = query.eq('user_id', options.userId)
+  const { data, error } = await query
+  if (error) throw new ApiError('โหลดบันทึกกิจกรรมไม่สำเร็จ', 500)
+  return (data as unknown as ActivityRow[]).map((r) => ({
+    id: r.id,
+    action: r.action,
+    catId: r.cat_id,
+    createdAt: r.created_at,
+    detail: r.detail ?? {},
+    user: r.profiles ? { id: r.profiles.id, name: r.profiles.display_name, avatarUrl: effectiveAvatar(r.profiles) } : null,
+  }))
 }

@@ -7,8 +7,9 @@ import { CAT_REPORT_REASONS, timeAgo } from '../../lib/cat'
 import { photoUrl } from '../../lib/supabase'
 import type { BugReport, CatReport } from '../../types'
 import { Modal } from '../ui/Modal'
+import { ActivityLog } from './ActivityLog'
 
-type Tab = 'cats' | 'bugs'
+type Tab = 'cats' | 'bugs' | 'activity'
 type Status = 'open' | 'resolved'
 
 const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: string }> = {
@@ -45,9 +46,12 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
           {t('ปัญหา / ไอเดีย')}
           {!!counts?.bugReports && <Badge n={counts.bugReports} />}
         </button>
+        <button type="button" onClick={() => setTab('activity')} className={tabClass(tab === 'activity')}>
+          {t('กิจกรรม')}
+        </button>
       </div>
 
-      <div className="mb-4 flex gap-2">
+      <div className={`mb-4 flex gap-2 ${tab === 'activity' ? 'hidden' : ''}`}>
         {(['open', 'resolved'] as const).map((s) => (
           <button
             key={s}
@@ -63,11 +67,9 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
         ))}
       </div>
 
-      {tab === 'cats' ? (
-        <CatReportsList status={status} onOpenCat={onOpenCat} />
-      ) : (
-        <BugReportsList status={status} />
-      )}
+      {tab === 'cats' && <CatReportsList status={status} onOpenCat={onOpenCat} />}
+      {tab === 'bugs' && <BugReportsList status={status} />}
+      {tab === 'activity' && <ActivityLog onOpenCat={onOpenCat} />}
     </Modal>
   )
 }

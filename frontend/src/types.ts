@@ -137,3 +137,49 @@ export interface BugReport {
   createdAt: string
   reporterName: string | null
 }
+
+/** เครื่องที่ล็อกอินบัญชีนี้อยู่ (1 แถว = 1 session ของ Supabase) */
+export interface DeviceSession {
+  id: string
+  userAgent: string | null
+  ip: string | null
+  createdAt: string
+  lastActiveAt: string
+  city: string | null
+  region: string | null
+  country: string | null
+  isCurrent: boolean
+}
+
+export type ActivityAction =
+  | 'sign_in'
+  | 'cat_create'
+  | 'cat_delete'
+  | 'review_create'
+  | 'review_update'
+  | 'review_delete'
+  | 'photo_add'
+  | 'sighting'
+  | 'bug_report'
+  | 'cat_report'
+
+export interface ActivityEntry {
+  id: number
+  action: ActivityAction
+  catId: string | null
+  createdAt: string
+  user: { id: string; name: string; avatarUrl: string | null } | null
+  detail: {
+    cat_name?: string
+    paws?: number
+    recommend?: boolean
+    by_other?: boolean
+    category?: string
+    reason?: string
+    ip?: string
+    user_agent?: string
+    city?: string
+    region?: string
+    country?: string
+  }
+}

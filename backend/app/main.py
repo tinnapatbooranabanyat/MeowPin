@@ -237,13 +237,15 @@ def create_cat(
 @app.delete("/cats/{cat_id}", status_code=204)
 def delete_cat(cat_id: UUID, request: Request):
     """ลบหมุดแมว (เฉพาะเจ้าของแพลตฟอร์ม) — ลบรูปใน storage ด้วย, รีวิวและการเจอลบตามด้วย cascade"""
-    require_admin(current_user_id(request))
+    admin_id = current_user_id(request)
+    require_admin(admin_id)
     client = get_client()
-    rows = client.table("cats").select("photo_path").eq("id", str(cat_id)).limit(1).execute().data
+    rows = client.table("cats").select("photo_path, name").eq("id", str(cat_id)).limit(1).execute().data
     if not rows:
         raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
     album = client.table("cat_photos").select("photo_path").eq("cat_id", str(cat_id)).execute().data
     client.table("cats").delete().eq("id", str(cat_id)).execute()
+    log_activity(client, admin_id, "cat_delete", cat_id, {"cat_name": rows[0].get("name")})
     paths = [p for p in [rows[0]["photo_path"], *(a["photo_path"] for a in album)] if p]
     if paths:
         client.storage.from_(settings.photo_bucket).remove(paths)
@@ -297,6 +299,16 @@ def add_cat_photo(
         log.exception("insert cat photo failed")
         raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
     return {"id": row["id"], "photoUrl": public_photo_url(photo_path), "reviewId": row["review_id"]}
+
+
+def log_activity(client, user_id: str, action: str, cat_id: UUID | None, detail: dict) -> None:
+    """บันทึกกิจกรรมที่ trigger ในฐานข้อมูลไม่รู้ว่าใครทำ (เช่น admin ลบหมุดผ่าน backend) — พลาดก็ไม่เป็นไร"""
+    try:
+        client.table("activity_log").insert(
+            {"user_id": user_id, "action": action, "cat_id": str(cat_id) if cat_id else None, "detail": detail}
+        ).execute()
+    except Exception:
+        log.warning("activity log failed: %s %s", action, cat_id, exc_info=True)
 
 
 def _summary_response(row: dict) -> dict:
