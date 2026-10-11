@@ -22,6 +22,7 @@ import { SupportDialog } from './SupportDialog'
 import { CatMarkers } from './CatMarkers'
 import { CatPanel } from './CatPanel'
 import { CatReportDialog } from './CatReportDialog'
+import { EditCatDialog } from './EditCatDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { FilterChips } from './FilterChips'
@@ -90,6 +91,7 @@ type Dialog =
   | { kind: 'support' }
   | { kind: 'admin' }
   | { kind: 'catReport'; cat: Cat }
+  | { kind: 'editCat'; cat: Cat }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -279,6 +281,7 @@ export function MapScreen({ mapId }: Props) {
     try {
       await deleteCat(cat.id)
       setSelectedId(null)
+      setDialog((d) => (d?.kind === 'editCat' ? null : d))
       queryClient.setQueriesData<Cat[]>({ queryKey: ['cats'] }, (list) => list?.filter((c) => c.id !== cat.id))
       queryClient.removeQueries({ queryKey: ['cat', cat.id] })
       queryClient.invalidateQueries({ queryKey: ['adminCounts'] })
@@ -320,7 +323,11 @@ export function MapScreen({ mapId }: Props) {
   }, [])
 
   const mapActions = useMemo<MapActions>(
-    () => ({ openProfile: (id) => setDialog({ kind: 'userProfile', userId: id }), openCat: openCatById }),
+    () => ({
+      openProfile: (id) => setDialog({ kind: 'userProfile', userId: id }),
+      openCat: openCatById,
+      editCat: (cat) => setDialog({ kind: 'editCat', cat }),
+    }),
     [openCatById],
   )
 
@@ -489,6 +496,17 @@ export function MapScreen({ mapId }: Props) {
             onSent={() => {
               setDialog(null)
               showToast(t('ส่งรายงานแล้ว ขอบคุณที่ช่วยกันนะ'))
+            }}
+          />
+        )}
+        {dialog?.kind === 'editCat' && (
+          <EditCatDialog
+            cat={dialog.cat}
+            onClose={() => setDialog(null)}
+            onDelete={removeCat}
+            onSaved={(cat) => {
+              setDialog(null)
+              showToast(t('บันทึกการแก้ไขหมุด{name}แล้ว', { name: cat.name }))
             }}
           />
         )}

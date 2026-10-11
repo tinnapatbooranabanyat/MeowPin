@@ -11,7 +11,7 @@ import { UserAvatar } from '../account/UserAvatar'
 const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[] = [
   { key: 'all', label: 'ทั้งหมด', actions: null },
   { key: 'sign_in', label: 'การเข้าสู่ระบบ', actions: ['sign_in'] },
-  { key: 'cats', label: 'หมุด', actions: ['cat_create', 'cat_delete'] },
+  { key: 'cats', label: 'หมุด', actions: ['cat_create', 'cat_update', 'cat_delete'] },
   { key: 'reviews', label: 'รีวิว', actions: ['review_create', 'review_update', 'review_delete'] },
   { key: 'photos', label: 'รูป', actions: ['photo_add'] },
   { key: 'sightings', label: 'เจอน้อง', actions: ['sighting'] },
@@ -22,6 +22,7 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
 const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: string }> = {
   sign_in: { icon: LogIn, text: 'เข้าสู่ระบบ', tone: 'bg-sky-100 text-sky-700' },
   cat_create: { icon: MapPinPlus, text: 'ปักหมุด {cat}', tone: 'bg-orange-100 text-orange-700' },
+  cat_update: { icon: Pencil, text: 'แก้ไขหมุด {cat}', tone: 'bg-orange-100 text-orange-700' },
   cat_delete: { icon: MapPinX, text: 'ลบหมุด {cat}', tone: 'bg-red-100 text-red-700' },
   review_create: { icon: PawPrint, text: 'รีวิว {cat}', tone: 'bg-amber-100 text-amber-700' },
   review_update: { icon: Pencil, text: 'แก้รีวิว {cat}', tone: 'bg-amber-100 text-amber-700' },

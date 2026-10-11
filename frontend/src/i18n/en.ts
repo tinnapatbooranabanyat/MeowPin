@@ -512,4 +512,10 @@ export const EN: Record<string, string> = {
   'ตรวจว่ารูปเป็นแมวจริง และสรุปรีวิวน้องแมว': 'Checks photos show a real cat and summarizes reviews',
   'ตรวจรูปแมวสำรองตอน AI ใช้ไม่ได้ (SSD MobileNet)': 'Backup cat check when AI is unavailable (SSD MobileNet)',
   'อาจใช้เวลาสักครู่ ถ้า server เพิ่งตื่น': 'This can take a moment if the server is just waking up.',
+  'แก้ไขหมุดน้อง{name}': 'Edit {name}',
+  'รูปและตำแหน่งหมุดแก้ไม่ได้ ถ้าผิดให้ลบแล้วปักหมุดใหม่': "The photo and location can't be changed. If they're wrong, delete the pin and pin it again.",
+  'ลบหมุดนี้': 'Delete this pin',
+  'บันทึกการแก้ไขหมุด{name}แล้ว': 'Saved changes to {name}',
+  'แก้ไขหมุด {cat}': 'edited the pin {cat}',
+  'แก้ไขหรือลบได้เฉพาะหมุดที่คุณปักเอง': 'You can only edit or delete pins you created',
 }

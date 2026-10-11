@@ -20,6 +20,7 @@ import type {
   UserReview,
   Verification,
 } from '../types'
+import type { CatFormValues } from '../components/add-cat/CatForm'
 import { photoUrl, storageUrl, supabase } from './supabase'
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
@@ -182,13 +183,15 @@ async function backendAwake(): Promise<boolean> {
 const isServerWaking = (res: Response) =>
   [502, 503, 504].includes(res.status) && !res.headers.get('content-type')?.includes('application/json')
 
-async function callBackend<T>(method: 'POST' | 'DELETE', path: string, body?: BodyInit): Promise<T> {
+async function callBackend<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: BodyInit): Promise<T> {
   if (!API_URL) throw new ApiError('ยังไม่ได้ตั้งค่า VITE_API_URL', 0)
   let res: Response | null = null
   try {
     for (let attempt = 0; ; attempt++) {
       // ขอ token ใหม่ทุกรอบ เผื่อรอนานจน token เดิมหมดอายุ
-      const headers = await authHeader()
+      const headers: Record<string, string> = { ...(await authHeader()) }
+      // body เป็นข้อความ = JSON (FormData ให้เบราว์เซอร์ใส่ content-type เอง)
+      if (typeof body === 'string') headers['Content-Type'] = 'application/json'
       try {
         res = await fetch(`${API_URL}${path}`, { method, body, headers })
         if (!isServerWaking(res)) break
@@ -283,6 +286,27 @@ export function createCat(input: NewCatInput): Promise<Cat> {
   }
   if (input.takenAt) form.append('taken_at', input.takenAt.toISOString())
   return callBackend<Cat>('POST', '/cats', form)
+}
+
+/** แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) */
+export function updateCat(catId: string, values: CatFormValues): Promise<void> {
+  return callBackend<void>(
+    'PATCH',
+    `/cats/${catId}`,
+    JSON.stringify({
+      name: values.name,
+      fur_color: values.furColor,
+      fur_color_custom: values.furColor === 'other' ? values.furColorCustom : '',
+      breed: values.breed ?? '',
+      place_name: values.placeName,
+      description: values.description,
+      owner_status: values.ownerStatus,
+      is_friendly: values.isFriendly,
+      is_clingy: values.isClingy,
+      is_playful: values.isPlayful,
+      neutered: values.neutered,
+    }),
+  )
 }
 
 export function deleteCat(catId: string): Promise<void> {

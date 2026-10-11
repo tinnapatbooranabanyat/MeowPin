@@ -10,9 +10,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
 from postgrest.exceptions import APIError
+from pydantic import BaseModel, Field
 
 from . import catcheck, summary
-from .auth import current_user_id, require_admin, sync_admin_emails
+from .auth import current_user_id, is_admin, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
 from .geo import blur, distance_m
@@ -75,7 +76,7 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=catch_unhandled)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -328,19 +329,86 @@ def create_cat(
     }
 
 
-@app.delete("/cats/{cat_id}", status_code=204)
-def delete_cat(cat_id: UUID, request: Request):
-    """ลบหมุดแมว (เฉพาะเจ้าของแพลตฟอร์ม) — ลบรูปใน storage ด้วย, รีวิวและการเจอลบตามด้วย cascade"""
-    admin_id = current_user_id(request)
-    require_admin(admin_id)
-    client = get_client()
-    rows = client.table("cats").select("photo_path, name").eq("id", str(cat_id)).limit(1).execute().data
+def load_own_cat(client, cat_id: UUID, user_id: str, columns: str) -> dict:
+    """หมุดที่ผู้ใช้คนนี้แก้/ลบได้: คนปักหมุดเอง หรือเจ้าของแพลตฟอร์ม"""
+    rows = client.table("cats").select(f"created_by, {columns}").eq("id", str(cat_id)).limit(1).execute().data
     if not rows:
         raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    if rows[0].get("created_by") != user_id and not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="แก้ไขหรือลบได้เฉพาะหมุดที่คุณปักเอง")
+    return rows[0]
+
+
+class CatUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    fur_color: FurColor
+    fur_color_custom: str = Field("", max_length=MAX_CUSTOM_COLOR)
+    breed: str = Field("", max_length=40)
+    place_name: str = Field("", max_length=80)
+    description: str = Field("", max_length=500)
+    owner_status: OwnerStatus
+    is_friendly: bool
+    is_clingy: bool
+    is_playful: bool
+    neutered: Neutered
+
+
+@app.patch("/cats/{cat_id}")
+def update_cat(cat_id: UUID, body: CatUpdate, request: Request):
+    """แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) — รูปและตำแหน่งแก้ไม่ได้ เพราะผูกกับการตรวจแมว/ยืนยันตำแหน่ง"""
+    user_id = current_user_id(request)
+    client = get_client()
+    current = load_own_cat(client, cat_id, user_id, "owner_status")
+
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="ตั้งชื่อให้น้องก่อน")
+    custom_color = body.fur_color_custom.strip() if body.fur_color == "other" else ""
+    if body.fur_color == "other" and not custom_color:
+        raise HTTPException(status_code=422, detail="พิมพ์สีขนของน้องก่อน")
+
+    row = {
+        "name": name,
+        "fur_color": body.fur_color,
+        "fur_color_custom": custom_color or None,
+        "breed": body.breed.strip() or None,
+        "place_name": body.place_name.strip(),
+        "description": body.description.strip(),
+        "owner_status": body.owner_status,
+        "has_owner": body.owner_status == "owned",
+        "is_friendly": body.is_friendly,
+        "is_clingy": body.is_clingy,
+        "is_playful": body.is_playful,
+        "neutered": body.neutered,
+    }
+    # เพิ่งเปลี่ยนเป็น "มีเจ้าของ" → เบลอตำแหน่งเหมือนตอนปักหมุด ไม่ให้ระบุบ้านได้
+    if body.owner_status == "owned" and current.get("owner_status") != "owned":
+        pos = client.table("cats_public").select("lat, lng").eq("id", str(cat_id)).limit(1).execute().data
+        if pos:
+            lat, lng = blur(pos[0]["lat"], pos[0]["lng"])
+            row["location"] = f"SRID=4326;POINT({lng} {lat})"
+    try:
+        client.table("cats").update(row).eq("id", str(cat_id)).execute()
+    except APIError as e:
+        # ยังไม่ได้รัน migration 0009 (ไม่มีคอลัมน์สีพิมพ์เอง)
+        if "fur_color_custom" not in str(e):
+            raise
+        row.pop("fur_color_custom")
+        client.table("cats").update(row).eq("id", str(cat_id)).execute()
+    log_activity(client, user_id, "cat_update", cat_id, {"cat_name": name})
+    return {"ok": True}
+
+
+@app.delete("/cats/{cat_id}", status_code=204)
+def delete_cat(cat_id: UUID, request: Request):
+    """ลบหมุดแมว (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) — ลบรูปใน storage ด้วย, รีวิวและการเจอลบตามด้วย cascade"""
+    user_id = current_user_id(request)
+    client = get_client()
+    cat = load_own_cat(client, cat_id, user_id, "photo_path, name")
     album = client.table("cat_photos").select("photo_path").eq("cat_id", str(cat_id)).execute().data
     client.table("cats").delete().eq("id", str(cat_id)).execute()
-    log_activity(client, admin_id, "cat_delete", cat_id, {"cat_name": rows[0].get("name")})
-    paths = [p for p in [rows[0]["photo_path"], *(a["photo_path"] for a in album)] if p]
+    log_activity(client, user_id, "cat_delete", cat_id, {"cat_name": cat.get("name")})
+    paths = [p for p in [cat["photo_path"], *(a["photo_path"] for a in album)] if p]
     if paths:
         client.storage.from_(settings.photo_bucket).remove(paths)
 

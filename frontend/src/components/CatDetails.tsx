@@ -1,4 +1,4 @@
-import { CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
+import { CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
@@ -29,7 +29,10 @@ type Tab = 'overview' | 'reviews' | 'about'
 
 // หน้าข้อมูลแมวแบบหน้าสถานที่ของ Google Maps: รูปใหญ่ → ชื่อ/คะแนน → แท็บ → ปุ่มกลม
 export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClose, variant }: Props) {
-  const { isAdmin } = useAuth()
+  const { isAdmin, userId } = useAuth()
+  const { editCat } = useMapActions()
+  // คนปักหมุดแก้ไข/ลบหมุดตัวเองได้ เจ้าของแพลตฟอร์มทำได้ทุกหมุด
+  const canManage = isAdmin || (userId !== null && userId === cat.createdBy)
   const { t, lang } = useI18n()
   const { openProfile } = useMapActions()
   const [tab, setTab] = useState<Tab>('overview')
@@ -190,7 +193,11 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                 {burst > 0 && <PawBurst key={burst} />}
               </RoundAction>
               <RoundAction icon={Share2} label={t('แชร์')} onClick={() => onShare(cat)} />
-              <RoundAction icon={Flag} label={t('รายงาน')} onClick={() => onReport(cat)} />
+              {canManage ? (
+                <RoundAction icon={Pencil} label={t('แก้ไข')} onClick={() => editCat(cat)} />
+              ) : (
+                <RoundAction icon={Flag} label={t('รายงาน')} onClick={() => onReport(cat)} />
+              )}
             </div>
 
             <div className="flex flex-col gap-2.5 border-t border-stone-100 pt-4 text-sm text-stone-700">
@@ -303,14 +310,14 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                 {pinnedBy}
               </AboutRow>
             </dl>
-            {isAdmin && (
+            {canManage && (
               <button
                 type="button"
                 onClick={() => onDelete(cat)}
                 className="mt-4 flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
               >
                 <Trash2 size={15} aria-hidden="true" />
-                {t('ลบหมุดนี้ (เจ้าของแพลตฟอร์ม)')}
+                {userId === cat.createdBy ? t('ลบหมุดนี้') : t('ลบหมุดนี้ (เจ้าของแพลตฟอร์ม)')}
               </button>
             )}
           </div>

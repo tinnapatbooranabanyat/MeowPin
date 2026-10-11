@@ -17,6 +17,9 @@ export interface CatFormValues extends CatTraits {
 }
 
 interface Props {
+  /** create = ปักหมุดใหม่, edit = แก้หมุดเดิม (เริ่มจากค่าใน initial) */
+  mode?: 'create' | 'edit'
+  initial?: CatFormValues
   photoUrl: string
   catScore: number
   catCheck: CatCheck
@@ -32,6 +35,8 @@ const inputClass =
   'w-full rounded-xl border border-stone-300 bg-surface px-3.5 py-2.5 text-[15px] text-stone-800 outline-none placeholder:text-stone-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-200'
 
 export function CatForm({
+  mode = 'create',
+  initial,
   photoUrl,
   catScore,
   catCheck,
@@ -43,16 +48,20 @@ export function CatForm({
   onSubmit,
 }: Props) {
   const { t } = useI18n()
-  const [name, setName] = useState('')
-  const [furColor, setFurColor] = useState<FurColor>(guessedFur)
-  const [furColorCustom, setFurColorCustom] = useState('')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [furColor, setFurColor] = useState<FurColor>(initial?.furColor ?? guessedFur)
+  const [furColorCustom, setFurColorCustom] = useState(initial?.furColorCustom ?? '')
   const [colorError, setColorError] = useState(false)
-  const [breed, setBreed] = useState<string | null>(null)
-  const [placeName, setPlaceName] = useState('')
-  const [description, setDescription] = useState('')
-  const [ownerStatus, setOwnerStatus] = useState<OwnerStatus>('unknown')
-  const [traits, setTraits] = useState({ isFriendly: false, isClingy: false, isPlayful: false })
-  const [neutered, setNeutered] = useState<Neutered>('unknown')
+  const [breed, setBreed] = useState<string | null>(initial?.breed ?? null)
+  const [placeName, setPlaceName] = useState(initial?.placeName ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [ownerStatus, setOwnerStatus] = useState<OwnerStatus>(initial?.ownerStatus ?? 'unknown')
+  const [traits, setTraits] = useState({
+    isFriendly: initial?.isFriendly ?? false,
+    isClingy: initial?.isClingy ?? false,
+    isPlayful: initial?.isPlayful ?? false,
+  })
+  const [neutered, setNeutered] = useState<Neutered>(initial?.neutered ?? 'unknown')
   const [nameError, setNameError] = useState(false)
 
   const submit = (e: FormEvent) => {
@@ -126,9 +135,11 @@ export function CatForm({
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
           {t('สีขน')}
-          <span className="flex items-center gap-0.5 text-xs font-normal text-stone-500">
-            <Sparkles size={12} aria-hidden="true" /> {t('เดาจากรูปให้แล้ว แก้ได้')}
-          </span>
+          {mode === 'create' && (
+            <span className="flex items-center gap-0.5 text-xs font-normal text-stone-500">
+              <Sparkles size={12} aria-hidden="true" /> {t('เดาจากรูปให้แล้ว แก้ได้')}
+            </span>
+          )}
         </legend>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(FUR_COLORS) as FurColor[]).map((color) => (
@@ -167,7 +178,7 @@ export function CatForm({
               maxLength={30}
               aria-label={t('พิมพ์สีขนของน้อง')}
               aria-invalid={colorError}
-              autoFocus
+              autoFocus={!furColorCustom}
               className={`${inputClass} ${colorError ? 'border-red-400' : ''}`}
             />
             {colorError && <span className="text-sm text-red-600">{t('พิมพ์สีขนของน้องก่อน')}</span>}
@@ -290,7 +301,7 @@ export function CatForm({
         className="flex h-12 items-center justify-center gap-2 rounded-full bg-orange-500 font-medium text-white shadow-md hover:bg-orange-600 aria-busy:opacity-80"
       >
         {submitting && <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />}
-        {submitting ? t('กำลังบันทึก…') : t('ปักหมุดแมว')}
+        {submitting ? t('กำลังบันทึก…') : t(mode === 'edit' ? 'บันทึกการแก้ไข' : 'ปักหมุดแมว')}
       </button>
       {submitting && (
         <p className="-mt-2 text-center text-xs text-stone-500">{t('ถ้า server เพิ่งตื่นจากโหมดพัก อาจใช้เวลาสักครู่')}</p>

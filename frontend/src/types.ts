@@ -162,6 +162,7 @@ export interface DeviceSession {
 export type ActivityAction =
   | 'sign_in'
   | 'cat_create'
+  | 'cat_update'
   | 'cat_delete'
   | 'review_create'
   | 'review_update'

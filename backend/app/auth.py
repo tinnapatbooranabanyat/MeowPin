@@ -29,7 +29,10 @@ def sync_admin_emails(emails: list[str]) -> None:
         table.delete().eq("email", email).execute()
 
 
+def is_admin(user_id: str) -> bool:
+    return bool(get_client().table("admins").select("user_id").eq("user_id", user_id).limit(1).execute().data)
+
+
 def require_admin(user_id: str) -> None:
-    rows = get_client().table("admins").select("user_id").eq("user_id", user_id).limit(1).execute().data
-    if not rows:
+    if not is_admin(user_id):
         raise HTTPException(status_code=403, detail="เฉพาะเจ้าของแพลตฟอร์มเท่านั้น")
