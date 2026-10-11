@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, PawPrint, Pencil, Trash2, Utensils, X, type LucideIcon } from 'lucide-react'
+import { Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, PawPrint, Pencil, Trash2, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -17,6 +17,7 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
   { key: 'sightings', label: 'เจอน้อง', actions: ['sighting', 'feeding'] },
   { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report'] },
   { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_resolve'] },
+  { key: 'posts', label: 'ประกาศ', actions: ['post_create', 'post_resolve', 'post_delete'] },
 ]
 
 // ข้อความไทยเป็น key ของ t() — {cat} คือชื่อแมว (แทนด้วยปุ่มกดเปิดหมุด)
@@ -33,6 +34,9 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   bug_report: { icon: Bug, text: 'ส่งรายงานปัญหา / ไอเดีย', tone: 'bg-violet-100 text-violet-700' },
   cat_report: { icon: Flag, text: 'รายงานหมุด {cat}', tone: 'bg-red-100 text-red-700' },
   help_request: { icon: HeartPulse, text: 'แจ้งว่า {cat} ต้องการความช่วยเหลือ', tone: 'bg-red-100 text-red-700' },
+  post_create: { icon: Megaphone, text: 'ลงประกาศ', tone: 'bg-red-100 text-red-700' },
+  post_resolve: { icon: CheckCircle2, text: 'ปิดประกาศ', tone: 'bg-emerald-100 text-emerald-700' },
+  post_delete: { icon: Trash2, text: 'ลบประกาศ', tone: 'bg-stone-200 text-stone-700' },
   feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
 }
@@ -139,6 +143,7 @@ function ActivityRow({
   if (detail.paws) extras.push(t('{n} อุ้งเท้า', { n: detail.paws }))
   if (entry.action === 'review_delete' && detail.by_other) extras.push(t('ลบโดย admin'))
   if (detail.category) extras.push(t(BUG_CATEGORIES[detail.category] ?? detail.category))
+  if (detail.title) extras.push(`${t(detail.post_kind === 'adoption' ? 'หาบ้าน' : 'แมวหาย')}: ${detail.title}`)
   if (detail.food) extras.push(t(FOOD_LABELS[detail.food] ?? detail.food))
   if (detail.kind) extras.push(t(HELP_KINDS[detail.kind as HelpKind]?.label ?? detail.kind))
   if (detail.reason) extras.push(t(CAT_REPORT_REASONS[detail.reason as CatReportReason]?.label ?? detail.reason))

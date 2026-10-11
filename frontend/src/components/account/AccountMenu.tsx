@@ -1,4 +1,4 @@
-import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sun, Trophy, UserRound } from 'lucide-react'
+import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Megaphone, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sun, Trophy, UserRound } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -22,6 +22,7 @@ interface Props {
   onOpenAdmin: () => void
   onSupport: () => void
   onOpenLeaderboard: () => void
+  onOpenPosts: () => void
 }
 
 const THEMES: { value: ThemePref; label: string; icon: ReactNode }[] = [
@@ -36,7 +37,7 @@ const LANGS: { value: Lang; label: string }[] = [
 ]
 
 // ปุ่มโปรไฟล์ลอยมุมขวาบน แบบ Google Maps
-export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin, onSupport, onOpenLeaderboard }: Props) {
+export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin, onSupport, onOpenLeaderboard, onOpenPosts }: Props) {
   const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut, openTerms } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
@@ -189,6 +190,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           )}
 
           <MenuSection title={t('ชุมชน')}>
+            <MenuItem icon={<Megaphone size={18} className="text-red-500" />} onClick={pick(onOpenPosts)}>
+              {t('ประกาศแมวหาย / หาบ้าน')}
+            </MenuItem>
             <MenuItem icon={<Trophy size={18} className="text-amber-500" />} onClick={pick(onOpenLeaderboard)}>
               {t('ทาสแมวแถวนี้')}
             </MenuItem>

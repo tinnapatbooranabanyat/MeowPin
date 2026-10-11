@@ -31,6 +31,7 @@ FurColor = Literal[
     "brown", "tabby", "silver_tabby", "tabby_white", "calico", "tortoiseshell", "pointed", "other",
 ]
 Verification = Literal["camera_gps", "exif_gps", "manual"]
+PostKind = Literal["lost", "adoption"]
 Neutered = Literal["yes", "no", "unknown"]
 OwnerStatus = Literal["stray", "owned", "unknown"]
 
@@ -42,6 +43,7 @@ create_ip_limiter = RateLimiter(30, 3600, "เพิ่มแมวบ่อย�
 album_user_limiter = RateLimiter(30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 summary_ip_limiter = RateLimiter(60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 check_user_limiter = RateLimiter(40, 3600, "ตรวจรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+post_user_limiter = RateLimiter(5, 86400, "ลงประกาศได้วันละ 5 ครั้ง พรุ่งนี้ลองใหม่นะ")
 MAX_PHOTOS_PER_REVIEW = 4
 
 
@@ -572,3 +574,100 @@ def cat_share_image(cat_id: UUID):
         _og_cache[path] = out.getvalue()
     # ชื่อไฟล์รูปไม่เปลี่ยน (เปลี่ยนรูป = ไฟล์ใหม่) จึงแคชได้นาน
     return Response(_og_cache[path], media_type="image/jpeg", headers={"cache-control": "public, max-age=86400"})
+
+
+# ── ประกาศแมวหาย / หาบ้าน ──
+# เบลอตำแหน่งเสมอ: แมวหาย = จุดที่เห็นครั้งล่าสุด (เบลอนิดเดียว) / หาบ้าน = มักเป็นบ้านคนโพสต์ (เบลอมากกว่า)
+POST_BLUR_M = {"lost": (30, 80), "adoption": (200, 400)}
+
+
+@app.post("/posts", status_code=201)
+def create_post(
+    request: Request,
+    photo: UploadFile,
+    kind: Annotated[PostKind, Form()],
+    title: Annotated[str, Form(min_length=1, max_length=40)],
+    fur_color: Annotated[FurColor, Form()],
+    contact: Annotated[str, Form(min_length=1, max_length=100)],
+    lat: Annotated[float, Form(ge=-90, le=90)],
+    lng: Annotated[float, Form(ge=-180, le=180)],
+    description: Annotated[str, Form(max_length=800)] = "",
+    fur_color_custom: Annotated[str, Form(max_length=MAX_CUSTOM_COLOR)] = "",
+    confirm_cat: Annotated[bool, Form()] = False,
+):
+    client = get_client()
+    user_id = current_user_id(request)
+    post_user_limiter.check(user_id)
+
+    title, contact = title.strip(), contact.strip()
+    if not title or not contact:
+        raise HTTPException(status_code=422, detail="ใส่ชื่อน้องและช่องทางติดต่อก่อน")
+    custom_color = fur_color_custom.strip() if fur_color == "other" else ""
+    if fur_color == "other" and not custom_color:
+        raise HTTPException(status_code=422, detail="พิมพ์สีขนของน้องก่อน")
+
+    data, image = read_photo(photo)
+    resolve_cat_check(data, image, user_id, "", confirm_cat)
+
+    post_id = uuid4()
+    photo_path = f"posts/{post_id}.webp"
+    bucket = client.storage.from_(settings.photo_bucket)
+    bucket.upload(
+        path=photo_path,
+        file=to_public_webp(image),
+        file_options={"content-type": "image/webp", "cache-control": "31536000"},
+    )
+    lat, lng = blur(lat, lng, *POST_BLUR_M[kind])
+    row = {
+        "id": str(post_id),
+        "kind": kind,
+        "user_id": user_id,
+        "title": title,
+        "description": description.strip(),
+        "fur_color": fur_color,
+        "fur_color_custom": custom_color or None,
+        "contact": contact,
+        "location": f"SRID=4326;POINT({lng} {lat})",
+        "photo_path": photo_path,
+    }
+    try:
+        client.table("cat_posts").insert(row).execute()
+    except APIError:
+        bucket.remove([photo_path])
+        log.exception("insert post failed")
+        raise HTTPException(status_code=500, detail="บันทึกประกาศไม่สำเร็จ (รัน migration 0016 แล้วหรือยัง?)")
+    log_activity(client, user_id, "post_create", None, {"post_kind": kind, "title": title})
+    return {"id": str(post_id)}
+
+
+def load_own_post(client, post_id: UUID, user_id: str) -> dict:
+    rows = client.table("cat_posts").select("user_id, photo_path, title, kind").eq("id", str(post_id)).limit(1).execute().data
+    if not rows:
+        raise HTTPException(status_code=404, detail="ไม่พบประกาศนี้")
+    if rows[0]["user_id"] != user_id and not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="จัดการได้เฉพาะประกาศของคุณเอง")
+    return rows[0]
+
+
+@app.post("/posts/{post_id}/resolve")
+def resolve_post(post_id: UUID, request: Request):
+    """ปิดประกาศ (เจอน้องแล้ว / มีคนรับเลี้ยงแล้ว)"""
+    user_id = current_user_id(request)
+    client = get_client()
+    post = load_own_post(client, post_id, user_id)
+    client.table("cat_posts").update(
+        {"status": "resolved", "resolved_at": datetime.now(timezone.utc).isoformat()}
+    ).eq("id", str(post_id)).execute()
+    log_activity(client, user_id, "post_resolve", None, {"post_kind": post["kind"], "title": post["title"]})
+    return {"ok": True}
+
+
+@app.delete("/posts/{post_id}", status_code=204)
+def delete_post(post_id: UUID, request: Request):
+    user_id = current_user_id(request)
+    client = get_client()
+    post = load_own_post(client, post_id, user_id)
+    client.table("cat_posts").delete().eq("id", str(post_id)).execute()
+    if post.get("photo_path"):
+        client.storage.from_(settings.photo_bucket).remove([post["photo_path"]])
+    log_activity(client, user_id, "post_delete", None, {"post_kind": post["kind"], "title": post["title"]})

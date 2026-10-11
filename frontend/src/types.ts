@@ -17,6 +17,24 @@ export type FurColor =
   /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
   | 'other'
 
+export type PostKind = 'lost' | 'adoption'
+
+/** ประกาศแมวหาย / หาบ้าน (ตำแหน่งถูกเบลอแล้ว) */
+export interface CatPost {
+  id: string
+  kind: PostKind
+  userId: string
+  userName: string | null
+  title: string
+  description: string
+  furColor: FurColor
+  furColorCustom: string | null
+  contact: string
+  position: LatLng
+  photoUrl: string | undefined
+  createdAt: string
+}
+
 export interface UserStats {
   pins: number
   reviews: number
@@ -224,6 +242,9 @@ export type ActivityAction =
   | 'help_request'
   | 'help_resolve'
   | 'feeding'
+  | 'post_create'
+  | 'post_resolve'
+  | 'post_delete'
 
 export interface ActivityEntry {
   id: number
@@ -240,6 +261,8 @@ export interface ActivityEntry {
     reason?: string
     kind?: string
     food?: string
+    post_kind?: string
+    title?: string
     ip?: string
     user_agent?: string
     city?: string

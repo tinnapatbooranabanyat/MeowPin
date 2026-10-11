@@ -5,6 +5,7 @@ import type {
   BugReport,
   Cat,
   CatPhoto,
+  CatPost,
   CatReport,
   CatReportReason,
   CatCheck,
@@ -20,6 +21,7 @@ import type {
   LatLng,
   Neutered,
   OwnerStatus,
+  PostKind,
   Profile,
   ReportCategory,
   Review,
@@ -730,6 +732,83 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
 export async function markNotificationsRead(): Promise<void> {
   const { error } = await db().from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
   if (error) throw new ApiError('บันทึกไม่สำเร็จ', 500)
+}
+
+// ═══════════════ ประกาศแมวหาย / หาบ้าน ═══════════════
+interface PostRow {
+  id: string
+  kind: PostKind
+  user_id: string
+  user_name: string | null
+  title: string
+  description: string
+  fur_color: FurColor
+  fur_color_custom: string | null
+  contact: string
+  lat: number
+  lng: number
+  photo_path: string | null
+  created_at: string
+}
+
+/** ประกาศที่ยังเปิดอยู่ในกรอบแผนที่ (ยังไม่ได้รัน migration 0016 ก็ได้รายการว่าง) */
+export async function fetchPostsInView(bounds: Bounds): Promise<CatPost[]> {
+  const { data, error } = await db().rpc('posts_in_view', {
+    min_lat: bounds.minLat,
+    min_lng: bounds.minLng,
+    max_lat: bounds.maxLat,
+    max_lng: bounds.maxLng,
+  })
+  if (error || !data) return []
+  return (data as PostRow[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    userId: r.user_id,
+    userName: r.user_name,
+    title: r.title,
+    description: r.description,
+    furColor: r.fur_color,
+    furColorCustom: r.fur_color_custom,
+    contact: r.contact,
+    position: { lat: r.lat, lng: r.lng },
+    photoUrl: photoUrl(r.photo_path),
+    createdAt: r.created_at,
+  }))
+}
+
+export interface NewPostInput {
+  kind: PostKind
+  photo: File
+  title: string
+  furColor: FurColor
+  furColorCustom: string
+  description: string
+  contact: string
+  position: LatLng
+  confirmCat: boolean
+}
+
+export function createPost(input: NewPostInput): Promise<{ id: string }> {
+  const form = new FormData()
+  form.append('photo', input.photo)
+  form.append('kind', input.kind)
+  form.append('title', input.title)
+  form.append('fur_color', input.furColor)
+  if (input.furColor === 'other') form.append('fur_color_custom', input.furColorCustom)
+  form.append('description', input.description)
+  form.append('contact', input.contact)
+  form.append('lat', String(input.position.lat))
+  form.append('lng', String(input.position.lng))
+  if (input.confirmCat) form.append('confirm_cat', 'true')
+  return callBackend<{ id: string }>('POST', '/posts', form)
+}
+
+export function resolvePost(postId: string): Promise<void> {
+  return callBackend<void>('POST', `/posts/${postId}/resolve`)
+}
+
+export function deletePost(postId: string): Promise<void> {
+  return callBackend<void>('DELETE', `/posts/${postId}`)
 }
 
 // ═══════════════ ตราสัญลักษณ์ + อันดับในพื้นที่ ═══════════════

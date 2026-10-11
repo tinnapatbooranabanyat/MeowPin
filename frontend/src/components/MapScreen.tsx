@@ -24,6 +24,7 @@ import { CatPanel } from './CatPanel'
 import { CatReportDialog } from './CatReportDialog'
 import { EditCatDialog } from './EditCatDialog'
 import { LeaderboardDialog } from './LeaderboardDialog'
+import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { FilterChips } from './FilterChips'
@@ -94,6 +95,7 @@ type Dialog =
   | { kind: 'catReport'; cat: Cat }
   | { kind: 'editCat'; cat: Cat }
   | { kind: 'leaderboard' }
+  | { kind: 'posts' }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -431,6 +433,7 @@ export function MapScreen({ mapId }: Props) {
                 onOpenAdmin={() => setDialog({ kind: 'admin' })}
                 onSupport={() => setDialog({ kind: 'support' })}
                 onOpenLeaderboard={() => setDialog({ kind: 'leaderboard' })}
+                onOpenPosts={() => setDialog({ kind: 'posts' })}
               />
             </div>
           </>
@@ -519,6 +522,7 @@ export function MapScreen({ mapId }: Props) {
             }}
           />
         )}
+        {dialog?.kind === 'posts' && bounds && <PostsDialog bounds={bounds} onClose={() => setDialog(null)} />}
         {dialog?.kind === 'leaderboard' && bounds && (
           <LeaderboardDialog bounds={bounds} onClose={() => setDialog(null)} />
         )}
