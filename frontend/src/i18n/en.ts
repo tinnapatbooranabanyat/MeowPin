@@ -401,4 +401,16 @@ export const EN: Record<string, string> = {
   'ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่': 'Too many summary requests. Take a break and try again.',
   'ยังไม่ได้ตั้งค่า GEMINI_API_KEY': 'GEMINI_API_KEY is not set',
   'สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง': 'Couldn’t generate the AI summary. Try again later.',
+  // ข้อกำหนดการใช้งาน + ข้อผิดพลาดตอนล็อกอิน
+  'ข้อกำหนดการใช้งาน': 'Terms of use',
+  'ข้อกำหนดการใช้งาน MeowPin': 'MeowPin terms of use',
+  'ปรับปรุงล่าสุด {date}': 'Last updated {date}',
+  'ยินดีต้อนรับ! ก่อนเริ่มปักหมุดและรีวิวน้องแมว อ่านและยอมรับข้อกำหนดนี้ก่อนนะ':
+    'Welcome! Before you start pinning and reviewing cats, please read and accept these terms.',
+  'ฉันอ่านและยอมรับข้อกำหนดการใช้งาน': 'I have read and accept the terms of use',
+  'ไม่ยอมรับ (ออกจากระบบ)': 'Decline (sign out)',
+  'ยอมรับและเริ่มใช้งาน': 'Accept and continue',
+  'ยกเลิกการเข้าสู่ระบบ หรือ Google ไม่อนุญาตบัญชีนี้ ({reason})': 'Sign-in was cancelled or Google didn’t allow this account ({reason})',
+  'สร้างบัญชีใหม่ไม่สำเร็จ ลองใหม่อีกครั้ง ({reason})': 'Couldn’t create your account. Try again ({reason})',
+  'เข้าสู่ระบบไม่สำเร็จ: {reason}': 'Sign-in failed: {reason}',
 }

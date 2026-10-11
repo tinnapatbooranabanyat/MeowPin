@@ -14,6 +14,8 @@ export interface AuthState {
   signOut: () => Promise<void>
   /** ถ้ายังไม่ล็อกอิน จะเปิดหน้าต่างชวนล็อกอินพร้อมบอกเหตุผล แล้วคืน false */
   requireLogin: (reason: string) => boolean
+  /** เปิดอ่านข้อกำหนดการใช้งาน */
+  openTerms: () => void
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

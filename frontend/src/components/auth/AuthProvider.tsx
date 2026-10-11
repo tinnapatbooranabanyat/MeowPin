@@ -3,20 +3,52 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PawPrint } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthState } from '../../hooks/useAuth'
-import { checkIsAdmin, fetchProfile } from '../../lib/api'
+import { acceptTerms, checkIsAdmin, fetchProfile } from '../../lib/api'
 import { isGoogleSignInEnabled, supabase } from '../../lib/supabase'
+import { TERMS_VERSION } from '../../lib/terms'
 import { useI18n } from '../../hooks/useI18n'
-import { translate } from '../../i18n'
+import { translate, type TParams } from '../../i18n'
 import { Modal } from '../ui/Modal'
 import { GoogleButton } from './GoogleButton'
+import { TermsDialog } from './TermsDialog'
+
+type LoginError = { key: string; params?: TParams }
+
+/**
+ * ล็อกอินไม่ผ่าน Supabase จะพากลับมาพร้อม ?error=...&error_description=... (หรือใน #hash)
+ * ถ้าไม่อ่านไว้ ผู้ใช้จะเห็นแค่ว่ายังไม่ได้ล็อกอินโดยไม่รู้สาเหตุ — อ่านแล้วลบออกจาก URL
+ */
+function takeAuthErrorFromUrl(): LoginError | null {
+  const url = new URL(window.location.href)
+  const hash = new URLSearchParams(url.hash.slice(1))
+  const pick = (key: string) => url.searchParams.get(key) ?? hash.get(key)
+  const code = pick('error')
+  const description = pick('error_description')
+  if (!code && !description) return null
+  for (const key of ['error', 'error_code', 'error_description']) url.searchParams.delete(key)
+  if (hash.has('error') || hash.has('error_description')) url.hash = ''
+  window.history.replaceState(window.history.state, '', url)
+  const reason = (description ?? code ?? '').replace(/\+/g, ' ')
+  if (code === 'access_denied') return { key: 'ยกเลิกการเข้าสู่ระบบ หรือ Google ไม่อนุญาตบัญชีนี้ ({reason})', params: { reason } }
+  if (/database error/i.test(reason)) return { key: 'สร้างบัญชีใหม่ไม่สำเร็จ ลองใหม่อีกครั้ง ({reason})', params: { reason } }
+  return { key: 'เข้าสู่ระบบไม่สำเร็จ: {reason}', params: { reason } }
+}
+
+const wantsTermsFromUrl = () => new URLSearchParams(window.location.search).has('terms')
+// อ่านครั้งเดียวตอนโหลดแอป (StrictMode เรียก initializer ของ useState ซ้ำ แต่ URL ถูกลบไปแล้ว)
+const initialAuthError = takeAuthErrorFromUrl()
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(supabase !== null)
-  const [loginReason, setLoginReason] = useState<string | null>(null)
-  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginReason, setLoginReason] = useState<string | null>(() =>
+    initialAuthError ? translate('เข้าสู่ระบบด้วย Google') : null,
+  )
+  const [loginError, setLoginError] = useState<LoginError | null>(initialAuthError)
+  // ?terms ใน URL = เปิดอ่านข้อกำหนดเลย (ใช้เป็นลิงก์ Terms of Service ในหน้า consent ของ Google ได้)
+  const [viewTerms, setViewTerms] = useState(wantsTermsFromUrl)
 
   useEffect(() => {
     if (!supabase) return
@@ -62,11 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // เปิดหน้าต่างล็อกอินค้างไว้พร้อมบอกสาเหตุ แทนที่จะเงียบไป
     setLoginReason((reason) => reason ?? translate('เข้าสู่ระบบด้วย Google'))
-    setLoginError(
-      enabled
+    setLoginError({
+      key: enabled
         ? 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง'
         : 'ยังไม่ได้เปิดการล็อกอินด้วย Google ใน Supabase (Authentication → Sign In / Providers → Google)',
-    )
+    })
   }, [])
 
   const signOut = useCallback(async () => {
@@ -74,6 +106,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.removeQueries({ queryKey: ['profile'] })
     queryClient.removeQueries({ queryKey: ['isAdmin'] })
   }, [queryClient])
+
+  const profile = profileQuery.data ?? null
+  // termsVersion = null คือยังไม่ได้รัน migration 0007 — ข้ามไปก่อน ไม่งั้นจะกดยอมรับไม่ได้และติดอยู่หน้านี้
+  const needsTerms = profile !== null && profile.termsVersion !== null && profile.termsVersion < TERMS_VERSION
+
+  const onAcceptTerms = useCallback(async () => {
+    await acceptTerms(TERMS_VERSION)
+    await queryClient.invalidateQueries({ queryKey: ['profile', userId] })
+  }, [queryClient, userId])
+
+  const openTerms = useCallback(() => setViewTerms(true), [])
+
+  const closeTerms = useCallback(() => {
+    setViewTerms(false)
+    if (!wantsTermsFromUrl()) return
+    const url = new URL(window.location.href)
+    url.searchParams.delete('terms')
+    window.history.replaceState(window.history.state, '', url)
+  }, [])
 
   const requireLogin = useCallback(
     (reason: string) => {
@@ -89,14 +140,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       userId,
       email: session?.user.email ?? null,
-      profile: profileQuery.data ?? null,
+      profile,
       isAdmin: adminQuery.data === true,
       loading,
       signInWithGoogle,
       signOut,
       requireLogin,
+      openTerms,
     }),
-    [session, userId, profileQuery.data, adminQuery.data, loading, signInWithGoogle, signOut, requireLogin],
+    [session, userId, profile, adminQuery.data, loading, signInWithGoogle, signOut, requireLogin, openTerms],
   )
 
   return (
@@ -118,12 +170,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             <GoogleButton onClick={signInWithGoogle} />
             {loginError && (
               <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
-                {t(loginError)}
+                {t(loginError.key, loginError.params)}
               </p>
             )}
-            <p className="text-xs text-stone-500">{t('เราใช้แค่ชื่อและรูปโปรไฟล์จาก Google เพื่อแสดงในแอป')}</p>
+            <p className="text-xs text-stone-500">
+              {t('เราใช้แค่ชื่อและรูปโปรไฟล์จาก Google เพื่อแสดงในแอป')}{' '}
+              <button type="button" onClick={openTerms} className="underline underline-offset-2 hover:text-orange-700">
+                {t('ข้อกำหนดการใช้งาน')}
+              </button>
+            </p>
           </div>
         </Modal>
+      )}
+      {needsTerms ? (
+        <TermsDialog mode="accept" onAccept={onAcceptTerms} onDecline={signOut} />
+      ) : (
+        viewTerms && <TermsDialog mode="view" onClose={closeTerms} />
       )}
     </AuthContext.Provider>
   )

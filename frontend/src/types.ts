@@ -68,6 +68,8 @@ export interface Profile {
   /** path ใน bucket avatars (null = ใช้รูปจาก Google) */
   avatarPath: string | null
   createdAt: string
+  /** เวอร์ชันข้อกำหนดที่ยอมรับล่าสุด (0 = ยังไม่เคย, null = ยังไม่ได้รัน migration 0007) */
+  termsVersion: number | null
 }
 
 /** รีวิวในหน้าโปรไฟล์ — แสดงพร้อมแมวที่รีวิว */

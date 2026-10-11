@@ -231,6 +231,7 @@ interface ProfileRow {
   avatar_url: string | null
   avatar_path?: string | null
   created_at: string
+  terms_version?: number
 }
 
 /** รูปที่อัปโหลดเองมาก่อนรูปจาก Google (avatar_path ยังไม่มีถ้ายังไม่ได้รัน migration 0003) */
@@ -246,12 +247,18 @@ function rowToProfile(row: ProfileRow): Profile {
     googleAvatarUrl: row.avatar_url,
     avatarPath: row.avatar_path ?? null,
     createdAt: row.created_at,
+    termsVersion: row.terms_version ?? null,
   }
 }
 
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data } = await db().from('profiles').select('*').eq('id', userId).maybeSingle()
   return data ? rowToProfile(data as ProfileRow) : null
+}
+
+export async function acceptTerms(version: number): Promise<void> {
+  const { error } = await db().rpc('accept_terms', { version })
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
 }
 
 /** อัปโหลดรูปที่ crop แล้วเป็นรูปโปรไฟล์ — ชื่อไฟล์ใหม่ทุกครั้ง (กัน cache รูปเก่า) แล้วลบไฟล์เดิมทิ้ง */

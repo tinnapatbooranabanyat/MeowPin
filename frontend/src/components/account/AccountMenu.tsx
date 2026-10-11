@@ -1,4 +1,4 @@
-import { Bug, HeartHandshake, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, Sun, UserRound } from 'lucide-react'
+import { Bug, HeartHandshake, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, ScrollText, Sun, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -29,7 +29,7 @@ const LANGS: { value: Lang; label: string }[] = [
 
 // ปุ่มโปรไฟล์ลอยมุมขวาบน แบบ Google Maps
 export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin, onSupport }: Props) {
-  const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut } = useAuth()
+  const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut, openTerms } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
   const [open, setOpen] = useState(false)
@@ -132,6 +132,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           </MenuItem>
           <MenuItem icon={<HeartHandshake size={18} className="text-orange-500" />} onClick={pick(onSupport)}>
             {t('สนับสนุนทีมงาน')}
+          </MenuItem>
+          <MenuItem icon={<ScrollText size={18} />} onClick={pick(openTerms)}>
+            {t('ข้อกำหนดการใช้งาน')}
           </MenuItem>
 
           <div className="mt-1 flex flex-col gap-3 border-t border-stone-100 px-4 pt-3 pb-2">
