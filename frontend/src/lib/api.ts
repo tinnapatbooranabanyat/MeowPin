@@ -444,19 +444,15 @@ export async function fetchCatSummary(catId: string): Promise<CatSummary | null>
 }
 
 /**
- * ขอให้ backend สรุปใหม่ (ไม่ต้องล็อกอิน) — backend คืนของเดิมถ้าข้อมูลไม่เปลี่ยน
- * ไม่สำเร็จ (ยังไม่ตั้ง key / AI ล่ม / server หลับ) ก็คืน null เงียบๆ
+ * ขอให้ backend สรุป (ไม่ต้องล็อกอิน) — backend คืนของเดิมถ้าข้อมูลไม่เปลี่ยน
+ * คืน null ถ้ารีวิวยังไม่ครบ / throw ถ้าเรียกไม่สำเร็จ (server กำลังตื่น, AI ล่ม) ให้ลองใหม่ได้
  */
 export async function requestCatSummary(catId: string): Promise<CatSummary | null> {
   if (!API_URL) return null
-  try {
-    const res = await fetch(`${API_URL}/cats/${catId}/summary`, { method: 'POST' })
-    if (!res.ok) return null
-    const body = (await res.json()) as { summary: CatSummary | null }
-    return body.summary
-  } catch {
-    return null
-  }
+  const res = await fetch(`${API_URL}/cats/${catId}/summary`, { method: 'POST' })
+  if (!res.ok) throw new ApiError('สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง', res.status)
+  const body = (await res.json()) as { summary: CatSummary | null }
+  return body.summary
 }
 
 // ═══════════════ รายงานปัญหา ═══════════════

@@ -481,4 +481,9 @@ export const EN: Record<string, string> = {
   'ดูเฉพาะกิจกรรมของคนนี้': "Show only this person's activity",
   'ผู้ใช้ที่ไม่ได้ล็อกอิน': 'A signed-out visitor',
   'โหลดบันทึกกิจกรรมไม่สำเร็จ': "Couldn't load the activity log",
+  'ลองอีกครั้ง': 'Try again',
+  'อุ๊ย มีบางอย่างผิดพลาด': 'Oops, something went wrong',
+  'โหลดหน้าใหม่แล้วลองอีกครั้งนะ': 'Reload the page and try again.',
+  'โหลดหน้าใหม่': 'Reload',
+  'กำลังเตรียมรูป…': 'Preparing photo…',
 }

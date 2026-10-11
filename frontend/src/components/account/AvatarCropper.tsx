@@ -1,11 +1,36 @@
 import { Minus, Plus } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Cropper, { type Area } from 'react-easy-crop'
 import { useI18n } from '../../hooks/useI18n'
 import { ApiError } from '../../lib/api'
 import { Modal } from '../ui/Modal'
 
 const OUTPUT_SIZE = 320
+// รูปจากกล้องมือถือ (12–50 ล้านพิกเซล) กินหน่วยความจำมากจนบางเครื่องปิดแท็บทิ้ง (จอขาว)
+// — ย่อให้ด้านยาวไม่เกินนี้ก่อน crop (รูปโปรไฟล์ออกมาแค่ 320px อยู่แล้ว)
+const MAX_EDIT_SIZE = 1600
+
+/** ย่อรูปก่อนเอาไปแสดงในตัว crop — ย่อไม่ได้ (เช่น HEIC ในบางเบราว์เซอร์) ใช้ไฟล์เดิม */
+async function prepareForEditing(file: File): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, MAX_EDIT_SIZE / Math.max(bitmap.width, bitmap.height))
+    if (scale === 1) {
+      bitmap.close()
+      return URL.createObjectURL(file)
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92))
+    canvas.width = canvas.height = 0
+    return URL.createObjectURL(blob ?? file)
+  } catch {
+    return URL.createObjectURL(file)
+  }
+}
 
 interface Props {
   file: File
@@ -32,8 +57,21 @@ async function cropToWebp(src: string, area: Area): Promise<Blob> {
 
 export function AvatarCropper({ file, onCancel, onCropped }: Props) {
   const { t } = useI18n()
-  // คืนหน่วยความจำของรูปตอนปิดหน้าต่าง (ไม่ใช้ cleanup ของ effect เพราะ StrictMode จะ revoke ทิ้งก่อนใช้)
-  const src = useMemo(() => URL.createObjectURL(file), [file])
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    let url: string | null = null
+    prepareForEditing(file).then((next) => {
+      url = next
+      if (cancelled) URL.revokeObjectURL(next)
+      else setSrc(next)
+    })
+    // StrictMode เรียก effect ซ้ำ: รอบแรกถูกยกเลิกและคืนหน่วยความจำของรูปเอง
+    return () => {
+      cancelled = true
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [file])
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [area, setArea] = useState<Area | null>(null)
@@ -42,18 +80,14 @@ export function AvatarCropper({ file, onCancel, onCropped }: Props) {
 
   const onCropComplete = useCallback((_: Area, pixels: Area) => setArea(pixels), [])
 
-  const cancel = () => {
-    URL.revokeObjectURL(src)
-    onCancel()
-  }
+  const cancel = () => onCancel()
 
   const save = async () => {
-    if (!area) return
+    if (!area || !src) return
     setSaving(true)
     setError(null)
     try {
       await onCropped(await cropToWebp(src, area))
-      URL.revokeObjectURL(src)
     } catch (e) {
       setError(t(e instanceof ApiError ? e.message : 'อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง'))
       setSaving(false)
@@ -64,6 +98,10 @@ export function AvatarCropper({ file, onCancel, onCropped }: Props) {
     <Modal title={t('ปรับรูปโปรไฟล์')} onClose={cancel}>
       <div className="flex flex-col gap-4">
         <div className="relative h-72 overflow-hidden rounded-2xl bg-black">
+          {!src && (
+            <p className="absolute inset-0 flex items-center justify-center text-sm text-white/70">{t('กำลังเตรียมรูป…')}</p>
+          )}
+          {src && (
           <Cropper
             image={src}
             crop={crop}
@@ -75,6 +113,7 @@ export function AvatarCropper({ file, onCancel, onCropped }: Props) {
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
           />
+          )}
         </div>
         <p className="-mt-2 text-center text-xs text-stone-500">{t('ลากเพื่อเลื่อนรูป ใช้นิ้วหรือแถบด้านล่างเพื่อซูม')}</p>
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Sparkles } from 'lucide-react'
+import { RotateCw, Sparkles } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useI18n } from '../hooks/useI18n'
 import { fetchCatSummary, requestCatSummary } from '../lib/api'
@@ -17,13 +17,21 @@ export function AiSummary({ cat }: { cat: Cat }) {
   const summary = useQuery({ queryKey, queryFn: () => fetchCatSummary(cat.id), staleTime: 5 * 60_000 })
   const refresh = useMutation({
     mutationFn: () => requestCatSummary(cat.id),
+    // server ฟรีของ Render หลับอยู่ครั้งแรกอาจล้ม — ลองซ้ำให้อีกครั้ง
+    retry: 1,
+    retryDelay: 4000,
     onSuccess: (fresh) => {
       if (fresh) queryClient.setQueryData(queryKey, fresh)
     },
   })
 
   const expected = Math.min(cat.reviewCount, MAX_REVIEWS)
-  const stale = summary.isSuccess && expected >= MIN_REVIEWS && summary.data?.reviewCount !== expected
+  // จำนวนรีวิวใน cat อาจยังเป็นค่าเก่าในแคช (มีคนรีวิวจากเครื่องอื่น) — ยังไม่มีสรุปก็ถาม backend ให้ตัดสินเอง
+  // (รีวิวยังไม่ครบ backend ตอบกลับทันทีโดยไม่เรียก AI)
+  const stale =
+    summary.isSuccess &&
+    expected > 0 &&
+    (summary.data ? expected >= MIN_REVIEWS && summary.data.reviewCount !== expected : true)
   // ขอสรุปใหม่ครั้งเดียวต่อจำนวนรีวิว — backend อาจคืนของเดิม (ติด cooldown) ก็ไม่ขอวนซ้ำ
   const requested = useRef<string | null>(null)
   const { mutate } = refresh
@@ -36,7 +44,25 @@ export function AiSummary({ cat }: { cat: Cat }) {
 
   const data = summary.data
   if (!data) {
-    if (!refresh.isPending) return null
+    if (refresh.isError && cat.reviewCount >= MIN_REVIEWS) {
+      return (
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-800 ring-1 ring-orange-200">
+          <span className="flex items-center gap-2">
+            <Sparkles size={16} aria-hidden="true" />
+            {t('สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง')}
+          </span>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-medium ring-1 ring-orange-300 hover:bg-orange-100"
+          >
+            <RotateCw size={14} aria-hidden="true" />
+            {t('ลองอีกครั้ง')}
+          </button>
+        </div>
+      )
+    }
+    if (!refresh.isPending || cat.reviewCount < MIN_REVIEWS) return null
     return (
       <div className="flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-800 ring-1 ring-orange-200">
         <Sparkles size={16} className="animate-pulse" aria-hidden="true" />
