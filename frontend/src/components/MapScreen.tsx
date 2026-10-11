@@ -110,6 +110,7 @@ export function MapScreen({ mapId }: Props) {
   const [furColor, setFurColor] = useState<FurColor | null>(null)
   const [seenToday, setSeenToday] = useState(false)
   const [friendlyOnly, setFriendlyOnly] = useState(false)
+  const [needsHelp, setNeedsHelp] = useState(false)
   const [userPosition, setUserPosition] = useState<LatLng | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [droppedPin, setDroppedPin] = useState<LatLng | null>(null)
@@ -144,9 +145,10 @@ export function MapScreen({ mapId }: Props) {
           (furColor === null || cat.furColor === furColor) &&
           (!seenToday || seenWithin(cat, 24)) &&
           (!friendlyOnly || cat.isFriendly) &&
+          (!needsHelp || cat.helpKinds.length > 0) &&
           matchesQuery(cat, query),
       ),
-    [cats, furColor, seenToday, friendlyOnly, query],
+    [cats, furColor, seenToday, friendlyOnly, needsHelp, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
 
@@ -224,6 +226,7 @@ export function MapScreen({ mapId }: Props) {
     setFurColor(null)
     setSeenToday(false)
     setFriendlyOnly(false)
+    setNeedsHelp(false)
     setSelectedId(cat.id)
     focusCat(cat)
     showToast(t('ปักหมุด{name}แล้ว', { name: cat.name }))
@@ -411,6 +414,8 @@ export function MapScreen({ mapId }: Props) {
                   onSeenTodayChange={setSeenToday}
                   friendlyOnly={friendlyOnly}
                   onFriendlyOnlyChange={setFriendlyOnly}
+                  needsHelp={needsHelp}
+                  onNeedsHelpChange={setNeedsHelp}
                 />
               </div>
             </div>

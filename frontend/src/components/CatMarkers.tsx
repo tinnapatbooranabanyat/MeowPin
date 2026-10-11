@@ -92,8 +92,18 @@ function CatMarker({ cat, selected, onSelect, setMarkerRef }: CatMarkerProps) {
         <CatAvatar
           cat={cat}
           iconSize={22}
-          className={`relative size-11 rounded-full border-[3px] shadow-md ${selected ? 'border-orange-500' : 'border-white'}`}
+          className={`relative size-11 rounded-full border-[3px] shadow-md ${
+            selected ? 'border-orange-500' : cat.helpKinds.length ? 'border-red-500' : 'border-white'
+          }`}
         />
+        {cat.helpKinds.length > 0 && (
+          <span
+            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white ring-2 ring-white"
+            aria-label="!"
+          >
+            !
+          </span>
+        )}
         <div
           className={`-mt-0.5 size-0 border-x-[7px] border-t-[9px] border-x-transparent ${selected ? 'border-t-orange-500' : 'border-t-white'}`}
         />

@@ -1,5 +1,5 @@
 import { getLang, translate, type Lang } from '../i18n'
-import type { Cat, CatReportReason, CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../types'
+import type { Cat, CatReportReason, CatTraits, FurColor, HelpKind, Neutered, OwnerStatus, Verification } from '../types'
 
 // สองสี: ครึ่งบนสีหลัก ครึ่งล่างสีขาว
 const half = (top: string, bottom: string) => `linear-gradient(160deg, ${top} 0 52%, ${bottom} 52% 100%)`
@@ -91,6 +91,14 @@ export const VERIFICATION: Record<Verification, { label: string; className: stri
   camera_gps: { label: 'GPS ยืนยันแล้ว', className: 'bg-sky-100 text-sky-800' },
   exif_gps: { label: 'ตำแหน่งจากรูป', className: 'bg-violet-100 text-violet-800' },
   manual: { label: 'ปักหมุดเอง', className: 'bg-stone-200 text-stone-700' },
+}
+
+export const HELP_KINDS: Record<HelpKind, { label: string; hint: string }> = {
+  injured: { label: 'บาดเจ็บ', hint: 'มีแผล เดินกะเผลก หรือโดนรถชน' },
+  sick: { label: 'ป่วย', hint: 'ซึม ไม่กินอาหาร น้ำมูก ตาแฉะ หรือมีอาการผิดปกติ' },
+  thin: { label: 'ผอมมาก', hint: 'ผอมจนเห็นกระดูก อาจไม่มีใครให้อาหาร' },
+  not_neutered: { label: 'ยังไม่ทำหมัน', hint: 'ไม่มีรอยตัดปลายหู หรือเพิ่งคลอดลูก — ควรพาไปทำหมันกับโครงการ TNR' },
+  other: { label: 'อื่นๆ', hint: 'เล่ารายละเอียดด้านล่าง' },
 }
 
 export const TRAITS = [

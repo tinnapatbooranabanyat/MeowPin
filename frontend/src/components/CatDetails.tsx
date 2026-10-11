@@ -8,6 +8,7 @@ import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION, breedLabel, d
 import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
+import { HelpSection } from './HelpSection'
 import { PawBurst } from './PawBurst'
 import { PhotoLightbox } from './PhotoLightbox'
 import { PawRating } from './reviews/PawRating'
@@ -251,6 +252,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                 </div>
               </div>
             )}
+
+            <HelpSection cat={cat} />
 
             <AiSummary cat={cat} />
 

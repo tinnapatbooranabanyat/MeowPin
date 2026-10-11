@@ -17,6 +17,18 @@ export type FurColor =
   /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
   | 'other'
 
+/** เรื่องที่แจ้งว่าน้องต้องการความช่วยเหลือ */
+export type HelpKind = 'injured' | 'sick' | 'thin' | 'not_neutered' | 'other'
+
+export interface HelpRequest {
+  id: string
+  kind: HelpKind
+  note: string
+  createdAt: string
+  userId: string
+  reporterName: string | null
+}
+
 /** ตรวจว่าเป็นแมวด้วยวิธีไหน: โมเดลในเครื่องมั่นใจ / AI (Gemini) ยืนยัน / ผู้ปักหมุดยืนยันเอง (รอ admin ตรวจ) */
 export type CatCheck = 'model' | 'ai' | 'user'
 
@@ -59,6 +71,8 @@ export interface Cat extends CatTraits {
   /** ความมั่นใจว่าเป็นแมวจริง 0–1 */
   catConfidence: number
   catCheck: CatCheck
+  /** เรื่องที่ยังไม่มีใครปิด (ว่าง = ไม่ต้องการความช่วยเหลือ) */
+  helpKinds: HelpKind[]
   createdBy: string | null
   createdByName: string | null
   reviewCount: number
@@ -171,6 +185,8 @@ export type ActivityAction =
   | 'sighting'
   | 'bug_report'
   | 'cat_report'
+  | 'help_request'
+  | 'help_resolve'
 
 export interface ActivityEntry {
   id: number
@@ -185,6 +201,7 @@ export interface ActivityEntry {
     by_other?: boolean
     category?: string
     reason?: string
+    kind?: string
     ip?: string
     user_agent?: string
     city?: string

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Clock, Heart, Palette, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Heart, HeartPulse, Palette, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../hooks/useI18n'
 import { FUR_COLORS } from '../lib/cat'
@@ -11,6 +11,8 @@ interface Props {
   onSeenTodayChange: (value: boolean) => void
   friendlyOnly: boolean
   onFriendlyOnlyChange: (value: boolean) => void
+  needsHelp: boolean
+  onNeedsHelpChange: (value: boolean) => void
 }
 
 const chipBase =
@@ -25,6 +27,8 @@ export function FilterChips({
   onSeenTodayChange,
   friendlyOnly,
   onFriendlyOnlyChange,
+  needsHelp,
+  onNeedsHelpChange,
 }: Props) {
   const { t } = useI18n()
   const [palette, setPalette] = useState<{ top: number; left: number } | null>(null)
@@ -109,6 +113,15 @@ export function FilterChips({
       >
         <Heart size={15} aria-hidden="true" />
         {t('เฟรนด์ลี่')}
+      </button>
+      <button
+        type="button"
+        aria-pressed={needsHelp}
+        onClick={() => onNeedsHelpChange(!needsHelp)}
+        className={`${chipBase} ${needsHelp ? 'bg-red-600 text-white ring-red-600' : 'bg-surface text-red-700 ring-red-200 hover:bg-red-50'}`}
+      >
+        <HeartPulse size={15} aria-hidden="true" />
+        {t('ต้องการความช่วยเหลือ')}
       </button>
 
       {palette && (

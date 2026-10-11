@@ -10,6 +10,8 @@ import type {
   CatSummary,
   CatTraits,
   DeviceSession,
+  HelpKind,
+  HelpRequest,
   FurColor,
   LatLng,
   Neutered,
@@ -61,6 +63,7 @@ interface CatRow {
   fur_color: FurColor
   fur_color_custom?: string | null
   cat_check?: CatCheck
+  help_kinds?: HelpKind[]
   breed?: string | null
   owner_status?: OwnerStatus
   lat: number
@@ -102,6 +105,8 @@ function rowToCat(row: CatRow): Cat {
     catConfidence: row.cat_confidence,
     // ก่อนรัน migration 0009 ยังไม่มีคอลัมน์นี้ — หมุดเดิมผ่านโมเดลทั้งหมด
     catCheck: row.cat_check ?? 'model',
+    // ก่อนรัน migration 0011 ยังไม่มีคอลัมน์นี้
+    helpKinds: row.help_kinds ?? [],
     // ค่า default กันพังถ้าฐานข้อมูลยังไม่ได้รัน migration 0002
     isFriendly: row.is_friendly ?? false,
     isClingy: row.is_clingy ?? false,
@@ -674,6 +679,51 @@ export async function fetchAdminCounts(): Promise<AdminCounts> {
   }
   const [catReports, bugReports] = await Promise.all([count('cat_reports'), count('bug_reports')])
   return { catReports, bugReports }
+}
+
+// ═══════════════ น้องต้องการความช่วยเหลือ ═══════════════
+interface HelpRow {
+  id: string
+  kind: HelpKind
+  note: string
+  created_at: string
+  user_id: string
+  profiles: { display_name: string } | null
+}
+
+/** เรื่องที่ยังไม่มีใครปิดของน้องตัวนี้ */
+export async function fetchHelpRequests(catId: string): Promise<HelpRequest[]> {
+  const { data, error } = await db()
+    .from('cat_help_requests')
+    .select('id, kind, note, created_at, user_id, profiles(display_name)')
+    .eq('cat_id', catId)
+    .is('resolved_at', null)
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data as unknown as HelpRow[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    note: r.note,
+    createdAt: r.created_at,
+    userId: r.user_id,
+    reporterName: r.profiles?.display_name ?? null,
+  }))
+}
+
+export async function requestHelp(catId: string, kind: HelpKind, note: string): Promise<void> {
+  const { error } = await db().from('cat_help_requests').insert({ cat_id: catId, kind, note })
+  if (error) {
+    if (error.code === '23505') throw new ApiError('คุณแจ้งเรื่องนี้ของน้องไปแล้ว รอคนมาช่วยก่อนนะ', 409)
+    throw new ApiError('แจ้งไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+}
+
+export async function resolveHelp(catId: string, note = ''): Promise<void> {
+  const { error } = await db().rpc('resolve_cat_help', { p_cat_id: catId, p_note: note })
+  if (error) {
+    if (error.message.includes('not_allowed')) throw new ApiError('ปิดเรื่องได้เฉพาะคนแจ้ง คนปักหมุด หรือผู้ดูแล', 403)
+    throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
 }
 
 // ═══════════════ อุปกรณ์ที่เข้าสู่ระบบ ═══════════════
