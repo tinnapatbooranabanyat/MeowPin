@@ -1,5 +1,5 @@
 import { PawPrint, Search, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Cat } from '../types'
 import { CatAvatar } from './CatAvatar'
 import { useI18n } from '../hooks/useI18n'
@@ -14,6 +14,20 @@ interface Props {
 export function SearchBar({ query, onQueryChange, suggestions, onSelect }: Props) {
   const { t } = useI18n()
   const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // คีย์ลัดแบบ Google Maps: กด / ที่ไหนก็ได้เพื่อไปช่องค้นหา (ยกเว้นตอนพิมพ์อยู่ในช่องอื่น)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLElement
+      if (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return
+      e.preventDefault()
+      inputRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const showSuggestions = focused && query.trim().length > 0
 
   return (
@@ -21,11 +35,13 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect }: Props
       <div className="flex h-12 items-center gap-3 rounded-full bg-surface px-4 shadow-md ring-1 ring-stone-200">
         <PawPrint className="shrink-0 text-orange-500" size={22} aria-hidden="true" />
         <input
+          ref={inputRef}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
+            if (e.key === 'Escape') e.currentTarget.blur()
             if (e.key === 'Enter' && suggestions[0]) {
               onSelect(suggestions[0])
               e.currentTarget.blur()

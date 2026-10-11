@@ -19,7 +19,12 @@ export const FUR_COLORS: Record<FurColor, { label: string; bg: string; fg: strin
   brown: { label: 'น้ำตาล', bg: '#7B5134', fg: '#F8EBDD' },
   tabby: { label: 'ลายสลิด', bg: stripes('#A88B6A', '#5E4630'), fg: '#FFF7EC' },
   silver_tabby: { label: 'ลายสลิดเทา', bg: stripes('#B9BEC6', '#585E66'), fg: '#111827' },
-  tabby_white: { label: 'ลายสลิดขาว', bg: half(stripes('#A88B6A', '#5E4630'), '#F7F2EA'), fg: '#FFF7EC' },
+  // วางสองชั้น: ครึ่งล่างสีขาวทับลายสลิด (ใส่ gradient ซ้อนใน gradient ไม่ได้)
+  tabby_white: {
+    label: 'ลายสลิดขาว',
+    bg: `linear-gradient(160deg, transparent 0 52%, #F7F2EA 52% 100%), ${stripes('#A88B6A', '#5E4630')}`,
+    fg: '#FFF7EC',
+  },
   calico: {
     label: 'สามสี',
     bg: 'radial-gradient(circle at 22% 28%, #F59E42 0 30%, transparent 31%), radial-gradient(circle at 80% 75%, #2E2A27 0 30%, transparent 31%), #F7F2EA',

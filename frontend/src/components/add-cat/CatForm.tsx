@@ -126,7 +126,7 @@ export function CatForm({
               }`}
             >
               <span
-                className="size-3.5 rounded-full ring-1 ring-black/10"
+                className="size-3.5 rounded-full ring-1 ring-black/10 dark:ring-white/30"
                 style={{ background: FUR_COLORS[color].bg }}
                 aria-hidden="true"
               />

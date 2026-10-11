@@ -138,7 +138,7 @@ export function FilterChips({
                   }`}
                 >
                   <span
-                    className="relative flex size-8 items-center justify-center rounded-full shadow-inner ring-1 ring-black/10"
+                    className="relative flex size-8 items-center justify-center rounded-full shadow-inner ring-1 ring-black/10 dark:ring-white/30"
                     style={{ background: FUR_COLORS[color].bg }}
                     aria-hidden="true"
                   >
