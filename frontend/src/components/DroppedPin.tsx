@@ -1,7 +1,8 @@
 import { AdvancedMarker } from '@vis.gl/react-google-maps'
 import { Camera, ImageUp, MapPin, X } from 'lucide-react'
-import { useRef, type ChangeEvent } from 'react'
+import { useEffect, useRef, type ChangeEvent } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { wakeBackend } from '../lib/api'
 import type { LatLng } from '../types'
 import { useI18n } from '../hooks/useI18n'
 
@@ -22,6 +23,10 @@ export function DroppedPin({ position, onClose, onCamera, onFile }: Props) {
   // ไม่งั้น Safari จะบล็อกหน้าต่างเลือกไฟล์
   const fileInput = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    wakeBackend()
+  }, [])
+
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -31,13 +36,15 @@ export function DroppedPin({ position, onClose, onCamera, onFile }: Props) {
   return (
     <>
       <AdvancedMarker position={position} zIndex={1000} title={t('จุดที่เลือก')}>
-        <MapPin size={44} className="fill-red-500 text-white drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
+        <span className="block animate-drop-in">
+          <MapPin size={44} className="fill-red-500 text-white drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
+        </span>
       </AdvancedMarker>
 
       <div
         role="dialog"
         aria-label={t('ปักหมุดแมวตรงนี้')}
-        className="absolute inset-x-0 bottom-0 z-30 rounded-t-3xl bg-surface p-5 pb-7 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] md:inset-x-auto md:bottom-6 md:left-1/2 md:w-[420px] md:-translate-x-1/2 md:rounded-3xl md:pb-5 md:shadow-xl"
+        className="absolute inset-x-0 bottom-0 z-30 animate-sheet-up rounded-t-3xl bg-surface md:animate-pop-in p-5 pb-7 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] md:inset-x-auto md:bottom-6 md:left-1/2 md:w-[420px] md:-translate-x-1/2 md:rounded-3xl md:pb-5 md:shadow-xl"
       >
         <div className="flex items-start justify-between gap-3">
           <div>

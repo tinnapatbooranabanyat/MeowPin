@@ -1,28 +1,37 @@
 import { Eye, Flag, Heart, MapPin, Navigation, Scissors, Share2, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { useMapActions } from '../hooks/useMapActions'
 import { directionsUrl, FUR_COLORS, NEUTERED, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
 import type { Cat } from '../types'
 import { CatAvatar } from './CatAvatar'
+import { PawBurst } from './PawBurst'
 import { PawRating } from './reviews/PawRating'
 import { ReviewSection } from './reviews/ReviewSection'
 
 interface Props {
   cat: Cat
-  onSighting: (cat: Cat) => void
+  onSighting: (cat: Cat) => Promise<boolean>
   onShare: (cat: Cat) => void
   onDelete: (cat: Cat) => void
   onReport: (cat: Cat) => void
 }
 
 const actionClass =
-  'flex flex-1 flex-col items-center gap-1 rounded-2xl py-2.5 text-xs font-medium transition-colors'
+  'flex flex-1 flex-col items-center gap-1 rounded-2xl py-2.5 text-xs font-medium transition active:scale-95'
 
 export function CatDetails({ cat, onSighting, onShare, onDelete, onReport }: Props) {
   const { isAdmin } = useAuth()
   const { t, lang } = useI18n()
+  const { openProfile } = useMapActions()
   const verification = VERIFICATION[cat.verification]
   const traits = TRAITS.filter((trait) => cat[trait.key])
+  const [burst, setBurst] = useState(0)
+
+  const sighting = async () => {
+    if (await onSighting(cat)) setBurst((n) => n + 1)
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,11 +85,12 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport }: Pro
         </a>
         <button
           type="button"
-          onClick={() => onSighting(cat)}
-          className={`${actionClass} bg-orange-50 text-orange-800 hover:bg-orange-100`}
+          onClick={sighting}
+          className={`${actionClass} relative bg-orange-50 text-orange-800 hover:bg-orange-100`}
         >
-          <Eye size={20} aria-hidden="true" />
+          <Eye size={20} aria-hidden="true" key={burst} className={burst ? 'animate-wiggle' : undefined} />
           {t('ฉันเจอด้วย')}
+          {burst > 0 && <PawBurst key={burst} />}
         </button>
         <button
           type="button"
@@ -117,7 +127,17 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport }: Pro
       <div className="flex items-center justify-between gap-2 text-xs text-stone-500">
         <p className="flex min-w-0 items-center gap-1.5">
           <UserRound size={13} className="shrink-0" aria-hidden="true" />
-          <span className="truncate">{t('ปักหมุดโดย {name}', { name: cat.createdByName ?? t('ทีม MeowPin') })}</span>
+          {cat.createdBy ? (
+            <button
+              type="button"
+              onClick={() => openProfile(cat.createdBy!)}
+              className="truncate text-left hover:text-stone-800 hover:underline"
+            >
+              {t('ปักหมุดโดย {name}', { name: cat.createdByName ?? t('ผู้ใช้') })}
+            </button>
+          ) : (
+            <span className="truncate">{t('ปักหมุดโดย {name}', { name: t('ทีม MeowPin') })}</span>
+          )}
         </p>
         <button
           type="button"

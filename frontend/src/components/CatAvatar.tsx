@@ -3,7 +3,7 @@ import { FUR_COLORS } from '../lib/cat'
 import type { Cat } from '../types'
 
 interface Props {
-  cat: Cat
+  cat: Pick<Cat, 'name' | 'furColor' | 'photoUrl'>
   className?: string
   iconSize?: number
 }

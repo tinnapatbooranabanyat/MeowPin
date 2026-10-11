@@ -41,7 +41,22 @@ export interface Cat extends CatTraits {
 export interface Profile {
   id: string
   displayName: string
+  /** รูปที่ใช้แสดงจริง: รูปที่อัปโหลดเอง ถ้าไม่มีใช้รูปจาก Google */
   avatarUrl: string | null
+  googleAvatarUrl: string | null
+  /** path ใน bucket avatars (null = ใช้รูปจาก Google) */
+  avatarPath: string | null
+  createdAt: string
+}
+
+/** รีวิวในหน้าโปรไฟล์ — แสดงพร้อมแมวที่รีวิว */
+export interface UserReview {
+  id: string
+  paws: number
+  recommend: boolean
+  comment: string
+  createdAt: string
+  cat: { id: string; name: string; photoUrl?: string; furColor: FurColor } | null
 }
 
 export interface Review {

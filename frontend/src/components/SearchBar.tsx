@@ -50,7 +50,7 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect }: Props
       </div>
 
       {showSuggestions && (
-        <ul className="absolute inset-x-0 top-14 max-h-80 overflow-auto rounded-2xl bg-surface py-2 shadow-lg ring-1 ring-stone-200">
+        <ul className="absolute inset-x-0 top-14 origin-top animate-pop-in max-h-80 overflow-auto rounded-2xl bg-surface py-2 shadow-lg ring-1 ring-stone-200">
           {suggestions.length === 0 && (
             <li className="px-4 py-3 text-sm text-stone-500">{t('ไม่เจอแมวที่ตรงกับ “{q}”', { q: query })}</li>
           )}

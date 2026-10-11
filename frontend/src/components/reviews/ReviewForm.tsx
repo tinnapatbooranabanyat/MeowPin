@@ -22,7 +22,7 @@ export function ReviewForm({ catId, existing, onCancel, onSaved }: Props) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (paws === 0) return setError(t('ให้อุ้งเท้าความน่ารักก่อน'))
+    if (paws === 0) return setError(t('ให้คะแนนอุ้งเท้าก่อน'))
     if (recommend === null) return setError(t('เลือกว่าแนะนำหรือไม่แนะนำ'))
     setSaving(true)
     try {
@@ -39,7 +39,7 @@ export function ReviewForm({ catId, existing, onCancel, onSaved }: Props) {
       recommend === value
         ? value
           ? 'bg-emerald-500 text-white ring-emerald-500'
-          : 'bg-stone-600 text-white ring-stone-600'
+          : 'bg-[#57534e] text-white ring-[#57534e]'
         : 'bg-surface text-stone-700 ring-stone-300 hover:bg-stone-50'
     }`
 

@@ -76,7 +76,7 @@ export function CatReportDialog({ cat, onClose, onSent }: Props) {
         <button
           type="submit"
           disabled={sending}
-          className="h-12 rounded-full bg-red-600 font-medium text-white hover:bg-red-700 disabled:opacity-70"
+          className="h-12 rounded-full bg-red-600 font-medium text-white hover:bg-red-500 disabled:opacity-70"
         >
           {sending ? t('กำลังส่ง…') : t('ส่งรายงาน')}
         </button>

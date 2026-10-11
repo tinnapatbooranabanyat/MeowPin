@@ -3,6 +3,7 @@ import type { LatLng } from '../types'
 
 const HOLD_MS = 500
 const MOVE_TOLERANCE_PX = 10
+const RING_DELAY_MS = 120
 
 /**
  * กดค้างบนแผนที่ (มือถือ) หรือคลิกขวา (คอมฯ) → ได้พิกัดจุดนั้น
@@ -51,10 +52,20 @@ export function useMapLongPress(
 
     let timer: number | undefined
     let start: { x: number; y: number } | null = null
+    let ring: HTMLDivElement | null = null
     const pointers = new Set<number>()
+    const removeRing = (done: boolean) => {
+      const el = ring
+      ring = null
+      if (!el) return
+      if (!done) return el.remove()
+      el.classList.add('done')
+      window.setTimeout(() => el.remove(), 300)
+    }
     const cancel = () => {
       window.clearTimeout(timer)
       start = null
+      removeRing(false)
     }
 
     const onDown = (e: PointerEvent) => {
@@ -63,10 +74,22 @@ export function useMapLongPress(
       if (pointers.size > 1 || e.button !== 0) return cancel()
       // กดบนหมุดแมว/ปุ่มบนแผนที่ ไม่นับ
       if ((e.target as Element).closest('gmp-advanced-marker, button')) return
-      start = { x: e.clientX, y: e.clientY }
+      const pressAt = { x: e.clientX, y: e.clientY }
+      start = pressAt
+      // วงแหวนค่อยๆ เต็มระหว่างกดค้าง — โผล่หลังกดไปนิดหนึ่ง จะได้ไม่กระพริบตอนแตะเฉยๆ
+      window.setTimeout(() => {
+        if (start !== pressAt || ring) return
+        ring = document.createElement('div')
+        ring.className = 'longpress-ring'
+        ring.style.left = `${pressAt.x}px`
+        ring.style.top = `${pressAt.y}px`
+        ring.style.animationDuration = `${HOLD_MS - RING_DELAY_MS}ms`
+        document.body.appendChild(ring)
+      }, RING_DELAY_MS)
       timer = window.setTimeout(() => {
         if (start) fire(start.x, start.y)
         start = null
+        removeRing(true)
       }, HOLD_MS)
     }
     const onMove = (e: PointerEvent) => {

@@ -27,7 +27,7 @@ export function PawRatingInput({ value, onChange }: { value: number; onChange: (
   const { t } = useI18n()
   return (
     <div className="flex items-center gap-3">
-      <div className="flex gap-1" role="radiogroup" aria-label={t('ความน่ารัก')}>
+      <div className="flex gap-1" role="radiogroup" aria-label={t('คะแนนอุ้งเท้า')}>
         {PAWS.map((n) => (
           <button
             key={n}
@@ -39,8 +39,11 @@ export function PawRatingInput({ value, onChange }: { value: number; onChange: (
             className="rounded-full p-1 transition-transform hover:scale-110 active:scale-95"
           >
             <PawPrint
+              // เปลี่ยน key ทุกครั้งที่ให้คะแนน → อุ้งเท้าที่เต็มเด้งเรียงกัน
+              key={n <= value ? `on-${value}` : 'off'}
               size={30}
-              className={n <= value ? 'fill-orange-500 text-orange-500' : 'text-stone-300'}
+              className={n <= value ? 'animate-paw-pop fill-orange-500 text-orange-500' : 'text-stone-300'}
+              style={{ animationDelay: `${(n - 1) * 40}ms` }}
               aria-hidden="true"
             />
           </button>

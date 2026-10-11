@@ -20,13 +20,13 @@ export function Modal({ title, onClose, children, wide = false }: Props) {
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`max-h-[92%] w-full overflow-y-auto rounded-t-3xl bg-surface p-5 pb-8 shadow-xl md:rounded-3xl md:pb-5 ${
+        className={`max-h-[92%] w-full animate-sheet-up overflow-y-auto rounded-t-3xl bg-surface p-5 md:animate-pop-in pb-8 shadow-xl md:rounded-3xl md:pb-5 ${
           wide ? 'md:max-w-2xl' : 'md:max-w-md'
         }`}
       >

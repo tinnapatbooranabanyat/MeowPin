@@ -15,7 +15,7 @@ function App() {
   if (!API_KEY) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center text-stone-600">
-        {t('ยังไม่ได้ใส่ VITE_GOOGLE_MAPS_API_KEY ในไฟล์ frontend/.env.local')}
+        {t('ยังไม่ได้ตั้งค่า VITE_GOOGLE_MAPS_API_KEY — ในเครื่องใส่ใน frontend/.env.local ส่วนบน Vercel ใส่ที่ Settings → Environment Variables แล้วกด Redeploy')}
       </div>
     )
   }

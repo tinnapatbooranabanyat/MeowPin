@@ -9,9 +9,11 @@ import { UserAvatar } from '../account/UserAvatar'
 import { PawRating } from './PawRating'
 import { ReviewForm } from './ReviewForm'
 import { useI18n } from '../../hooks/useI18n'
+import { useMapActions } from '../../hooks/useMapActions'
 
 export function ReviewSection({ cat }: { cat: Cat }) {
   const { t, lang } = useI18n()
+  const { openProfile } = useMapActions()
   const { userId, isAdmin, requireLogin } = useAuth()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
@@ -26,7 +28,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
   }
 
   const startWriting = () => {
-    if (requireLogin(t('เข้าสู่ระบบเพื่อรีวิวความน่ารักของ{name}', { name: cat.name }))) setEditing(true)
+    if (requireLogin(t('เข้าสู่ระบบเพื่อรีวิว{name}', { name: cat.name }))) setEditing(true)
   }
 
   const remove = async (review: Review) => {
@@ -41,7 +43,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
     <section aria-labelledby="reviews-heading" className="flex flex-col gap-3 border-t border-stone-100 pt-4">
       <div className="flex items-center justify-between">
         <h3 id="reviews-heading" className="font-display text-lg text-stone-900">
-          {t('รีวิวความน่ารัก')}
+          {t('รีวิวน้องแมว')}
         </h3>
         {!editing && (
           <button
@@ -73,7 +75,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
           </div>
         </div>
       ) : (
-        !editing && <p className="text-sm text-stone-500">{t('ยังไม่มีรีวิว มาเป็นคนแรกที่บอกว่าน้องน่ารักแค่ไหน')}</p>
+        !editing && <p className="text-sm text-stone-500">{t('ยังไม่มีรีวิว มาเป็นคนแรกที่รีวิวน้องตัวนี้')}</p>
       )}
 
       {editing && (
@@ -91,10 +93,23 @@ export function ReviewSection({ cat }: { cat: Cat }) {
       <ul className="flex flex-col gap-3">
         {reviews.data?.map((review) => (
           <li key={review.id} className="flex gap-3">
-            <UserAvatar name={review.author?.displayName} url={review.author?.avatarUrl} className="size-9 text-sm" />
+            <button
+              type="button"
+              onClick={() => openProfile(review.userId)}
+              className="shrink-0 self-start rounded-full transition hover:scale-105"
+              aria-label={t('ดูโปรไฟล์ของ {name}', { name: review.author?.displayName ?? '' })}
+            >
+              <UserAvatar name={review.author?.displayName} url={review.author?.avatarUrl} className="size-9 text-sm" />
+            </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium text-stone-900">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openProfile(review.userId)}
+                  onKeyDown={(e) => e.key === 'Enter' && openProfile(review.userId)}
+                  className="cursor-pointer truncate text-sm font-medium text-stone-900 hover:underline"
+                >
                   {review.author?.displayName ?? t('ผู้ใช้')}
                   {review.userId === userId && <span className="font-normal text-stone-500"> {t('(คุณ)')}</span>}
                 </span>

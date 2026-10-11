@@ -10,9 +10,10 @@ import type {
   Profile,
   ReportCategory,
   Review,
+  UserReview,
   Verification,
 } from '../types'
-import { photoUrl, supabase } from './supabase'
+import { photoUrl, storageUrl, supabase } from './supabase'
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
 
@@ -144,6 +145,18 @@ async function callBackend<T>(method: 'POST' | 'DELETE', path: string, body?: Bo
   return (res.status === 204 ? undefined : await res.json()) as T
 }
 
+let lastWake = 0
+
+/**
+ * Render แพ็กเกจฟรีพักเครื่องหลังว่าง 15 นาที — ปลุกไว้ก่อนตั้งแต่ผู้ใช้เริ่มปักหมุด
+ * กว่าจะถ่ายรูป/กรอกข้อมูลเสร็จ server ก็ตื่นพอดี (ไม่สนผลลัพธ์ ไม่ต้องรอ)
+ */
+export function wakeBackend(): void {
+  if (!API_URL || Date.now() - lastWake < 5 * 60_000) return
+  lastWake = Date.now()
+  fetch(`${API_URL}/health`).catch(() => {})
+}
+
 export interface NewCatInput extends CatTraits {
   photo: File
   name: string
@@ -203,9 +216,93 @@ export async function recordSighting(catId: string): Promise<SightingResult> {
 
 // ═══════════════ โปรไฟล์ / เจ้าของแพลตฟอร์ม ═══════════════
 
+interface ProfileRow {
+  id: string
+  display_name: string
+  avatar_url: string | null
+  avatar_path?: string | null
+  created_at: string
+}
+
+/** รูปที่อัปโหลดเองมาก่อนรูปจาก Google (avatar_path ยังไม่มีถ้ายังไม่ได้รัน migration 0003) */
+function effectiveAvatar(row: { avatar_url: string | null; avatar_path?: string | null }): string | null {
+  return storageUrl('avatars', row.avatar_path ?? null) ?? row.avatar_url
+}
+
+function rowToProfile(row: ProfileRow): Profile {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    avatarUrl: effectiveAvatar(row),
+    googleAvatarUrl: row.avatar_url,
+    avatarPath: row.avatar_path ?? null,
+    createdAt: row.created_at,
+  }
+}
+
 export async function fetchProfile(userId: string): Promise<Profile | null> {
-  const { data } = await db().from('profiles').select('id, display_name, avatar_url').eq('id', userId).maybeSingle()
-  return data ? { id: data.id, displayName: data.display_name, avatarUrl: data.avatar_url } : null
+  const { data } = await db().from('profiles').select('*').eq('id', userId).maybeSingle()
+  return data ? rowToProfile(data as ProfileRow) : null
+}
+
+/** อัปโหลดรูปที่ crop แล้วเป็นรูปโปรไฟล์ — ชื่อไฟล์ใหม่ทุกครั้ง (กัน cache รูปเก่า) แล้วลบไฟล์เดิมทิ้ง */
+export async function uploadAvatar(userId: string, image: Blob, previousPath: string | null): Promise<void> {
+  const path = `${userId}/${Date.now()}.webp`
+  const bucket = db().storage.from('avatars')
+  const { error: uploadError } = await bucket.upload(path, image, { contentType: 'image/webp', cacheControl: '31536000' })
+  if (uploadError) throw new ApiError('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  const { error } = await db().from('profiles').update({ avatar_path: path }).eq('id', userId)
+  if (error) {
+    await bucket.remove([path])
+    throw new ApiError('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+  if (previousPath) await bucket.remove([previousPath])
+}
+
+/** กลับไปใช้รูปจาก Google */
+export async function removeAvatar(userId: string, currentPath: string): Promise<void> {
+  const { error } = await db().from('profiles').update({ avatar_path: null }).eq('id', userId)
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  await db().storage.from('avatars').remove([currentPath])
+}
+
+export async function fetchUserReviews(userId: string): Promise<UserReview[]> {
+  const { data, error } = await db()
+    .from('reviews')
+    .select('id, paws, recommend, comment, created_at, cats(id, name, photo_path, fur_color)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) throw new ApiError('โหลดรีวิวไม่สำเร็จ', 500)
+  type Row = {
+    id: string
+    paws: number
+    recommend: boolean
+    comment: string
+    created_at: string
+    cats: { id: string; name: string; photo_path: string | null; fur_color: FurColor } | null
+  }
+  return (data as unknown as Row[]).map((r) => ({
+    id: r.id,
+    paws: r.paws,
+    recommend: r.recommend,
+    comment: r.comment,
+    createdAt: r.created_at,
+    cat: r.cats
+      ? { id: r.cats.id, name: r.cats.name, photoUrl: photoUrl(r.cats.photo_path), furColor: r.cats.fur_color }
+      : null,
+  }))
+}
+
+export async function fetchUserCats(userId: string): Promise<Cat[]> {
+  const { data, error } = await db()
+    .from('cats_public')
+    .select('*')
+    .eq('created_by', userId)
+    .order('last_seen_at', { ascending: false })
+    .limit(100)
+  if (error) throw new ApiError('โหลดข้อมูลแมวไม่สำเร็จ', 500)
+  return (data as CatRow[]).map(rowToCat)
 }
 
 export async function updateDisplayName(userId: string, displayName: string): Promise<void> {
@@ -228,13 +325,13 @@ interface ReviewRow {
   recommend: boolean
   comment: string
   created_at: string
-  profiles: { display_name: string; avatar_url: string | null } | null
+  profiles: { display_name: string; avatar_url: string | null; avatar_path?: string | null } | null
 }
 
 export async function fetchReviews(catId: string): Promise<Review[]> {
   const { data, error } = await db()
     .from('reviews')
-    .select('id, cat_id, user_id, paws, recommend, comment, created_at, profiles(display_name, avatar_url)')
+    .select('id, cat_id, user_id, paws, recommend, comment, created_at, profiles(*)')
     .eq('cat_id', catId)
     .order('created_at', { ascending: false })
     .limit(50)
@@ -247,7 +344,7 @@ export async function fetchReviews(catId: string): Promise<Review[]> {
     recommend: r.recommend,
     comment: r.comment,
     createdAt: r.created_at,
-    author: r.profiles ? { displayName: r.profiles.display_name, avatarUrl: r.profiles.avatar_url } : null,
+    author: r.profiles ? { displayName: r.profiles.display_name, avatarUrl: effectiveAvatar(r.profiles) } : null,
   }))
 }
 

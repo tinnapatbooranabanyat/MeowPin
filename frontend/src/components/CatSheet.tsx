@@ -7,7 +7,7 @@ import { useI18n } from '../hooks/useI18n'
 interface Props {
   cat: Cat | null
   onClose: () => void
-  onSighting: (cat: Cat) => void
+  onSighting: (cat: Cat) => Promise<boolean>
   onShare: (cat: Cat) => void
   onDelete: (cat: Cat) => void
   onReport: (cat: Cat) => void

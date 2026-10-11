@@ -9,6 +9,114 @@
   --color-page: #f5efe6;
   --font-sans: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Mitr", "IBM Plex Sans Thai", ui-sans-serif, sans-serif;
+
+  /* ── animation (ใช้เป็น class animate-*) ── */
+  --animate-fade-in: fade-in 180ms ease-out both;
+  --animate-pop-in: pop-in 200ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  --animate-fade-up: fade-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-sheet-up: sheet-up 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in-left: slide-in-left 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-drop-in: drop-in 450ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  --animate-toast-in: toast-in 280ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  --animate-paw-pop: paw-pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.6) both;
+  --animate-paw-burst: paw-burst 750ms cubic-bezier(0.15, 0.8, 0.3, 1) both;
+  --animate-float-up: float-up 900ms ease-out both;
+  --animate-wiggle: wiggle 500ms ease-in-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92) translateY(-4px);
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+  }
+  /* หมุดหล่นลงมาแล้วเด้ง */
+  @keyframes drop-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-28px) scale(0.6);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(3px) scale(1.05);
+    }
+  }
+  /* ใช้ transform แยกจาก translate ของ Tailwind (-translate-x-1/2) จึงไม่ต้องชดเชย -50% */
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.95);
+    }
+  }
+  @keyframes paw-pop {
+    0% {
+      transform: scale(0.6) rotate(-15deg);
+    }
+    60% {
+      transform: scale(1.3) rotate(8deg);
+    }
+  }
+  /* อุ้งเท้ากระจายออกตอนกด "ฉันเจอด้วย" — ทิศทางมาจาก --dx/--dy */
+  @keyframes paw-burst {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot));
+    }
+  }
+  @keyframes float-up {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0) scale(0.8);
+    }
+    25% {
+      opacity: 1;
+      transform: translate(-50%, -10px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -36px) scale(1);
+    }
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    25% {
+      transform: rotate(-12deg);
+    }
+    75% {
+      transform: rotate(12deg);
+    }
+  }
 }
 
 html,
@@ -36,9 +144,63 @@ body {
   }
 }
 
+/* วงแหวนที่ค่อยๆ เต็มระหว่างกดค้างบนแผนที่ (src/hooks/useMapLongPress.ts) */
+.longpress-ring {
+  position: fixed;
+  z-index: 25;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 9999px;
+  border: 3px solid var(--color-orange-500);
+  background: color-mix(in oklab, var(--color-orange-500) 15%, transparent);
+  pointer-events: none;
+  animation: longpress-grow 500ms linear both;
+}
+.longpress-ring.done {
+  animation: longpress-done 280ms ease-out both;
+}
+@keyframes longpress-grow {
+  from {
+    transform: scale(0.25);
+    opacity: 0.4;
+  }
+}
+@keyframes longpress-done {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* เปลี่ยนธีม: วงกลมขยายจากจุดที่กด (View Transitions API) — ปิด crossfade เดิมเฉพาะตอนเปลี่ยนธีม */
+:root.theme-transition::view-transition-old(root),
+:root.theme-transition::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ผู้ใช้ตั้งค่าให้ลดการเคลื่อนไหว → ปิด animation ทั้งหมด */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

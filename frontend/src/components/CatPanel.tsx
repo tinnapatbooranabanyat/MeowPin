@@ -6,7 +6,7 @@ import { useI18n } from '../hooks/useI18n'
 interface Props {
   cat: Cat
   onClose: () => void
-  onSighting: (cat: Cat) => void
+  onSighting: (cat: Cat) => Promise<boolean>
   onShare: (cat: Cat) => void
   onDelete: (cat: Cat) => void
   onReport: (cat: Cat) => void
@@ -18,7 +18,7 @@ export function CatPanel({ cat, onClose, onSighting, onShare, onDelete, onReport
   return (
     <aside
       aria-label={t('ข้อมูลของ {name}', { name: cat.name })}
-      className="absolute top-20 left-4 z-20 max-h-[calc(100%-6rem)] w-[380px] overflow-y-auto rounded-3xl bg-surface p-5 shadow-xl ring-1 ring-stone-200"
+      className="absolute top-20 left-4 z-20 animate-slide-in-left max-h-[calc(100%-6rem)] w-[380px] overflow-y-auto rounded-3xl bg-surface p-5 shadow-xl ring-1 ring-stone-200"
     >
       <button
         type="button"

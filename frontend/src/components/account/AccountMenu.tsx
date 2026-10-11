@@ -1,5 +1,5 @@
-import { Bug, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, Sun, UserRound } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Bug, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, Sun, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useTheme, type ThemePref } from '../../hooks/useTheme'
@@ -9,6 +9,7 @@ import { UserAvatar } from './UserAvatar'
 interface Props {
   /** จำนวนรายงานที่ยังค้าง (เฉพาะ admin) — โชว์จุดแดงบนรูปโปรไฟล์ */
   pendingReports: number
+  onOpenMyProfile: () => void
   onEditProfile: () => void
   onReportBug: () => void
   onOpenAdmin: () => void
@@ -26,7 +27,7 @@ const LANGS: { value: Lang; label: string }[] = [
 ]
 
 // ปุ่มโปรไฟล์ลอยมุมขวาบน แบบ Google Maps
-export function AccountMenu({ pendingReports, onEditProfile, onReportBug, onOpenAdmin }: Props) {
+export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin }: Props) {
   const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
@@ -60,7 +61,7 @@ export function AccountMenu({ pendingReports, onEditProfile, onReportBug, onOpen
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={session ? t('บัญชีของ {name}', { name: profile?.displayName ?? '' }) : t('เมนูบัญชี')}
-        className="relative flex size-12 items-center justify-center rounded-full bg-surface shadow-md ring-1 ring-stone-200 hover:ring-4 hover:ring-orange-100"
+        className="relative flex size-12 items-center justify-center rounded-full bg-surface shadow-md ring-1 ring-stone-200 transition hover:ring-4 hover:ring-orange-100 active:scale-90"
       >
         {session ? (
           <UserAvatar name={profile?.displayName} url={profile?.avatarUrl} className="size-10 text-base" />
@@ -68,14 +69,17 @@ export function AccountMenu({ pendingReports, onEditProfile, onReportBug, onOpen
           <UserRound size={22} className="text-stone-600" />
         )}
         {isAdmin && pendingReports > 0 && (
-          <span className="absolute top-0 right-0 size-3 rounded-full bg-red-500 ring-2 ring-surface" aria-hidden="true" />
+          <span className="absolute top-0 right-0 flex size-3" aria-hidden="true">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex size-3 rounded-full bg-red-500 ring-2 ring-surface" />
+          </span>
         )}
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute top-14 right-0 z-40 w-76 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-surface py-2 shadow-xl ring-1 ring-stone-200"
+          className="absolute top-14 right-0 z-40 w-76 origin-top-right animate-pop-in max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-surface py-2 shadow-xl ring-1 ring-stone-200"
         >
           {session ? (
             <div className="flex items-center gap-3 border-b border-stone-100 px-4 pt-2 pb-3">
@@ -97,9 +101,14 @@ export function AccountMenu({ pendingReports, onEditProfile, onReportBug, onOpen
           )}
 
           {session ? (
-            <MenuItem icon={<Pencil size={18} />} onClick={pick(onEditProfile)}>
-              {t('แก้ไขโปรไฟล์')}
-            </MenuItem>
+            <>
+              <MenuItem icon={<IdCard size={18} />} onClick={pick(onOpenMyProfile)}>
+                {t('โปรไฟล์และประวัติรีวิว')}
+              </MenuItem>
+              <MenuItem icon={<Pencil size={18} />} onClick={pick(onEditProfile)}>
+                {t('แก้ไขโปรไฟล์')}
+              </MenuItem>
+            </>
           ) : (
             <MenuItem icon={<LogIn size={18} />} onClick={pick(signInWithGoogle)} disabled={loading}>
               {t('เข้าสู่ระบบด้วย Google')}
@@ -127,7 +136,7 @@ export function AccountMenu({ pendingReports, onEditProfile, onReportBug, onOpen
               icon={pref === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
               options={THEMES.map((o) => ({ ...o, label: t(o.label) }))}
               value={pref}
-              onChange={setThemePref}
+              onChange={(value, e) => setThemePref(value, { x: e.clientX, y: e.clientY })}
             />
             <Segmented
               label={t('ภาษา')}
@@ -181,7 +190,7 @@ interface SegmentedProps<T extends string> {
   icon: ReactNode
   options: { value: T; label: string; icon?: ReactNode }[]
   value: T
-  onChange: (value: T) => void
+  onChange: (value: T, event: MouseEvent<HTMLButtonElement>) => void
 }
 
 function Segmented<T extends string>({ label, icon, options, value, onChange }: SegmentedProps<T>) {
@@ -198,7 +207,7 @@ function Segmented<T extends string>({ label, icon, options, value, onChange }: 
             type="button"
             role="radio"
             aria-checked={value === o.value}
-            onClick={() => onChange(o.value)}
+            onClick={(e) => onChange(o.value, e)}
             className={`flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-sm transition-colors ${
               value === o.value ? 'bg-surface font-medium text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
             }`}

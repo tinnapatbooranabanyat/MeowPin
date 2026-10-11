@@ -5,6 +5,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAuth } from '../hooks/useAuth'
 import { snapBounds, useCat, useCatsInView, useUpsertCat } from '../hooks/useCats'
 import { useI18n } from '../hooks/useI18n'
+import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
@@ -13,6 +14,7 @@ import { matchesQuery, seenWithin } from '../lib/cat'
 import type { Cat, FurColor, LatLng } from '../types'
 import { AccountMenu } from './account/AccountMenu'
 import { ProfileDialog } from './account/ProfileDialog'
+import { UserProfileDialog } from './account/UserProfileDialog'
 import type { AddCatStart } from './add-cat/AddCatFlow'
 import { AdminDialog } from './admin/AdminDialog'
 import { BugReportDialog } from './BugReportDialog'
@@ -63,12 +65,18 @@ function readHintDismissed(): boolean {
   }
 }
 
-type Dialog = { kind: 'profile' } | { kind: 'bugReport' } | { kind: 'admin' } | { kind: 'catReport'; cat: Cat } | null
+type Dialog =
+  | { kind: 'profile' }
+  | { kind: 'userProfile'; userId: string }
+  | { kind: 'bugReport' }
+  | { kind: 'admin' }
+  | { kind: 'catReport'; cat: Cat }
+  | null
 
 export function MapScreen({ mapId }: Props) {
   const map = useMap()
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const { requireLogin, isAdmin } = useAuth()
+  const { requireLogin, isAdmin, userId } = useAuth()
   const { t } = useI18n()
   const { resolved: theme } = useTheme()
   const queryClient = useQueryClient()
@@ -225,14 +233,17 @@ export function MapScreen({ mapId }: Props) {
     )
   }
 
-  const markSighting = async (cat: Cat) => {
-    if (!requireLogin(t('เข้าสู่ระบบเพื่อบันทึกว่าคุณเจอ{name}', { name: cat.name }))) return
+  /** คืน true ถ้าบันทึกสำเร็จ (ปุ่มจะเล่นเอฟเฟกต์อุ้งเท้า) */
+  const markSighting = async (cat: Cat): Promise<boolean> => {
+    if (!requireLogin(t('เข้าสู่ระบบเพื่อบันทึกว่าคุณเจอ{name}', { name: cat.name }))) return false
     try {
       const result = await recordSighting(cat.id)
       upsertCat({ ...cat, sightings: result.sightings, lastSeenAt: result.lastSeenAt })
       showToast(t('บันทึกแล้วว่าคุณเจอ{name}', { name: cat.name }))
+      return true
     } catch (e) {
       showToast(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ'))
+      return false
     }
   }
 
@@ -273,13 +284,18 @@ export function MapScreen({ mapId }: Props) {
     showToast(t('คัดลอกลิงก์แล้ว'))
   }
 
-  const openCatFromAdmin = (catId: string) => {
+  const openCatById = useCallback((catId: string) => {
     setDialog(null)
     setDroppedPin(null)
-    // ถ้าแมวอยู่นอกกรอบแผนที่ useCat จะโหลดให้ แล้ว effect ด้านล่างเลื่อนไปหา
+    // ถ้าแมวอยู่นอกกรอบแผนที่ useCat จะโหลดให้ แล้ว effect ด้านบนเลื่อนไปหา
     initialCatHandled.current = false
     setSelectedId(catId)
-  }
+  }, [])
+
+  const mapActions = useMemo<MapActions>(
+    () => ({ openProfile: (id) => setDialog({ kind: 'userProfile', userId: id }), openCat: openCatById }),
+    [openCatById],
+  )
 
   const updateCamera = (gmap: google.maps.Map) => {
     const center = gmap.getCenter()?.toJSON()
@@ -295,98 +311,111 @@ export function MapScreen({ mapId }: Props) {
   const showHint = !hintDismissed && !adding && !droppedPin && !selectedCat
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-page">
-      <Map
-        // ธีมมืด/สว่างของ Google Maps ตั้งได้ตอนสร้างแผนที่เท่านั้น
-        key={theme}
-        className="h-full w-full"
-        mapId={mapId}
-        colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
-        defaultCenter={camera.center}
-        defaultZoom={camera.zoom}
-        gestureHandling="greedy"
-        disableDefaultUI
-        zoomControl={isDesktop}
-        clickableIcons={false}
-        onClick={() => {
-          if (adding || consumeClick()) return
-          setSelectedId(null)
-          setDroppedPin(null)
-        }}
-        onIdle={(e) => updateCamera(e.map)}
-      >
-        <CatMarkers cats={visibleCats} selectedId={selectedId} onSelect={selectCat} />
-        {userPosition && <UserLocationMarker position={userPosition} />}
-        {droppedPin && !adding && (
-          <DroppedPin
-            position={droppedPin}
-            onClose={() => setDroppedPin(null)}
-            onCamera={() => startAdding({ kind: 'camera' })}
-            onFile={(file) => startAdding({ kind: 'upload', file })}
-          />
-        )}
-      </Map>
+    <MapActionsContext.Provider value={mapActions}>
+      <div className="relative h-full w-full overflow-hidden bg-page">
+        <Map
+          // ธีมมืด/สว่างของ Google Maps ตั้งได้ตอนสร้างแผนที่เท่านั้น
+          key={theme}
+          className="h-full w-full"
+          mapId={mapId}
+          colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
+          defaultCenter={camera.center}
+          defaultZoom={camera.zoom}
+          gestureHandling="greedy"
+          disableDefaultUI
+          zoomControl={isDesktop}
+          clickableIcons={false}
+          onClick={() => {
+            if (adding || consumeClick()) return
+            setSelectedId(null)
+            setDroppedPin(null)
+          }}
+          onIdle={(e) => updateCamera(e.map)}
+        >
+          <CatMarkers cats={visibleCats} selectedId={selectedId} onSelect={selectCat} />
+          {userPosition && <UserLocationMarker position={userPosition} />}
+          {droppedPin && !adding && (
+            <DroppedPin
+              position={droppedPin}
+              onClose={() => setDroppedPin(null)}
+              onCamera={() => startAdding({ kind: 'camera' })}
+              onFile={(file) => startAdding({ kind: 'upload', file })}
+            />
+          )}
+        </Map>
 
-      {!adding && (
-        <>
-          {/* เว้นที่ขวาบนให้ปุ่มโปรไฟล์ (48px + ระยะขอบ) */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-4 pr-20 md:flex-row md:items-start md:gap-3">
-            <div className="pointer-events-auto md:w-[380px] md:shrink-0">
-              <SearchBar query={query} onQueryChange={setQuery} suggestions={suggestions} onSelect={selectCat} />
+        {!adding && (
+          <>
+            {/* เว้นที่ขวาบนให้ปุ่มโปรไฟล์ (48px + ระยะขอบ) */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-4 pr-20 md:flex-row md:items-start md:gap-3">
+              <div className="pointer-events-auto md:w-[380px] md:shrink-0">
+                <SearchBar query={query} onQueryChange={setQuery} suggestions={suggestions} onSelect={selectCat} />
+              </div>
+              <div className="pointer-events-auto -mr-16 min-w-0 md:mr-0 md:pt-1.5">
+                <FilterChips
+                  furColor={furColor}
+                  onFurColorChange={setFurColor}
+                  seenToday={seenToday}
+                  onSeenTodayChange={setSeenToday}
+                  friendlyOnly={friendlyOnly}
+                  onFriendlyOnlyChange={setFriendlyOnly}
+                />
+              </div>
             </div>
-            <div className="pointer-events-auto -mr-16 min-w-0 md:mr-0 md:pt-1.5">
-              <FilterChips
-                furColor={furColor}
-                onFurColorChange={setFurColor}
-                seenToday={seenToday}
-                onSeenTodayChange={setSeenToday}
-                friendlyOnly={friendlyOnly}
-                onFriendlyOnlyChange={setFriendlyOnly}
+            <div className="absolute top-4 right-4 z-30">
+              <AccountMenu
+                pendingReports={pendingReports}
+                onOpenMyProfile={() => userId && setDialog({ kind: 'userProfile', userId })}
+                onEditProfile={() => setDialog({ kind: 'profile' })}
+                onReportBug={() => setDialog({ kind: 'bugReport' })}
+                onOpenAdmin={() => setDialog({ kind: 'admin' })}
               />
             </div>
-          </div>
-          <div className="absolute top-4 right-4 z-30">
-            <AccountMenu
-              pendingReports={pendingReports}
-              onEditProfile={() => setDialog({ kind: 'profile' })}
-              onReportBug={() => setDialog({ kind: 'bugReport' })}
-              onOpenAdmin={() => setDialog({ kind: 'admin' })}
-            />
-          </div>
-        </>
-      )}
+          </>
+        )}
 
-      {!adding && !sheetOpen && (
-        <button
-          type="button"
-          onClick={locateMe}
-          className="absolute right-4 bottom-6 z-20 flex size-12 items-center justify-center rounded-full bg-surface text-sky-600 shadow-md ring-1 ring-stone-200 hover:bg-stone-50 md:right-16"
-          aria-label={t('ไปที่ตำแหน่งของฉัน')}
-        >
-          <LocateFixed size={22} />
-        </button>
-      )}
-
-      {showHint && (
-        <div className="absolute bottom-6 left-1/2 z-20 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-stone-900/85 py-2 pr-2 pl-4 text-sm text-white shadow-lg md:max-w-none dark:bg-black/80">
-          <Hand size={16} className="shrink-0" aria-hidden="true" />
-          <span>
-            {t(isDesktop ? 'คลิกขวาบนแผนที่ตรงที่เจอแมว เพื่อปักหมุด' : 'กดค้างบนแผนที่ตรงที่เจอแมว เพื่อปักหมุด')}
-          </span>
+        {!adding && !sheetOpen && (
           <button
             type="button"
-            onClick={dismissHint}
-            className="shrink-0 rounded-full p-1 text-white/70 hover:bg-white/10 hover:text-white"
-            aria-label={t('ซ่อนคำแนะนำ')}
+            onClick={locateMe}
+            className="absolute right-4 bottom-6 z-20 flex size-12 items-center justify-center rounded-full bg-surface text-sky-600 shadow-md ring-1 ring-stone-200 hover:bg-stone-50 md:right-16"
+            aria-label={t('ไปที่ตำแหน่งของฉัน')}
           >
-            <X size={15} />
+            <LocateFixed size={22} />
           </button>
-        </div>
-      )}
+        )}
 
-      {isDesktop ? (
-        selectedCat && (
-          <CatPanel
+        {showHint && (
+          <div className="absolute bottom-6 left-1/2 z-20 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 py-2 pr-2 pl-4 text-sm text-white shadow-lg md:max-w-none">
+            <Hand size={16} className="shrink-0" aria-hidden="true" />
+            <span>
+              {t(isDesktop ? 'คลิกขวาบนแผนที่ตรงที่เจอแมว เพื่อปักหมุด' : 'กดค้างบนแผนที่ตรงที่เจอแมว เพื่อปักหมุด')}
+            </span>
+            <button
+              type="button"
+              onClick={dismissHint}
+              className="shrink-0 rounded-full p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              aria-label={t('ซ่อนคำแนะนำ')}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
+
+        {isDesktop ? (
+          selectedCat && (
+            <CatPanel
+              key={selectedCat.id}
+              cat={selectedCat}
+              onClose={() => setSelectedId(null)}
+              onSighting={markSighting}
+              onShare={shareCat}
+              onDelete={removeCat}
+              onReport={reportCat}
+            />
+          )
+        ) : (
+          <CatSheet
             cat={selectedCat}
             onClose={() => setSelectedId(null)}
             onSighting={markSighting}
@@ -394,63 +423,61 @@ export function MapScreen({ mapId }: Props) {
             onDelete={removeCat}
             onReport={reportCat}
           />
-        )
-      ) : (
-        <CatSheet
-          cat={selectedCat}
-          onClose={() => setSelectedId(null)}
-          onSighting={markSighting}
-          onShare={shareCat}
-          onDelete={removeCat}
-          onReport={reportCat}
-        />
-      )}
+        )}
 
-      {adding && (
-        <Suspense fallback={null}>
-          <AddCatFlow origin={adding.origin} start={adding.start} onClose={closeAddCat} onAdded={handleCatAdded} />
-        </Suspense>
-      )}
+        {adding && (
+          <Suspense fallback={null}>
+            <AddCatFlow origin={adding.origin} start={adding.start} onClose={closeAddCat} onAdded={handleCatAdded} />
+          </Suspense>
+        )}
 
-      {dialog?.kind === 'profile' && (
-        <ProfileDialog
-          onClose={() => setDialog(null)}
-          onSaved={() => {
-            setDialog(null)
-            showToast(t('บันทึกโปรไฟล์แล้ว'))
-          }}
-        />
-      )}
-      {dialog?.kind === 'bugReport' && (
-        <BugReportDialog
-          onClose={() => setDialog(null)}
-          onSent={() => {
-            setDialog(null)
-            showToast(t('ส่งรายงานแล้ว ขอบคุณที่ช่วยกันนะ'))
-          }}
-        />
-      )}
-      {dialog?.kind === 'catReport' && (
-        <CatReportDialog
-          cat={dialog.cat}
-          onClose={() => setDialog(null)}
-          onSent={() => {
-            setDialog(null)
-            showToast(t('ส่งรายงานแล้ว ทีมงานจะตรวจสอบหมุดนี้'))
-          }}
-        />
-      )}
-      {dialog?.kind === 'admin' && (
-        <AdminDialog counts={adminCounts.data} onClose={() => setDialog(null)} onOpenCat={openCatFromAdmin} />
-      )}
+        {dialog?.kind === 'profile' && (
+          <ProfileDialog
+            onClose={() => setDialog(null)}
+            onSaved={() => {
+              setDialog(null)
+              showToast(t('บันทึกโปรไฟล์แล้ว'))
+            }}
+          />
+        )}
+        {dialog?.kind === 'userProfile' && (
+          <UserProfileDialog
+            userId={dialog.userId}
+            onClose={() => setDialog(null)}
+            onEditProfile={() => setDialog({ kind: 'profile' })}
+          />
+        )}
+        {dialog?.kind === 'bugReport' && (
+          <BugReportDialog
+            onClose={() => setDialog(null)}
+            onSent={() => {
+              setDialog(null)
+              showToast(t('ส่งรายงานแล้ว ขอบคุณที่ช่วยกันนะ'))
+            }}
+          />
+        )}
+        {dialog?.kind === 'catReport' && (
+          <CatReportDialog
+            cat={dialog.cat}
+            onClose={() => setDialog(null)}
+            onSent={() => {
+              setDialog(null)
+              showToast(t('ส่งรายงานแล้ว ทีมงานจะตรวจสอบหมุดนี้'))
+            }}
+          />
+        )}
+        {dialog?.kind === 'admin' && (
+          <AdminDialog counts={adminCounts.data} onClose={() => setDialog(null)} onOpenCat={openCatById} />
+        )}
 
-      {catsQuery.isError && (
-        <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2 rounded-full bg-surface/90 px-3 py-1.5 text-xs text-red-700 shadow ring-1 ring-red-200">
-          {t('โหลดข้อมูลแมวไม่สำเร็จ')}
-        </div>
-      )}
+        {catsQuery.isError && (
+          <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2 rounded-full bg-surface/90 px-3 py-1.5 text-xs text-red-700 shadow ring-1 ring-red-200">
+            {t('โหลดข้อมูลแมวไม่สำเร็จ')}
+          </div>
+        )}
 
-      <Toast message={toast} />
-    </div>
+        <Toast message={toast} />
+      </div>
+    </MapActionsContext.Provider>
   )
 }

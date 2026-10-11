@@ -2,7 +2,8 @@
 // เพิ่มข้อความใหม่: ใส่ t('ข้อความไทย') ในโค้ด แล้วเพิ่มบรรทัดที่นี่ (dev: ดูที่ยังขาดได้จาก window.__missingI18n)
 export const EN: Record<string, string> = {
   // ── แอปทั่วไป ──
-  'ยังไม่ได้ใส่ VITE_GOOGLE_MAPS_API_KEY ในไฟล์ frontend/.env.local': 'VITE_GOOGLE_MAPS_API_KEY is missing from frontend/.env.local',
+  'ยังไม่ได้ตั้งค่า VITE_GOOGLE_MAPS_API_KEY — ในเครื่องใส่ใน frontend/.env.local ส่วนบน Vercel ใส่ที่ Settings → Environment Variables แล้วกด Redeploy':
+    'VITE_GOOGLE_MAPS_API_KEY is not set — locally put it in frontend/.env.local; on Vercel add it under Settings → Environment Variables, then Redeploy',
   'ปิด': 'Close',
   'ยกเลิก': 'Cancel',
   'ย้อนกลับ': 'Back',
@@ -35,7 +36,6 @@ export const EN: Record<string, string> = {
   // ── โปรไฟล์ ──
   'ใส่ชื่อที่จะแสดงก่อน': 'Enter a display name first',
   'บันทึกไม่สำเร็จ': 'Couldn’t save',
-  'รูปโปรไฟล์ใช้จากบัญชี Google': 'Your profile photo comes from your Google account',
   'ชื่อที่แสดง': 'Display name',
   'ทาสแมวแห่งบางลำพู': 'Cat servant of Bang Lamphu',
   'ชื่อนี้จะแสดงตอนคุณปักหมุดแมวและเขียนรีวิว': 'Shown when you pin cats and write reviews',
@@ -49,7 +49,7 @@ export const EN: Record<string, string> = {
   'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง': 'Sign-in failed. Try again.',
   'เข้าสู่ระบบเพื่อปักหมุดแมวที่คุณเจอ': 'Sign in to pin the cats you find',
   'เข้าสู่ระบบเพื่อบันทึกว่าคุณเจอ{name}': 'Sign in to log that you saw {name}',
-  'เข้าสู่ระบบเพื่อรีวิวความน่ารักของ{name}': 'Sign in to review how cute {name} is',
+  'เข้าสู่ระบบเพื่อรีวิว{name}': 'Sign in to review {name}',
   'เข้าสู่ระบบเพื่อรายงานหมุดนี้': 'Sign in to report this pin',
 
   // ── แผนที่ ──
@@ -127,8 +127,8 @@ export const EN: Record<string, string> = {
   'น่ารักมาก': 'Very cute',
   'น่ารักสุดๆ': 'Super cute',
   'ใจละลาย': 'Heart melted',
-  'ความน่ารัก': 'Cuteness',
-  'ให้อุ้งเท้าความน่ารักก่อน': 'Give some cuteness paws first',
+  'คะแนนอุ้งเท้า': 'Paw rating',
+  'ให้คะแนนอุ้งเท้าก่อน': 'Give a paw rating first',
   'เลือกว่าแนะนำหรือไม่แนะนำ': 'Choose recommend or not',
   'แนะนำให้คนอื่นมาเจอไหม': 'Would you recommend visiting?',
   'เล่าความประทับใจ (ไม่บังคับ)': 'Share your impression (optional)',
@@ -136,12 +136,12 @@ export const EN: Record<string, string> = {
   'บันทึกการแก้ไข': 'Save changes',
   'ส่งรีวิว': 'Post review',
   'ลบรีวิวนี้?': 'Delete this review?',
-  'รีวิวความน่ารัก': 'Cuteness reviews',
+  'รีวิวน้องแมว': 'Cat reviews',
   'แก้ไขรีวิวของคุณ': 'Edit your review',
   'เขียนรีวิว': 'Write a review',
   '{n} รีวิว': '{n} reviews',
   'แนะนำ {n}%': '{n}% recommend',
-  'ยังไม่มีรีวิว มาเป็นคนแรกที่บอกว่าน้องน่ารักแค่ไหน': 'No reviews yet. Be the first to say how cute this cat is.',
+  'ยังไม่มีรีวิว มาเป็นคนแรกที่รีวิวน้องตัวนี้': 'No reviews yet. Be the first to review this cat.',
   '(คุณ)': '(you)',
   'ลบรีวิว': 'Delete review',
 
@@ -286,4 +286,27 @@ export const EN: Record<string, string> = {
   'รูปใหญ่เกิน 5 MB': 'The photo is larger than 5 MB',
   'บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง': 'Couldn’t save. Try again.',
   'ไม่พบน้องแมวตัวนี้': 'Couldn’t find this cat',
+
+  // ── โปรไฟล์ / รูปโปรไฟล์ / ประวัติรีวิว ──
+  'โปรไฟล์และประวัติรีวิว': 'Profile & review history',
+  'อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง': 'Couldn’t upload the photo. Try again.',
+  'ปรับรูปโปรไฟล์': 'Adjust profile photo',
+  'ลากเพื่อเลื่อนรูป ใช้นิ้วหรือแถบด้านล่างเพื่อซูม': 'Drag to move. Pinch or use the slider to zoom.',
+  'ซูม': 'Zoom',
+  'ใช้รูปนี้': 'Use this photo',
+  'เปลี่ยนรูปโปรไฟล์': 'Change profile photo',
+  'อัปโหลดรูปใหม่': 'Upload a new photo',
+  'กลับไปใช้รูปจาก Google': 'Use my Google photo',
+  'โปรไฟล์ของฉัน': 'My profile',
+  'โปรไฟล์': 'Profile',
+  'เข้าร่วมเมื่อ {date}': 'Joined {date}',
+  'ปักหมุด {n} ตัว': '{n} cats pinned',
+  'แก้ไข': 'Edit',
+  'ประวัติรีวิว': 'Reviews',
+  'แมวที่ปักหมุด': 'Pinned cats',
+  'คุณยังไม่ได้รีวิวน้องแมวตัวไหนเลย': 'You haven’t reviewed any cats yet',
+  'ยังไม่มีรีวิว': 'No reviews yet',
+  'คุณยังไม่ได้ปักหมุดแมวเลย ลองกดค้างบนแผนที่ดูสิ': 'You haven’t pinned any cats yet. Try long-pressing the map!',
+  'ยังไม่ได้ปักหมุดแมว': 'No cats pinned yet',
+  'ดูโปรไฟล์ของ {name}': 'View {name}’s profile',
 }

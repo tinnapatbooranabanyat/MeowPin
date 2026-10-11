@@ -19,7 +19,9 @@ export async function isGoogleSignInEnabled(): Promise<boolean> {
   }
 }
 
-export function photoUrl(path: string | null): string | undefined {
+export function storageUrl(bucket: 'cat-photos' | 'avatars', path: string | null): string | undefined {
   if (!path || !url) return undefined
-  return `${url}/storage/v1/object/public/cat-photos/${path}`
+  return `${url}/storage/v1/object/public/${bucket}/${path}`
 }
+
+export const photoUrl = (path: string | null) => storageUrl('cat-photos', path)

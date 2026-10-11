@@ -25,7 +25,7 @@ export function CatMarkers({ cats, selectedId, onSelect }: Props) {
       render: ({ count, position }) => {
         const el = document.createElement('div')
         el.className =
-          'flex items-center gap-1 rounded-full border-[3px] border-white bg-orange-800 px-3 py-2 text-sm font-semibold text-white shadow-lg'
+          'flex items-center gap-1 rounded-full border-[3px] border-white bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-lg'
         el.innerHTML = `${PAW_SVG}<span>${count}</span>`
         return new markerLib.AdvancedMarkerElement({ position, content: el, zIndex: 1000 + count })
       },
@@ -81,12 +81,18 @@ function CatMarker({ cat, selected, onSelect, setMarkerRef }: CatMarkerProps) {
       onClick={() => onSelect(cat)}
     >
       <div
-        className={`flex flex-col items-center transition-transform duration-200 ${selected ? 'scale-125' : 'hover:scale-110'}`}
+        className={`relative flex animate-drop-in flex-col items-center transition-[scale] duration-200 ${selected ? 'scale-125' : 'hover:scale-110'}`}
       >
+        {selected && (
+          <span
+            className="absolute top-0 left-1/2 size-11 -translate-x-1/2 animate-ping rounded-full bg-orange-400/60"
+            aria-hidden="true"
+          />
+        )}
         <CatAvatar
           cat={cat}
           iconSize={22}
-          className={`size-11 rounded-full border-[3px] shadow-md ${selected ? 'border-orange-500' : 'border-white'}`}
+          className={`relative size-11 rounded-full border-[3px] shadow-md ${selected ? 'border-orange-500' : 'border-white'}`}
         />
         <div
           className={`-mt-0.5 size-0 border-x-[7px] border-t-[9px] border-x-transparent ${selected ? 'border-t-orange-500' : 'border-t-white'}`}
