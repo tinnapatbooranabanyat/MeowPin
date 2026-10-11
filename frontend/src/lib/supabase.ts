@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
 
+// supabase ลบ token ด้วย location.hash = '' ซึ่งทิ้ง "#" ไว้ท้าย URL — ถ้าล็อกอินรอบถัดไปจาก URL นั้น
+// จะกลับมาเป็น "##access_token=..." ที่ supabase อ่านไม่ออก (ผู้ใช้ยังเป็น guest) แก้ให้เหลือ # เดียวก่อนสร้าง client
+if (window.location.hash.startsWith('##')) {
+  window.history.replaceState(window.history.state, '', window.location.href.replace(/#+/, '#'))
+}
+
 // frontend ใช้แค่ publishable key อ่านข้อมูล (สิทธิ์ถูกจำกัดด้วย RLS) — การเขียนทั้งหมดผ่าน backend
 export const supabase = url && publishableKey ? createClient(url, publishableKey) : null
 

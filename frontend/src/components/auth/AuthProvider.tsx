@@ -36,6 +36,8 @@ function takeAuthErrorFromUrl(): LoginError | null {
 
 const wantsTermsFromUrl = () => new URLSearchParams(window.location.search).has('terms')
 // อ่านครั้งเดียวตอนโหลดแอป (StrictMode เรียก initializer ของ useState ซ้ำ แต่ URL ถูกลบไปแล้ว)
+// ต้องเช็ก token ก่อน takeAuthErrorFromUrl และก่อนที่ supabase จะลบออกจาก URL
+const cameBackWithToken = /[#&?](access_token|code)=/.test(window.location.href)
 const initialAuthError = takeAuthErrorFromUrl()
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -52,9 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => {
+    const client = supabase
+    // initialize() คืน error ตอนอ่าน token จาก URL ไม่ผ่าน — getSession() เงียบเฉยๆ ผู้ใช้เลยเห็นแค่ว่ายังไม่ได้ล็อกอิน
+    client.auth.initialize().then(async ({ error }) => {
+      const { data } = await client.auth.getSession()
       setSession(data.session)
       setLoading(false)
+      if (data.session || (!error && !cameBackWithToken)) return
+      console.error('[auth] sign-in from redirect failed', error)
+      // token ที่ใช้ไม่ได้ไม่ต้องค้างใน URL (reload แล้วจะเจอ error ซ้ำ)
+      if (window.location.hash) {
+        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+      }
+      const reason = error?.message ?? translate('ได้ข้อมูลจาก Google แล้ว แต่เบราว์เซอร์สร้าง session ไม่ได้')
+      setLoginReason((r) => r ?? translate('เข้าสู่ระบบด้วย Google'))
+      setLoginError((e) => e ?? { key: 'เข้าสู่ระบบไม่สำเร็จ: {reason}', params: { reason } })
     })
     const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
     return () => data.subscription.unsubscribe()
@@ -79,12 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) return
     setLoginError(null)
-    // กลับมาหน้าเดิม (รวม ?cat=...) หลังล็อกอินเสร็จ
+    // กลับมาหน้าเดิม (รวม ?cat=...) หลังล็อกอินเสร็จ — ไม่เอา #hash ไป Supabase จะต่อ #access_token ท้ายให้เอง
+    const redirectTo = new URL(window.location.href)
+    redirectTo.hash = ''
     // ขอ URL ก่อน (ยังไม่ redirect) แล้วเช็กว่า Google เปิดใช้อยู่ — ไม่งั้นผู้ใช้จะไปเจอหน้า error ของ Supabase
     const [{ data, error }, enabled] = await Promise.all([
       supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.href, skipBrowserRedirect: true },
+        options: { redirectTo: redirectTo.toString(), skipBrowserRedirect: true },
       }),
       isGoogleSignInEnabled(),
     ])

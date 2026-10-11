@@ -1,10 +1,13 @@
-import { Bug, HeartHandshake, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, ScrollText, Sun, UserRound } from 'lucide-react'
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Monitor, Moon, Pencil, ScrollText, Sun, UserRound } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useTheme, type ThemePref } from '../../hooks/useTheme'
 import type { Lang } from '../../i18n'
 import { UserAvatar } from './UserAvatar'
+
+// โลโก้ทั้งหมดอยู่ในไฟล์นี้ — โหลดเฉพาะตอนเปิดดู
+const AboutDialog = lazy(() => import('./AboutDialog').then((m) => ({ default: m.AboutDialog })))
 
 interface Props {
   /** จำนวนรายงานที่ยังค้าง (เฉพาะ admin) — โชว์จุดแดงบนรูปโปรไฟล์ */
@@ -33,6 +36,7 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
   const [open, setOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -136,6 +140,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           <MenuItem icon={<ScrollText size={18} />} onClick={pick(openTerms)}>
             {t('ข้อกำหนดการใช้งาน')}
           </MenuItem>
+          <MenuItem icon={<Info size={18} />} onClick={pick(() => setAboutOpen(true))}>
+            {t('เกี่ยวกับเว็บไซต์')}
+          </MenuItem>
 
           <div className="mt-1 flex flex-col gap-3 border-t border-stone-100 px-4 pt-3 pb-2">
             <Segmented
@@ -162,6 +169,11 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
             </div>
           )}
         </div>
+      )}
+      {aboutOpen && (
+        <Suspense fallback={null}>
+          <AboutDialog onClose={() => setAboutOpen(false)} />
+        </Suspense>
       )}
     </div>
   )
