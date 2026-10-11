@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
+import { startViewTransition } from '../lib/viewTransition'
 
 export type ThemePref = 'light' | 'dark' | 'system'
 
@@ -48,7 +49,7 @@ function setThemePref(next: ThemePref, origin?: { x: number; y: number }) {
   const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))
   const root = document.documentElement
   root.classList.add('theme-transition')
-  const transition = document.startViewTransition(() => flushSync(apply))
+  const transition = startViewTransition(() => flushSync(apply))
   transition.ready.then(() =>
     root.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },

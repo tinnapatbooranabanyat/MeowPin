@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type Reac
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useTheme, type ThemePref } from '../../hooks/useTheme'
+import { skipActiveTransition } from '../../lib/viewTransition'
 import type { Lang } from '../../i18n'
 import { UserAvatar } from './UserAvatar'
 
@@ -40,17 +41,40 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
   const [aboutOpen, setAboutOpen] = useState(false)
   const [devicesOpen, setDevicesOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     const close = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+      if (rootRef.current?.contains(e.target as Node)) return
+      // เบราว์เซอร์ที่ยังให้ชั้น animation (เปลี่ยนธีม/ภาษา) รับคลิก — target จะเป็น <html> เช็กจากตำแหน่งที่กดแทน
+      const inside = [rootRef.current, menuRef.current].some((el) => {
+        const r = el?.getBoundingClientRect()
+        return r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+      })
+      if (!inside) setOpen(false)
     }
+    // คลิกในเมนูระหว่าง animation โดน <html> แทนปุ่ม → ข้าม animation แล้วกดปุ่มตรงตำแหน่งนั้นให้
+    const replayClick = (e: globalThis.MouseEvent) => {
+      if (e.target !== document.documentElement || !menuRef.current) return
+      const r = menuRef.current.getBoundingClientRect()
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return
+      const { clientX, clientY } = e
+      const press = async () => {
+        // คลิกก่อนหน้าที่ส่งต่อไปอาจเพิ่งเริ่ม animation ใหม่ — ข้ามจนไม่เหลือตัวไหนเล่นอยู่
+        for (let skip = skipActiveTransition(); skip; skip = skipActiveTransition()) await skip
+        const target = document.elementFromPoint(clientX, clientY)?.closest('button')
+        if (target && menuRef.current?.contains(target)) target.click()
+      }
+      press()
+    }
+    window.addEventListener('click', replayClick)
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     window.addEventListener('pointerdown', close)
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('pointerdown', close)
+      window.removeEventListener('click', replayClick)
       window.removeEventListener('keydown', onKey)
     }
   }, [open])
@@ -85,6 +109,7 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
           className="absolute top-14 right-0 z-40 max-h-[calc(100dvh-5.5rem)] w-76 max-w-[calc(100vw-2rem)] origin-top-right animate-pop-in overflow-y-auto overscroll-contain rounded-2xl bg-surface py-2 shadow-xl ring-1 ring-stone-200"
         >
@@ -260,7 +285,16 @@ function Segmented<T extends string>({ label, icon, options, value, onChange }: 
         {icon}
         {label}
       </span>
-      <div className="flex rounded-full bg-stone-100 p-1" role="radiogroup" aria-label={label}>
+      <div className="relative flex rounded-full bg-stone-100 p-1" role="radiogroup" aria-label={label}>
+        {/* แถบไฮไลต์ชิ้นเดียวเลื่อนไปหาตัวที่เลือก (ทุกช่องกว้างเท่ากัน) */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-1 left-1 rounded-full bg-surface shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none"
+          style={{
+            width: `calc((100% - 0.5rem) / ${options.length})`,
+            transform: `translateX(${Math.max(0, options.findIndex((o) => o.value === value)) * 100}%)`,
+          }}
+        />
         {options.map((o) => (
           <button
             key={o.value}
@@ -268,8 +302,8 @@ function Segmented<T extends string>({ label, icon, options, value, onChange }: 
             role="radio"
             aria-checked={value === o.value}
             onClick={(e) => onChange(o.value, e)}
-            className={`flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-sm transition-colors ${
-              value === o.value ? 'bg-surface font-medium text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
+            className={`relative flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-sm transition-colors duration-300 ${
+              value === o.value ? 'font-medium text-stone-900' : 'text-stone-600 hover:text-stone-900'
             }`}
           >
             {o.icon}
