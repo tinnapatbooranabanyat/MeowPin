@@ -662,4 +662,7 @@ export const EN: Record<string, string> = {
   'ประกาศ': 'Posts',
   'ปิดประกาศ': 'closed a post',
   'ลบประกาศ': 'deleted a post',
+  'มี MeowPin เวอร์ชันใหม่': 'A new version of MeowPin is ready',
+  'อัปเดต': 'Update',
+  'ไว้ทีหลัง': 'Later',
 }

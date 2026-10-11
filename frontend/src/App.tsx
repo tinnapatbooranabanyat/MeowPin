@@ -2,6 +2,7 @@ import { APIProvider } from '@vis.gl/react-google-maps'
 import { useEffect, useState } from 'react'
 import { MapScreen } from './components/MapScreen'
 import { ServerWakingBanner } from './components/ServerWakingBanner'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { getLang } from './i18n'
 import { useI18n } from './hooks/useI18n'
 
@@ -31,6 +32,7 @@ function App() {
     <APIProvider apiKey={API_KEY} language={mapLang} region="TH">
       <MapScreen mapId={MAP_ID} />
       <ServerWakingBanner />
+      <UpdatePrompt />
     </APIProvider>
   )
 }
