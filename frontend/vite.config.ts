@@ -32,6 +32,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // รูปตัวอย่างตอนแชร์ลิงก์ใช้แค่ตอน LINE/Facebook มาอ่าน ไม่ต้องเก็บไว้ในเครื่อง
+        globIgnores: ['**/og-default.png'],
         // ลิงก์แชร์ (/c/:id) และ Vercel Function ต้องไปถึง server จริง ไม่ใช่หน้าแอปในเครื่อง
         navigateFallbackDenylist: [/^\/api\//, /^\/c\//],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,

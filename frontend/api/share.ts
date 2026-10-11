@@ -46,7 +46,10 @@ export async function GET(request: Request) {
   if (!cat) return Response.redirect(appUrl, 302)
 
   const api = (process.env.VITE_API_URL ?? '').replace(/\/$/, '')
-  const image = cat.photo_path && api ? `${api}/cats/${id}/og.jpg` : `${url.origin}/og-default.png`
+  const hasPhoto = Boolean(cat.photo_path && api)
+  const image = hasPhoto ? `${api}/cats/${id}/og.jpg` : `${url.origin}/og-default.png?v=2`
+  // รูปน้องจาก backend = 1200x630 / banner ของแอป = 2400x1260
+  const [imageW, imageH] = hasPhoto ? [1200, 630] : [2400, 1260]
   const bits = [
     cat.place_name && `📍 ${cat.place_name}`,
     cat.review_count > 0 && cat.paw_avg !== null && `🐾 ${cat.paw_avg} (${cat.review_count} รีวิว)`,
@@ -70,8 +73,8 @@ export async function GET(request: Request) {
 <meta property="og:description" content="${escape(description)}" />
 <meta property="og:url" content="${escape(shareUrl)}" />
 <meta property="og:image" content="${escape(image)}" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:width" content="${imageW}" />
+<meta property="og:image:height" content="${imageH}" />
 <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body><a href="${escape(appUrl)}">${escape(title)}</a><script>location.replace(${JSON.stringify(appUrl)})</script></body>
