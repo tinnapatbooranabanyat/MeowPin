@@ -1,6 +1,6 @@
 import { Camera, CatIcon, ImageUp, ScanSearch } from 'lucide-react'
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
-import { ApiError, checkCatPhoto, createCat, wakeBackend } from '../../lib/api'
+import { ApiError, checkCatPhoto, createCat, fetchCatsInView, recordSighting, uploadCatPhoto, wakeBackend } from '../../lib/api'
 import { isAndroid, isImageFile, UPLOAD_ACCEPT } from '../../lib/device'
 import { distanceMeters, getCurrentPosition, type GpsFix } from '../../lib/geo'
 import { compressPhoto, guessFurColor, loadImage, readPhotoMeta } from '../../lib/photo'
@@ -9,6 +9,7 @@ import { Modal } from '../ui/Modal'
 import { CameraCapture } from './CameraCapture'
 import { CatForm, type CatFormValues } from './CatForm'
 import { LocationPicker } from './LocationPicker'
+import { NearbyMatch, type NearbyCat } from './NearbyMatch'
 import { useI18n } from '../../hooks/useI18n'
 
 // ขยับหมุดจากตำแหน่ง GPS/EXIF เกินระยะนี้ → นับเป็นปักหมุดเอง
@@ -16,6 +17,8 @@ const MAX_ADJUST_M = 50
 const OLD_PHOTO_DAYS = 30
 // รูปไม่มีตำแหน่งแต่เพิ่งถ่ายภายในเวลานี้ → ใช้ตำแหน่งปัจจุบันของเครื่องเป็นจุดเริ่ม (น่าจะยังอยู่ใกล้น้อง)
 const FRESH_PHOTO_MIN = 60
+// มีหมุดอื่นอยู่ในระยะนี้ → ถามก่อนว่าใช่ตัวเดียวกันไหม (กันหมุดซ้ำ)
+const DUPLICATE_RADIUS_M = 50
 
 interface Draft {
   /** รูปที่บีบอัดแล้ว (WebP ไม่มี EXIF) ส่งขึ้น server */
@@ -48,6 +51,14 @@ type Step =
   | { kind: 'rejected'; previewUrl: string; message: string; messageEn: string | null; draft: Draft | null }
   | { kind: 'pick'; draft: Draft }
   | { kind: 'details'; draft: Draft; position: LatLng; verification: Verification; notices: string[] }
+  | {
+      kind: 'nearby'
+      draft: Draft
+      position: LatLng
+      verification: Verification
+      notices: string[]
+      nearby: NearbyCat[]
+    }
 
 export type AddCatStart = { kind: 'camera' } | { kind: 'upload'; file: File }
 
@@ -57,9 +68,11 @@ interface Props {
   start: AddCatStart
   onClose: () => void
   onAdded: (cat: Cat) => void
+  /** ผู้ใช้บอกว่าเป็นน้องที่ปักไว้แล้ว — บันทึกว่าเจอแทนการปักหมุดใหม่ */
+  onMatched: (cat: Cat, sighting: { sightings: number; lastSeenAt: string } | null) => void
 }
 
-export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
+export function AddCatFlow({ origin, start, onClose, onAdded, onMatched }: Props) {
   const { t, lang } = useI18n()
   const [step, setStep] = useState<Step>(start.kind === 'camera' ? { kind: 'camera' } : { kind: 'source' })
   const [gps, setGps] = useState<GpsFix | null | undefined>(undefined)
@@ -183,7 +196,55 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
     }
   }
 
-  const confirmPosition = (draft: Draft, position: LatLng) => {
+  /** หมุดอื่นในระยะ DUPLICATE_RADIUS_M — สีเดียวกับที่เดาจากรูปขึ้นก่อน แล้วเรียงตามระยะ */
+  async function findNearby(position: LatLng, guessedFur: FurColor): Promise<NearbyCat[]> {
+    const pad = 0.0007 // ~75 ม.
+    try {
+      const cats = await fetchCatsInView({
+        minLat: position.lat - pad,
+        maxLat: position.lat + pad,
+        minLng: position.lng - pad,
+        maxLng: position.lng + pad,
+      })
+      return cats
+        .map((cat) => ({ cat, distance: distanceMeters(position, cat.position), sameColor: cat.furColor === guessedFur }))
+        .filter((c) => c.distance <= DUPLICATE_RADIUS_M)
+        .sort((a, b) => Number(b.sameColor) - Number(a.sameColor) || a.distance - b.distance)
+        .slice(0, 5)
+    } catch {
+      // ค้นไม่ได้ก็ปักหมุดต่อตามปกติ
+      return []
+    }
+  }
+
+  const [matching, setMatching] = useState(false)
+  const [matchError, setMatchError] = useState<string | null>(null)
+
+  const sameCat = async (draft: Draft, cat: Cat, addPhoto: boolean) => {
+    setMatching(true)
+    setMatchError(null)
+    let sighting: { sightings: number; lastSeenAt: string } | null = null
+    try {
+      sighting = await recordSighting(cat.id)
+    } catch (e) {
+      // เพิ่งกดเจอไปไม่ถึง 10 นาที — ไม่เป็นไร ยังเพิ่มรูปได้
+      if (!(e instanceof ApiError && e.status === 429)) {
+        setMatchError(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
+        setMatching(false)
+        return
+      }
+    }
+    if (addPhoto) {
+      try {
+        await uploadCatPhoto(cat.id, draft.photo, undefined, draft.catCheck === 'user')
+      } catch {
+        // รูปไม่ผ่าน/อัปไม่สำเร็จ ก็ยังนับว่าเจอน้องแล้ว
+      }
+    }
+    onMatched(cat, sighting)
+  }
+
+  const confirmPosition = async (draft: Draft, position: LatLng) => {
     const notices: string[] = []
     let verification = draft.verification
     if (verification !== 'manual' && distanceMeters(position, draft.sourcePosition) > MAX_ADJUST_M) {
@@ -196,6 +257,12 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
           date: draft.takenAt.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium' }),
         }),
       )
+    }
+    const nearby = await findNearby(position, draft.guessedFur)
+    if (nearby.length) {
+      setMatchError(null)
+      setStep({ kind: 'nearby', draft, position, verification, notices, nearby })
+      return
     }
     setStep({ kind: 'details', draft, position, verification, notices })
   }
@@ -316,7 +383,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
   }
 
   return (
-    <Modal onClose={onClose} title={t(step.kind === 'details' ? 'ข้อมูลน้องแมว' : 'เพิ่มแมวที่คุณเจอ')}>
+    <Modal onClose={onClose} title={t(step.kind === 'details' ? 'ข้อมูลน้องแมว' : step.kind === 'nearby' ? 'ใช่น้องตัวนี้ไหม?' : 'เพิ่มแมวที่คุณเจอ')}>
       {hiddenInputs}
 
       {step.kind === 'source' && (
@@ -392,6 +459,25 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
             </>
           )}
         </div>
+      )}
+
+      {step.kind === 'nearby' && (
+        <NearbyMatch
+          nearby={step.nearby}
+          photoUrl={step.draft.photoUrl}
+          busy={matching}
+          error={matchError}
+          onSame={(cat, addPhoto) => sameCat(step.draft, cat, addPhoto)}
+          onNew={() =>
+            setStep({
+              kind: 'details',
+              draft: step.draft,
+              position: step.position,
+              verification: step.verification,
+              notices: step.notices,
+            })
+          }
+        />
       )}
 
       {step.kind === 'details' && (

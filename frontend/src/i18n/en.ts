@@ -522,4 +522,12 @@ export const EN: Record<string, string> = {
   'รูปนี้ไม่มีข้อมูลตำแหน่ง — ลองเลือกรูปผ่านแอป Files (โฟลเดอร์ DCIM → Camera) ซึ่งมักเก็บตำแหน่งไว้ หรือเลื่อนแผนที่ไปที่ที่เจอแมว': 'This photo has no location. Try picking it through the Files app (DCIM → Camera), which usually keeps it, or move the map to where you met the cat.',
   'รูปนี้ไม่มีข้อมูลตำแหน่ง แต่เพิ่งถ่ายไม่นาน เลยวางหมุดที่ตำแหน่งปัจจุบันของคุณให้ ขยับได้ถ้าไม่ตรง': "This photo has no location, but it was taken recently, so we placed the pin at your current location. Move it if it's off.",
   'มือถือลบตำแหน่งออกจากรูปนี้ตอนเลือกรูป — เลื่อนแผนที่ไปที่ที่เจอแมว หรือครั้งหน้าใช้ "ถ่ายรูปตอนนี้" ในแอปเพื่อให้ได้ตำแหน่งอัตโนมัติ': 'Your phone removed the location from this photo when you picked it. Move the map to where you met the cat, or next time use "Take a photo now" in the app to get the location automatically.',
+  'แถวนี้มีน้องที่ปักหมุดไว้แล้ว': 'There are cats pinned near here already',
+  'ใช่ตัวเดียวกับในรูปไหม? ถ้าใช่ จะบันทึกว่าคุณเจอน้องแทนการปักหมุดซ้ำ': "Is one of them the cat in your photo? If so, we'll record a sighting instead of adding a duplicate pin.",
+  'ห่าง {m} ม.': '{m} m away',
+  'สีเดียวกัน': 'same color',
+  'ใช่ตัวนี้': 'This one',
+  'เพิ่มรูปนี้เข้าอัลบั้มของน้องด้วย': "Also add this photo to the cat's album",
+  'ไม่ใช่ เป็นน้องตัวใหม่': "No, it's a new cat",
+  'ใช่น้องตัวนี้ไหม?': 'Is it one of these cats?',
 }

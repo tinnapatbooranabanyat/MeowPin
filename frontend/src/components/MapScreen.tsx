@@ -205,6 +205,17 @@ export function MapScreen({ mapId }: Props) {
   }
   const closeAddCat = useCallback(() => setAdding(null), [])
 
+  // ผู้ใช้บอกว่าเป็นน้องที่ปักไว้แล้ว: เปิดหมุดเดิม (นับการเจอ + รูปเข้าอัลบั้มไปแล้ว)
+  const handleCatMatched = (cat: Cat, sighting: { sightings: number; lastSeenAt: string } | null) => {
+    const updated = sighting ? { ...cat, sightings: sighting.sightings, lastSeenAt: sighting.lastSeenAt } : cat
+    upsertCat(updated)
+    queryClient.invalidateQueries({ queryKey: ['catPhotos', cat.id] })
+    setAdding(null)
+    setSelectedId(cat.id)
+    focusCat(updated)
+    showToast(t('บันทึกแล้วว่าคุณเจอ{name}', { name: cat.name }))
+  }
+
   const handleCatAdded = (cat: Cat) => {
     upsertCat(cat)
     setAdding(null)
@@ -469,7 +480,7 @@ export function MapScreen({ mapId }: Props) {
 
         {adding && (
           <Suspense fallback={null}>
-            <AddCatFlow origin={adding.origin} start={adding.start} onClose={closeAddCat} onAdded={handleCatAdded} />
+            <AddCatFlow origin={adding.origin} start={adding.start} onClose={closeAddCat} onAdded={handleCatAdded} onMatched={handleCatMatched} />
           </Suspense>
         )}
 
