@@ -1,0 +1,82 @@
+export type FurColor = 'orange' | 'black' | 'white' | 'calico' | 'tabby' | 'gray'
+
+// ระดับความน่าเชื่อถือของตำแหน่ง: ถ่ายในแอป+GPS > EXIF ในรูป > ผู้ใช้ลากหมุดเอง
+export type Verification = 'camera_gps' | 'exif_gps' | 'manual'
+
+export type Neutered = 'yes' | 'no' | 'unknown'
+
+export interface LatLng {
+  lat: number
+  lng: number
+}
+
+export interface CatTraits {
+  isFriendly: boolean
+  isClingy: boolean
+  isPlayful: boolean
+  neutered: Neutered
+}
+
+export interface Cat extends CatTraits {
+  id: string
+  name: string
+  furColor: FurColor
+  position: LatLng
+  placeName: string
+  description: string
+  photoUrl?: string
+  lastSeenAt: string
+  sightings: number
+  verification: Verification
+  /** ความมั่นใจของโมเดลว่าเป็นแมวจริง 0–1 */
+  catConfidence: number
+  createdBy: string | null
+  createdByName: string | null
+  reviewCount: number
+  /** ค่าเฉลี่ยอุ้งเท้า 1–5 (null = ยังไม่มีรีวิว) */
+  pawAvg: number | null
+  recommendCount: number
+}
+
+export interface Profile {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+}
+
+export interface Review {
+  id: string
+  catId: string
+  userId: string
+  paws: number
+  recommend: boolean
+  comment: string
+  createdAt: string
+  author: { displayName: string; avatarUrl: string | null } | null
+}
+
+export type ReportCategory = 'bug' | 'idea' | 'other'
+
+export type CatReportReason = 'not_cat' | 'inappropriate' | 'wrong_location' | 'duplicate' | 'privacy' | 'other'
+
+export interface CatReport {
+  id: string
+  catId: string
+  reason: CatReportReason
+  details: string
+  status: 'open' | 'resolved'
+  createdAt: string
+  reporterName: string | null
+  cat: { name: string; photoPath: string | null; placeName: string } | null
+}
+
+export interface BugReport {
+  id: string
+  category: ReportCategory
+  message: string
+  pageUrl: string | null
+  userAgent: string | null
+  status: 'open' | 'resolved'
+  createdAt: string
+  reporterName: string | null
+}
