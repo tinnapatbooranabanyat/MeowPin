@@ -25,7 +25,7 @@ const resolve = (p: ThemePref): 'light' | 'dark' => (p === 'system' ? (media.mat
 function apply() {
   const dark = resolve(pref) === 'dark'
   document.documentElement.classList.toggle('dark', dark)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#1c1917' : '#f97316')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#202329' : '#f97316')
   listeners.forEach((l) => l())
 }
 

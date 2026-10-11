@@ -7,6 +7,7 @@ import type {
   FurColor,
   LatLng,
   Neutered,
+  OwnerStatus,
   Profile,
   ReportCategory,
   Review,
@@ -45,6 +46,8 @@ interface CatRow {
   id: string
   name: string
   fur_color: FurColor
+  breed?: string | null
+  owner_status?: OwnerStatus
   lat: number
   lng: number
   place_name: string
@@ -70,6 +73,8 @@ function rowToCat(row: CatRow): Cat {
     id: row.id,
     name: row.name,
     furColor: row.fur_color,
+    breed: row.breed ?? null,
+    ownerStatus: row.owner_status ?? 'unknown',
     position: { lat: row.lat, lng: row.lng },
     // ค่าว่างให้ UI ใส่ข้อความแทนตามภาษาที่เลือก
     placeName: row.place_name,
@@ -161,10 +166,11 @@ export interface NewCatInput extends CatTraits {
   photo: File
   name: string
   furColor: FurColor
+  breed: string | null
   position: LatLng
   placeName: string
   description: string
-  hasOwner: boolean
+  ownerStatus: OwnerStatus
   verification: Verification
   /** ตำแหน่งจาก GPS/EXIF ก่อนผู้ใช้ขยับหมุด — server ใช้ตรวจว่าขยับไกลเกินไหม */
   sourcePosition: LatLng | null
@@ -176,11 +182,12 @@ export function createCat(input: NewCatInput): Promise<Cat> {
   form.append('photo', input.photo)
   form.append('name', input.name)
   form.append('fur_color', input.furColor)
+  if (input.breed) form.append('breed', input.breed)
   form.append('lat', String(input.position.lat))
   form.append('lng', String(input.position.lng))
   form.append('place_name', input.placeName)
   form.append('description', input.description)
-  form.append('has_owner', String(input.hasOwner))
+  form.append('owner_status', input.ownerStatus)
   form.append('verification', input.verification)
   form.append('is_friendly', String(input.isFriendly))
   form.append('is_clingy', String(input.isClingy))

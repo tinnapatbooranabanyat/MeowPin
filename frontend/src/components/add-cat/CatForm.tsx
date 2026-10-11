@@ -1,15 +1,17 @@
 import { Check, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { FUR_COLORS, NEUTERED, TRAITS, VERIFICATION } from '../../lib/cat'
-import type { CatTraits, FurColor, Neutered, Verification } from '../../types'
+import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION } from '../../lib/cat'
+import { BreedPicker } from './BreedPicker'
+import type { CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../../types'
 import { useI18n } from '../../hooks/useI18n'
 
 export interface CatFormValues extends CatTraits {
   name: string
   furColor: FurColor
+  breed: string | null
   placeName: string
   description: string
-  hasOwner: boolean
+  ownerStatus: OwnerStatus
 }
 
 interface Props {
@@ -39,9 +41,10 @@ export function CatForm({
   const { t } = useI18n()
   const [name, setName] = useState('')
   const [furColor, setFurColor] = useState<FurColor>(guessedFur)
+  const [breed, setBreed] = useState<string | null>(null)
   const [placeName, setPlaceName] = useState('')
   const [description, setDescription] = useState('')
-  const [hasOwner, setHasOwner] = useState(false)
+  const [ownerStatus, setOwnerStatus] = useState<OwnerStatus>('unknown')
   const [traits, setTraits] = useState({ isFriendly: false, isClingy: false, isPlayful: false })
   const [neutered, setNeutered] = useState<Neutered>('unknown')
   const [nameError, setNameError] = useState(false)
@@ -56,9 +59,10 @@ export function CatForm({
     onSubmit({
       name: name.trim(),
       furColor,
+      breed,
       placeName: placeName.trim(),
       description: description.trim(),
-      hasOwner,
+      ownerStatus,
       ...traits,
       neutered,
     })
@@ -132,6 +136,13 @@ export function CatForm({
         </div>
       </fieldset>
 
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-stone-700">
+          {t('สายพันธุ์')} <span className="font-normal text-stone-500">{t('(ไม่บังคับ)')}</span>
+        </span>
+        <BreedPicker value={breed} onChange={setBreed} />
+      </div>
+
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium text-stone-700">{t('นิสัยน้อง (เลือกได้หลายข้อ)')}</legend>
         <div className="flex flex-wrap gap-2">
@@ -203,18 +214,30 @@ export function CatForm({
         />
       </label>
 
-      <label className="flex items-start gap-3 rounded-xl bg-stone-50 p-3.5">
-        <input
-          type="checkbox"
-          checked={hasOwner}
-          onChange={(e) => setHasOwner(e.target.checked)}
-          className="mt-0.5 size-4.5 accent-orange-500"
-        />
-        <span className="text-sm text-stone-700">
-          <span className="font-medium">{t('น้องน่าจะมีเจ้าของ / อยู่ในบ้านคน')}</span>
-          <span className="block text-stone-500">{t('เบลอตำแหน่งบนแผนที่ประมาณ 50–100 ม. เพื่อความเป็นส่วนตัวของเจ้าของ')}</span>
-        </span>
-      </label>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium text-stone-700">{t('แมวจรหรือมีเจ้าของ')}</legend>
+        <div className="flex gap-2" role="radiogroup" aria-label={t('แมวจรหรือมีเจ้าของ')}>
+          {(Object.keys(OWNER_STATUS) as OwnerStatus[]).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={ownerStatus === value}
+              onClick={() => setOwnerStatus(value)}
+              className={`h-9 flex-1 rounded-full text-sm ring-1 transition active:scale-95 ${
+                ownerStatus === value
+                  ? 'bg-orange-500 text-white ring-orange-500'
+                  : 'bg-surface text-stone-700 ring-stone-300 hover:bg-orange-50'
+              }`}
+            >
+              {t(OWNER_STATUS[value].label)}
+            </button>
+          ))}
+        </div>
+        {OWNER_STATUS[ownerStatus].hint && (
+          <span className="animate-fade-up text-xs text-stone-500">{t(OWNER_STATUS[ownerStatus].hint)}</span>
+        )}
+      </fieldset>
 
       {submitError && (
         <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">

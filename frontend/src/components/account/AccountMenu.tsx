@@ -1,4 +1,4 @@
-import { Bug, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, Sun, UserRound } from 'lucide-react'
+import { Bug, HeartHandshake, IdCard, Inbox, Languages, LogIn, LogOut, Monitor, Moon, Pencil, Sun, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -13,6 +13,7 @@ interface Props {
   onEditProfile: () => void
   onReportBug: () => void
   onOpenAdmin: () => void
+  onSupport: () => void
 }
 
 const THEMES: { value: ThemePref; label: string; icon: ReactNode }[] = [
@@ -27,7 +28,7 @@ const LANGS: { value: Lang; label: string }[] = [
 ]
 
 // ปุ่มโปรไฟล์ลอยมุมขวาบน แบบ Google Maps
-export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin }: Props) {
+export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin, onSupport }: Props) {
   const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
@@ -128,6 +129,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           )}
           <MenuItem icon={<Bug size={18} />} onClick={pick(onReportBug)}>
             {t('รายงานปัญหา / เสนอไอเดีย')}
+          </MenuItem>
+          <MenuItem icon={<HeartHandshake size={18} className="text-orange-500" />} onClick={pick(onSupport)}>
+            {t('สนับสนุนทีมงาน')}
           </MenuItem>
 
           <div className="mt-1 flex flex-col gap-3 border-t border-stone-100 px-4 pt-3 pb-2">

@@ -75,7 +75,14 @@ export function guessFurColor(img: HTMLImageElement, bbox?: Bbox): FurColor {
   ctx.drawImage(img, x + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6, 0, 0, size, size)
   const { data } = ctx.getImageData(0, 0, size, size)
 
-  const counts: Record<Exclude<FurColor, 'calico'>, number> = { orange: 0, black: 0, white: 0, gray: 0, tabby: 0 }
+  // เดาได้แค่สีพื้นฐาน (สีผสมอย่างขาวดำ/กระดองเต่าเดาจากพิกเซลไม่แม่น ให้ผู้ใช้เลือกเอง)
+  const counts: Record<Extract<FurColor, 'orange' | 'black' | 'white' | 'gray' | 'tabby'>, number> = {
+    orange: 0,
+    black: 0,
+    white: 0,
+    gray: 0,
+    tabby: 0,
+  }
   for (let i = 0; i < data.length; i += 4) {
     const [hue, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2])
     if (l < 0.22) counts.black++

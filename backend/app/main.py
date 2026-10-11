@@ -19,9 +19,13 @@ from .ratelimit import RateLimiter, client_ip
 
 log = logging.getLogger("meowpin")
 
-FurColor = Literal["orange", "black", "white", "calico", "tabby", "gray"]
+FurColor = Literal[
+    "orange", "orange_white", "cream", "white", "black", "black_white", "gray", "gray_white",
+    "brown", "tabby", "silver_tabby", "tabby_white", "calico", "tortoiseshell", "pointed",
+]
 Verification = Literal["camera_gps", "exif_gps", "manual"]
 Neutered = Literal["yes", "no", "unknown"]
+OwnerStatus = Literal["stray", "owned", "unknown"]
 
 REJECTION_MESSAGES = {
     "dog": "ดูเหมือนน้องหมานะ ไว้มีแอปปักหมุดหมาค่อยมาเจอกัน",
@@ -117,6 +121,9 @@ def create_cat(
     is_clingy: Annotated[bool, Form()] = False,
     is_playful: Annotated[bool, Form()] = False,
     neutered: Annotated[Neutered, Form()] = "unknown",
+    # key จากรายการสายพันธุ์ในแอป หรือข้อความที่ผู้ใช้พิมพ์เอง (ว่าง = ไม่ระบุ)
+    breed: Annotated[str, Form(max_length=40)] = "",
+    owner_status: Annotated[OwnerStatus, Form()] = "unknown",
 ):
     client = get_client()
     user_id = current_user_id(request)
@@ -143,6 +150,10 @@ def create_cat(
 
     final_verification = resolve_verification(verification, lat, lng, source_lat, source_lng)
     last_seen_at = resolve_last_seen(taken_at)
+    # has_owner เป็นช่องแบบเก่า — ถือว่ามีเจ้าของถ้าส่งอย่างใดอย่างหนึ่งมา
+    if has_owner:
+        owner_status = "owned"
+    has_owner = owner_status == "owned"
     if has_owner:
         lat, lng = blur(lat, lng)
 
@@ -171,6 +182,8 @@ def create_cat(
         "is_clingy": is_clingy,
         "is_playful": is_playful,
         "neutered": neutered,
+        "breed": breed.strip() or None,
+        "owner_status": owner_status,
         "sightings_count": 1,
         "last_seen_at": last_seen_at.isoformat(),
     }
@@ -202,6 +215,8 @@ def create_cat(
         "isClingy": is_clingy,
         "isPlayful": is_playful,
         "neutered": neutered,
+        "breed": row["breed"],
+        "ownerStatus": owner_status,
         "createdBy": user_id,
         "createdByName": profile[0]["display_name"] if profile else None,
         "reviewCount": 0,

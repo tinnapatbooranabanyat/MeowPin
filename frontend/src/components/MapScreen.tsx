@@ -18,6 +18,7 @@ import { UserProfileDialog } from './account/UserProfileDialog'
 import type { AddCatStart } from './add-cat/AddCatFlow'
 import { AdminDialog } from './admin/AdminDialog'
 import { BugReportDialog } from './BugReportDialog'
+import { SupportDialog } from './SupportDialog'
 import { CatMarkers } from './CatMarkers'
 import { CatPanel } from './CatPanel'
 import { CatReportDialog } from './CatReportDialog'
@@ -69,6 +70,7 @@ type Dialog =
   | { kind: 'profile' }
   | { kind: 'userProfile'; userId: string }
   | { kind: 'bugReport' }
+  | { kind: 'support' }
   | { kind: 'admin' }
   | { kind: 'catReport'; cat: Cat }
   | null
@@ -369,6 +371,7 @@ export function MapScreen({ mapId }: Props) {
                 onEditProfile={() => setDialog({ kind: 'profile' })}
                 onReportBug={() => setDialog({ kind: 'bugReport' })}
                 onOpenAdmin={() => setDialog({ kind: 'admin' })}
+                onSupport={() => setDialog({ kind: 'support' })}
               />
             </div>
           </>
@@ -447,6 +450,7 @@ export function MapScreen({ mapId }: Props) {
             onEditProfile={() => setDialog({ kind: 'profile' })}
           />
         )}
+        {dialog?.kind === 'support' && <SupportDialog onClose={() => setDialog(null)} />}
         {dialog?.kind === 'bugReport' && (
           <BugReportDialog
             onClose={() => setDialog(null)}

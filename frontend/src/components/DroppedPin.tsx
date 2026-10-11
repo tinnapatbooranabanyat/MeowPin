@@ -1,8 +1,9 @@
 import { AdvancedMarker } from '@vis.gl/react-google-maps'
-import { Camera, ImageUp, MapPin, X } from 'lucide-react'
+import { Camera, ImageUp, X } from 'lucide-react'
 import { useEffect, useRef, type ChangeEvent } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { wakeBackend } from '../lib/api'
+import { PawPin } from './PawPin'
 import type { LatLng } from '../types'
 import { useI18n } from '../hooks/useI18n'
 
@@ -37,7 +38,7 @@ export function DroppedPin({ position, onClose, onCamera, onFile }: Props) {
     <>
       <AdvancedMarker position={position} zIndex={1000} title={t('จุดที่เลือก')}>
         <span className="block animate-drop-in">
-          <MapPin size={44} className="fill-red-500 text-white drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
+          <PawPin size={44} />
         </span>
       </AdvancedMarker>
 

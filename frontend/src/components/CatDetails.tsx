@@ -1,9 +1,9 @@
-import { Eye, Flag, Heart, MapPin, Navigation, Scissors, Share2, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { Dna, Eye, Flag, Heart, MapPin, Navigation, Scissors, Share2, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useMapActions } from '../hooks/useMapActions'
-import { directionsUrl, FUR_COLORS, NEUTERED, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
+import { breedLabel, directionsUrl, FUR_COLORS, NEUTERED, OWNER_STATUS, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
 import type { Cat } from '../types'
 import { CatAvatar } from './CatAvatar'
 import { PawBurst } from './PawBurst'
@@ -103,6 +103,17 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport }: Pro
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {cat.ownerStatus !== 'unknown' && (
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${OWNER_STATUS[cat.ownerStatus].className}`}>
+            {t(OWNER_STATUS[cat.ownerStatus].label)}
+          </span>
+        )}
+        {cat.breed && (
+          <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800">
+            <Dna size={12} aria-hidden="true" />
+            {breedLabel(cat.breed, lang)}
+          </span>
+        )}
         {traits.map((trait) => (
           <span
             key={trait.key}

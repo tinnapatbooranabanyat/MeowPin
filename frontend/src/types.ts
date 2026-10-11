@@ -1,9 +1,27 @@
-export type FurColor = 'orange' | 'black' | 'white' | 'calico' | 'tabby' | 'gray'
+export type FurColor =
+  | 'orange'
+  | 'orange_white'
+  | 'cream'
+  | 'white'
+  | 'black'
+  | 'black_white'
+  | 'gray'
+  | 'gray_white'
+  | 'brown'
+  | 'tabby'
+  | 'silver_tabby'
+  | 'tabby_white'
+  | 'calico'
+  | 'tortoiseshell'
+  | 'pointed'
 
 // ระดับความน่าเชื่อถือของตำแหน่ง: ถ่ายในแอป+GPS > EXIF ในรูป > ผู้ใช้ลากหมุดเอง
 export type Verification = 'camera_gps' | 'exif_gps' | 'manual'
 
 export type Neutered = 'yes' | 'no' | 'unknown'
+
+/** แมวจร / มีเจ้าของ (เบลอตำแหน่ง) / ไม่แน่ใจ */
+export type OwnerStatus = 'stray' | 'owned' | 'unknown'
 
 export interface LatLng {
   lat: number
@@ -21,6 +39,9 @@ export interface Cat extends CatTraits {
   id: string
   name: string
   furColor: FurColor
+  /** key จาก BREEDS หรือข้อความที่ผู้ใช้พิมพ์เอง (null = ไม่ระบุ) */
+  breed: string | null
+  ownerStatus: OwnerStatus
   position: LatLng
   placeName: string
   description: string

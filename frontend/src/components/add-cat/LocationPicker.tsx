@@ -1,7 +1,8 @@
 import { useMap } from '@vis.gl/react-google-maps'
-import { ArrowLeft, Crosshair, MapPin } from 'lucide-react'
+import { ArrowLeft, Crosshair } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { VERIFICATION } from '../../lib/cat'
+import { PawPin } from '../PawPin'
 import type { LatLng, Verification } from '../../types'
 import { useI18n } from '../../hooks/useI18n'
 
@@ -82,7 +83,7 @@ export function LocationPicker({ initialPosition, verification, alternative, onB
 
       {/* หมุดกลางจอ: ปลายหมุดชี้ตรงจุดศูนย์กลางแผนที่พอดี */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full">
-        <MapPin size={48} className="fill-orange-500 text-white drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
+        <PawPin size={48} className="animate-drop-in" />
       </div>
       <div className="absolute top-1/2 left-1/2 size-2 -translate-1/2 rounded-full bg-black/30" aria-hidden="true" />
 

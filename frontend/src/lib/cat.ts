@@ -1,17 +1,74 @@
 import { getLang, translate, type Lang } from '../i18n'
-import type { Cat, CatReportReason, CatTraits, FurColor, Neutered, Verification } from '../types'
+import type { Cat, CatReportReason, CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../types'
 
+// สองสี: ครึ่งบนสีหลัก ครึ่งล่างสีขาว
+const half = (top: string, bottom: string) => `linear-gradient(160deg, ${top} 0 52%, ${bottom} 52% 100%)`
+const stripes = (base: string, stripe: string) =>
+  `repeating-linear-gradient(115deg, ${base} 0 5px, ${stripe} 5px 8px)`
+
+// เรียงตามที่คนไทยเจอบ่อย — ลำดับนี้ใช้ทั้งในตัวกรองและฟอร์ม
 export const FUR_COLORS: Record<FurColor, { label: string; bg: string; fg: string }> = {
   orange: { label: 'ส้ม', bg: '#F59E42', fg: '#5C2A06' },
-  black: { label: 'ดำ', bg: '#2E2A27', fg: '#F5EFE6' },
+  orange_white: { label: 'ส้มขาว', bg: half('#F59E42', '#F7F2EA'), fg: '#5C2A06' },
+  cream: { label: 'ครีม', bg: '#EED9B6', fg: '#6B4F2A' },
   white: { label: 'ขาว', bg: '#F7F2EA', fg: '#7A6F63' },
+  black: { label: 'ดำ', bg: '#2E2A27', fg: '#F5EFE6' },
+  black_white: { label: 'ขาวดำ', bg: half('#2E2A27', '#F7F2EA'), fg: '#F5EFE6' },
+  gray: { label: 'เทา', bg: '#9CA3AF', fg: '#1F2937' },
+  gray_white: { label: 'เทาขาว', bg: half('#9CA3AF', '#F7F2EA'), fg: '#1F2937' },
+  brown: { label: 'น้ำตาล', bg: '#7B5134', fg: '#F8EBDD' },
+  tabby: { label: 'ลายสลิด', bg: stripes('#A88B6A', '#5E4630'), fg: '#FFF7EC' },
+  silver_tabby: { label: 'ลายสลิดเทา', bg: stripes('#B9BEC6', '#585E66'), fg: '#111827' },
+  tabby_white: { label: 'ลายสลิดขาว', bg: half(stripes('#A88B6A', '#5E4630'), '#F7F2EA'), fg: '#FFF7EC' },
   calico: {
     label: 'สามสี',
     bg: 'radial-gradient(circle at 22% 28%, #F59E42 0 30%, transparent 31%), radial-gradient(circle at 80% 75%, #2E2A27 0 30%, transparent 31%), #F7F2EA',
     fg: '#5C2A06',
   },
-  tabby: { label: 'ลายสลิด', bg: '#A88B6A', fg: '#3B2A18' },
-  gray: { label: 'เทา', bg: '#9CA3AF', fg: '#1F2937' },
+  tortoiseshell: {
+    label: 'กระดองเต่า',
+    bg: 'radial-gradient(circle at 30% 30%, #C9732E 0 22%, transparent 23%), radial-gradient(circle at 70% 65%, #9A5524 0 20%, transparent 21%), #2E2420',
+    fg: '#FCE7D2',
+  },
+  pointed: {
+    label: 'แต้มสี',
+    bg: 'radial-gradient(circle at 50% 45%, #F3E6D3 0 38%, #6B4A35 75%)',
+    fg: '#3B2618',
+  },
+}
+
+/** สายพันธุ์ที่มีให้เลือก — ผู้ใช้พิมพ์ชื่ออื่นเองได้ (เก็บเป็นข้อความตรงๆ) */
+export const BREEDS: Record<string, { label: string; en: string }> = {
+  unknown: { label: 'ไม่ทราบสายพันธุ์', en: 'Unknown breed' },
+  domestic: { label: 'แมวบ้าน / พันทาง', en: 'Domestic / mixed' },
+  siamese: { label: 'วิเชียรมาศ', en: 'Siamese' },
+  khao_manee: { label: 'ขาวมณี', en: 'Khao Manee' },
+  korat: { label: 'โคราช / สีสวาด', en: 'Korat' },
+  suphalak: { label: 'ศุภลักษณ์', en: 'Suphalak' },
+  konja: { label: 'โกนจา', en: 'Konja' },
+  persian: { label: 'เปอร์เซีย', en: 'Persian' },
+  exotic_shorthair: { label: 'เอ็กโซติก ช็อตแฮร์', en: 'Exotic Shorthair' },
+  scottish_fold: { label: 'สก็อตติช โฟลด์', en: 'Scottish Fold' },
+  british_shorthair: { label: 'บริติช ช็อตแฮร์', en: 'British Shorthair' },
+  american_shorthair: { label: 'อเมริกัน ช็อตแฮร์', en: 'American Shorthair' },
+  maine_coon: { label: 'เมนคูน', en: 'Maine Coon' },
+  ragdoll: { label: 'แร็กดอลล์', en: 'Ragdoll' },
+  bengal: { label: 'เบงกอล', en: 'Bengal' },
+  munchkin: { label: 'มันช์กิ้น', en: 'Munchkin' },
+  sphynx: { label: 'สฟิงซ์', en: 'Sphynx' },
+  russian_blue: { label: 'รัสเซียน บลู', en: 'Russian Blue' },
+  norwegian_forest: { label: 'นอร์วีเจียน ฟอเรสต์', en: 'Norwegian Forest Cat' },
+  siberian: { label: 'ไซบีเรียน', en: 'Siberian' },
+  abyssinian: { label: 'อะบิสซิเนียน', en: 'Abyssinian' },
+  turkish_angora: { label: 'เทอร์กิช แองโกรา', en: 'Turkish Angora' },
+}
+
+/** ชื่อสายพันธุ์ตามภาษา — ถ้าเป็นชื่อที่ผู้ใช้พิมพ์เองก็แสดงตามนั้น */
+export function breedLabel(breed: string | null, lang: Lang = getLang()): string | null {
+  if (!breed) return null
+  const known = BREEDS[breed]
+  if (!known) return breed
+  return lang === 'en' ? known.en : known.label
 }
 
 export const VERIFICATION: Record<Verification, { label: string; className: string }> = {
@@ -41,6 +98,12 @@ export const CAT_REPORT_REASONS: Record<CatReportReason, { label: string; hint: 
   other: { label: 'อื่นๆ', hint: 'เล่ารายละเอียดด้านล่าง' },
 }
 
+export const OWNER_STATUS: Record<OwnerStatus, { label: string; hint: string; className: string }> = {
+  stray: { label: 'แมวจร', hint: 'ไม่มีเจ้าของ อยู่ตามที่สาธารณะ', className: 'bg-amber-100 text-amber-800' },
+  owned: { label: 'มีเจ้าของ', hint: 'เบลอตำแหน่งบนแผนที่ 50–100 ม. เพื่อความเป็นส่วนตัวของเจ้าของ', className: 'bg-sky-100 text-sky-800' },
+  unknown: { label: 'ไม่แน่ใจ', hint: '', className: '' },
+}
+
 const formatters: Partial<Record<Lang, Intl.RelativeTimeFormat>> = {}
 
 export function timeAgo(iso: string, lang: Lang = getLang(), now = Date.now()): string {
@@ -60,8 +123,16 @@ export function matchesQuery(cat: Cat, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
   const fur = FUR_COLORS[cat.furColor].label
-  // ค้นได้ทั้งชื่อสีขนภาษาไทยและอังกฤษ
-  return [cat.name, cat.placeName, cat.description, fur, translate(fur, undefined, 'en')]
+  // ค้นได้ทั้งชื่อสีขนและสายพันธุ์ ภาษาไทยและอังกฤษ
+  return [
+    cat.name,
+    cat.placeName,
+    cat.description,
+    fur,
+    translate(fur, undefined, 'en'),
+    breedLabel(cat.breed, 'th') ?? '',
+    breedLabel(cat.breed, 'en') ?? '',
+  ]
     .some((text) => text.toLowerCase().includes(q))
 }
 
