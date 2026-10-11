@@ -1,10 +1,12 @@
-import { CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
+import { Bell, BellRing, CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useCatPhotos } from '../hooks/useCatPhotos'
 import { useMapActions } from '../hooks/useMapActions'
 import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION, breedLabel, directionsUrl, furLabel, timeAgo } from '../lib/cat'
+import { fetchIsFollowing, setFollowing } from '../lib/api'
 import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
@@ -31,7 +33,18 @@ type Tab = 'overview' | 'reviews' | 'about'
 
 // หน้าข้อมูลแมวแบบหน้าสถานที่ของ Google Maps: รูปใหญ่ → ชื่อ/คะแนน → แท็บ → ปุ่มกลม
 export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClose, variant }: Props) {
-  const { isAdmin, userId } = useAuth()
+  const { isAdmin, userId, requireLogin } = useAuth()
+  const queryClient = useQueryClient()
+  const following = useQuery({
+    queryKey: ['following', cat.id, userId],
+    queryFn: () => fetchIsFollowing(cat.id),
+    enabled: userId !== null,
+  })
+  const toggleFollow = useMutation({
+    mutationFn: (follow: boolean) => setFollowing(cat.id, follow),
+    onSuccess: (_, follow) => queryClient.setQueryData(['following', cat.id, userId], follow),
+  })
+  const isFollowing = following.data === true
   const { editCat } = useMapActions()
   // คนปักหมุดแก้ไข/ลบหมุดตัวเองได้ เจ้าของแพลตฟอร์มทำได้ทุกหมุด
   const canManage = isAdmin || (userId !== null && userId === cat.createdBy)
@@ -194,6 +207,15 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
               >
                 {burst > 0 && <PawBurst key={burst} />}
               </RoundAction>
+              <RoundAction
+                icon={isFollowing ? BellRing : Bell}
+                label={t(isFollowing ? 'ติดตามอยู่' : 'ติดตาม')}
+                iconClass={isFollowing ? 'text-orange-600' : undefined}
+                onClick={() => {
+                  if (!requireLogin(t('เข้าสู่ระบบเพื่อติดตามน้อง{name}', { name: cat.name }))) return
+                  if (!toggleFollow.isPending) toggleFollow.mutate(!isFollowing)
+                }}
+              />
               <RoundAction icon={Share2} label={t('แชร์')} onClick={() => onShare(cat)} />
               {canManage ? (
                 <RoundAction icon={Pencil} label={t('แก้ไข')} onClick={() => editCat(cat)} />

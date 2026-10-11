@@ -1,6 +1,7 @@
 import type {
   ActivityAction,
   ActivityEntry,
+  AppNotification,
   BugReport,
   Cat,
   CatPhoto,
@@ -679,6 +680,52 @@ export async function fetchAdminCounts(): Promise<AdminCounts> {
   }
   const [catReports, bugReports] = await Promise.all([count('cat_reports'), count('bug_reports')])
   return { catReports, bugReports }
+}
+
+// ═══════════════ ติดตามน้อง + การแจ้งเตือน ═══════════════
+export async function fetchIsFollowing(catId: string): Promise<boolean> {
+  const { data, error } = await db().from('cat_follows').select('cat_id').eq('cat_id', catId).maybeSingle()
+  return !error && data !== null
+}
+
+export async function setFollowing(catId: string, follow: boolean): Promise<void> {
+  const { error } = follow
+    ? await db().from('cat_follows').insert({ cat_id: catId })
+    : await db().from('cat_follows').delete().eq('cat_id', catId)
+  // กดติดตามซ้ำ (มีอยู่แล้ว) ถือว่าสำเร็จ
+  if (error && error.code !== '23505') throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+interface NotificationRow {
+  id: number
+  kind: AppNotification['kind']
+  cat_id: string | null
+  data: AppNotification['data'] | null
+  created_at: string
+  read_at: string | null
+}
+
+/** การแจ้งเตือน 40 อันล่าสุด (ยังไม่ได้รัน migration 0013 ก็ได้รายการว่าง) */
+export async function fetchNotifications(): Promise<AppNotification[]> {
+  const { data, error } = await db()
+    .from('notifications')
+    .select('id, kind, cat_id, data, created_at, read_at')
+    .order('created_at', { ascending: false })
+    .limit(40)
+  if (error || !data) return []
+  return (data as NotificationRow[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    catId: r.cat_id,
+    data: r.data ?? {},
+    createdAt: r.created_at,
+    readAt: r.read_at,
+  }))
+}
+
+export async function markNotificationsRead(): Promise<void> {
+  const { error } = await db().from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ', 500)
 }
 
 // ═══════════════ ช่วงเวลาที่มักเจอ ═══════════════

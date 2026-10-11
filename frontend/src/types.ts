@@ -17,6 +17,17 @@ export type FurColor =
   /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
   | 'other'
 
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen'
+
+export interface AppNotification {
+  id: number
+  kind: NotificationKind
+  catId: string | null
+  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number }
+  createdAt: string
+  readAt: string | null
+}
+
 /** เรื่องที่แจ้งว่าน้องต้องการความช่วยเหลือ */
 export type HelpKind = 'injured' | 'sick' | 'thin' | 'not_neutered' | 'other'
 

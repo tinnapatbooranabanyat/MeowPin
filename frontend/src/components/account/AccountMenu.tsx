@@ -1,7 +1,8 @@
-import { Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sun, UserRound } from 'lucide-react'
+import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sun, UserRound } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
+import { useNotifications } from '../../hooks/useNotifications'
 import { useTheme, type ThemePref } from '../../hooks/useTheme'
 import { skipActiveTransition } from '../../lib/viewTransition'
 import type { Lang } from '../../i18n'
@@ -10,6 +11,7 @@ import { UserAvatar } from './UserAvatar'
 // โลโก้ทั้งหมดอยู่ในไฟล์นี้ — โหลดเฉพาะตอนเปิดดู
 const AboutDialog = lazy(() => import('./AboutDialog').then((m) => ({ default: m.AboutDialog })))
 const DevicesDialog = lazy(() => import('./DevicesDialog').then((m) => ({ default: m.DevicesDialog })))
+const NotificationsDialog = lazy(() => import('./NotificationsDialog').then((m) => ({ default: m.NotificationsDialog })))
 
 interface Props {
   /** จำนวนรายงานที่ยังค้าง (เฉพาะ admin) — โชว์จุดแดงบนรูปโปรไฟล์ */
@@ -40,6 +42,8 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
   const [open, setOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [devicesOpen, setDevicesOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const { unread } = useNotifications()
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -99,6 +103,14 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
         ) : (
           <UserRound size={22} className="text-stone-600" />
         )}
+        {session && unread > 0 && (
+          <span
+            className="absolute -top-1 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-bold text-white ring-2 ring-surface"
+            aria-label={t('การแจ้งเตือนใหม่ {n} รายการ', { n: unread })}
+          >
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
         {isAdmin && pendingReports > 0 && (
           <span className="absolute top-0 right-0 flex size-3" aria-hidden="true">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -134,6 +146,14 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
 
           {session ? (
             <MenuSection title={t('บัญชี')}>
+              <MenuItem icon={<Bell size={18} />} onClick={pick(() => setNotificationsOpen(true))}>
+                <span className="flex flex-1 items-center justify-between">
+                  {t('การแจ้งเตือน')}
+                  {unread > 0 && (
+                    <span className="rounded-full bg-orange-500 px-1.5 text-xs leading-5 font-medium text-white">{unread}</span>
+                  )}
+                </span>
+              </MenuItem>
               <MenuItem icon={<IdCard size={18} />} onClick={pick(onOpenMyProfile)}>
                 {t('โปรไฟล์และประวัติรีวิว')}
               </MenuItem>
@@ -221,6 +241,11 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
             </button>
           </div>
         </div>
+      )}
+      {notificationsOpen && session && (
+        <Suspense fallback={null}>
+          <NotificationsDialog onClose={() => setNotificationsOpen(false)} />
+        </Suspense>
       )}
       {devicesOpen && session && (
         <Suspense fallback={null}>
