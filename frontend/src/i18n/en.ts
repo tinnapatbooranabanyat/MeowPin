@@ -395,4 +395,10 @@ export const EN: Record<string, string> = {
   'อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่': 'You’re uploading photos too often. Take a break and try again.',
   'แนบรูปได้เฉพาะรีวิวของตัวเอง': 'You can only add photos to your own review',
   'แนบรูปได้สูงสุด 4 รูปต่อรีวิว': 'Up to 4 photos per review',
+  'AI กำลังสรุปจากรีวิว…': 'AI is summarizing the reviews…',
+  'สรุปโดย AI จาก {n} รีวิว': 'AI summary of {n} reviews',
+  'สรุปอัตโนมัติ อาจไม่ถูกต้องทั้งหมด': 'Generated automatically and may not be fully accurate',
+  'ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่': 'Too many summary requests. Take a break and try again.',
+  'ยังไม่ได้ตั้งค่า GEMINI_API_KEY': 'GEMINI_API_KEY is not set',
+  'สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง': 'Couldn’t generate the AI summary. Try again later.',
 }

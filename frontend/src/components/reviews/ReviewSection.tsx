@@ -31,6 +31,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
     queryClient.invalidateQueries({ queryKey: ['cats'] })
     queryClient.invalidateQueries({ queryKey: ['cat', cat.id] })
     queryClient.invalidateQueries({ queryKey: ['catPhotos', cat.id] })
+    queryClient.invalidateQueries({ queryKey: ['catSummary', cat.id] })
   }
 
   const startWriting = () => {

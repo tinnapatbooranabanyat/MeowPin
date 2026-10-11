@@ -25,6 +25,7 @@ import { useCatPhotos } from '../hooks/useCatPhotos'
 import { useMapActions } from '../hooks/useMapActions'
 import { breedLabel, directionsUrl, FUR_COLORS, NEUTERED, OWNER_STATUS, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
 import type { Cat } from '../types'
+import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
 import { PawBurst } from './PawBurst'
 import { PhotoLightbox } from './PhotoLightbox'
@@ -248,6 +249,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                 </div>
               </div>
             )}
+
+            <AiSummary cat={cat} />
 
             {cat.description ? (
               <TranslatableText text={cat.description} className="text-[15px] leading-relaxed text-stone-700" />

@@ -4,6 +4,7 @@ import type {
   CatPhoto,
   CatReport,
   CatReportReason,
+  CatSummary,
   CatTraits,
   FurColor,
   LatLng,
@@ -417,6 +418,35 @@ export function uploadCatPhoto(catId: string, photo: File, reviewId?: string): P
 export async function deleteReview(reviewId: string): Promise<void> {
   const { error } = await db().from('reviews').delete().eq('id', reviewId)
   if (error) throw new ApiError('ลบรีวิวไม่สำเร็จ', 500)
+}
+
+// ═══════════════ สรุปด้วย AI ═══════════════
+
+/** สรุปที่เก็บไว้แล้ว (null = ยังไม่มี หรือยังไม่ได้รัน migration 0006) */
+export async function fetchCatSummary(catId: string): Promise<CatSummary | null> {
+  const { data, error } = await db()
+    .from('cat_summaries')
+    .select('summary_th, summary_en, review_count, generated_at')
+    .eq('cat_id', catId)
+    .maybeSingle()
+  if (error || !data) return null
+  return { th: data.summary_th, en: data.summary_en, reviewCount: data.review_count, generatedAt: data.generated_at }
+}
+
+/**
+ * ขอให้ backend สรุปใหม่ (ไม่ต้องล็อกอิน) — backend คืนของเดิมถ้าข้อมูลไม่เปลี่ยน
+ * ไม่สำเร็จ (ยังไม่ตั้ง key / AI ล่ม / server หลับ) ก็คืน null เงียบๆ
+ */
+export async function requestCatSummary(catId: string): Promise<CatSummary | null> {
+  if (!API_URL) return null
+  try {
+    const res = await fetch(`${API_URL}/cats/${catId}/summary`, { method: 'POST' })
+    if (!res.ok) return null
+    const body = (await res.json()) as { summary: CatSummary | null }
+    return body.summary
+  } catch {
+    return null
+  }
 }
 
 // ═══════════════ รายงานปัญหา ═══════════════

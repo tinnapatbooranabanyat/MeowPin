@@ -101,6 +101,15 @@ export interface CatPhoto {
   createdAt: string
 }
 
+/** สรุปแมวด้วย AI จากคำอธิบาย + รีวิว (สร้างที่ backend เก็บไว้ในตาราง cat_summaries) */
+export interface CatSummary {
+  th: string
+  en: string
+  /** จำนวนรีวิวตอนสรุป — ไม่ตรงกับตอนนี้แปลว่าล้าสมัย */
+  reviewCount: number
+  generatedAt: string
+}
+
 export type ReportCategory = 'bug' | 'idea' | 'other'
 
 export type CatReportReason = 'not_cat' | 'inappropriate' | 'wrong_location' | 'duplicate' | 'privacy' | 'other'
