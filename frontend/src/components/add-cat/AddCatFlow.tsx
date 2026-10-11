@@ -1,10 +1,9 @@
 import { Camera, CatIcon, ImageUp, ScanSearch } from 'lucide-react'
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
-import { detectCat, loadCatDetector, rejectionMessage } from '../../lib/catDetector'
-import { createCat } from '../../lib/api'
+import { ApiError, checkCatPhoto, createCat, wakeBackend } from '../../lib/api'
 import { distanceMeters, getCurrentPosition, type GpsFix } from '../../lib/geo'
 import { compressPhoto, guessFurColor, loadImage, readPhotoMeta } from '../../lib/photo'
-import type { Cat, FurColor, LatLng, Verification } from '../../types'
+import type { Cat, CatCheck, FurColor, LatLng, Verification } from '../../types'
 import { Modal } from '../ui/Modal'
 import { CameraCapture } from './CameraCapture'
 import { CatForm, type CatFormValues } from './CatForm'
@@ -20,6 +19,10 @@ interface Draft {
   photo: File
   photoUrl: string
   catScore: number
+  /** null = ระบบไม่แน่ใจ ผู้ใช้ต้องกดยืนยันเองก่อน (จะกลายเป็น user) */
+  catCheck: CatCheck | null
+  /** ผลตรวจที่ server เซ็นไว้ — ส่งกลับตอนปักหมุด จะได้ไม่ต้องตรวจซ้ำ */
+  checkToken: string | null
   guessedFur: FurColor
   sourcePosition: LatLng
   /** false = sourcePosition เป็นแค่ศูนย์กลางแผนที่ ไม่ใช่ GPS/EXIF */
@@ -34,7 +37,8 @@ type Step =
   | { kind: 'source' }
   | { kind: 'camera' }
   | { kind: 'analyzing'; previewUrl: string }
-  | { kind: 'rejected'; previewUrl: string; message: string }
+  /** ระบบไม่แน่ใจว่าเป็นแมว (หรือตรวจไม่สำเร็จ) — ลองรูปใหม่ หรือยืนยันเองแล้วไปต่อได้ */
+  | { kind: 'rejected'; previewUrl: string; message: string; messageEn: string | null; draft: Draft | null }
   | { kind: 'pick'; draft: Draft }
   | { kind: 'details'; draft: Draft; position: LatLng; verification: Verification; notices: string[] }
 
@@ -62,8 +66,8 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
   // StrictMode เรียก effect 2 รอบตอน dev — กันไม่ให้ตรวจรูปเดียวกันซ้ำ
   const started = useRef(false)
   useEffect(() => {
-    // เริ่มโหลดโมเดลไว้ก่อนระหว่างที่ผู้ใช้กำลังถ่ายรูป
-    loadCatDetector().catch(() => {})
+    // ปลุก server ไว้ก่อนระหว่างที่ผู้ใช้กำลังถ่ายรูป (Render แบบฟรีหลับเมื่อไม่มีคนใช้)
+    wakeBackend()
     if (!started.current) {
       started.current = true
       if (start.kind === 'camera') requestGps()
@@ -102,13 +106,8 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
       const compressed = await compressPhoto(file)
       const photoUrl = URL.createObjectURL(compressed)
       const img = await loadImage(photoUrl)
-      const detection = await detectCat(img)
-
-      if (!detection.isCat) {
-        URL.revokeObjectURL(photoUrl)
-        setStep({ kind: 'rejected', previewUrl, message: rejectionMessage(detection) })
-        return
-      }
+      // ตรวจที่ server (โมเดล → ไม่มั่นใจค่อยถาม AI) ตรวจไม่สำเร็จก็ยังให้ผู้ใช้ยืนยันเองแล้วไปต่อได้
+      const check = await checkCatPhoto(compressed).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))))
 
       let sourcePosition = origin
       let verification: Verification = 'manual'
@@ -123,24 +122,37 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         verification = 'exif_gps'
       }
 
-      URL.revokeObjectURL(previewUrl)
       draftPhotoUrl.current = photoUrl
-      setStep({
-        kind: 'pick',
-        draft: {
-          photo: compressed,
-          photoUrl,
-          catScore: detection.score,
-          guessedFur: guessFurColor(img, detection.bbox),
-          sourcePosition,
-          sourceKnown: verification !== 'manual',
-          source,
-          verification,
-          takenAt: meta?.takenAt ?? null,
-        },
-      })
+      const checked = check instanceof Error ? null : check
+      const draft: Draft = {
+        photo: compressed,
+        photoUrl,
+        catScore: checked?.score ?? 0,
+        catCheck: checked?.isCat ? checked.method : null,
+        checkToken: checked?.token ?? null,
+        guessedFur: guessFurColor(img),
+        sourcePosition,
+        sourceKnown: verification !== 'manual',
+        source,
+        verification,
+        takenAt: meta?.takenAt ?? null,
+      }
+      if (!checked?.isCat) {
+        const failed = check instanceof ApiError && check.status === 401
+        setStep({
+          kind: 'rejected',
+          previewUrl,
+          message: checked?.message ?? (check instanceof Error ? check.message : 'ตรวจรูปไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง'),
+          messageEn: checked?.messageEn ?? null,
+          // ยังไม่ล็อกอิน = ไปต่อไม่ได้อยู่แล้ว
+          draft: failed ? null : draft,
+        })
+        return
+      }
+      URL.revokeObjectURL(previewUrl)
+      setStep({ kind: 'pick', draft })
     } catch {
-      setStep({ kind: 'rejected', previewUrl, message: 'ตรวจรูปไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง' })
+      setStep({ kind: 'rejected', previewUrl, message: 'ตรวจรูปไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง', messageEn: null, draft: null })
     }
   }
 
@@ -181,10 +193,19 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         verification,
         sourcePosition: draft.sourceKnown ? draft.sourcePosition : null,
         takenAt: draft.takenAt,
+        furColorCustom: values.furColorCustom,
+        checkToken: draft.checkToken,
+        confirmCat: draft.catCheck === 'user',
       })
       onAdded(cat)
     } catch (e) {
-      setSaveError(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
+      if (e instanceof ApiError && e.code === 'not_cat') {
+        // ผลตรวจเดิมหมดอายุแล้ว ตรวจใหม่ไม่ผ่าน — กดปักหมุดอีกครั้ง = ยืนยันเองว่าเป็นแมว
+        setStep((prev) => (prev.kind === 'details' ? { ...prev, draft: { ...prev.draft, catCheck: 'user' } } : prev))
+        setSaveError(t('ระบบตรวจรูปอีกรอบแล้วไม่แน่ใจว่าเป็นแมว ถ้าแน่ใจว่าเป็นน้องแมว กดปักหมุดอีกครั้งเพื่อยืนยัน'))
+      } else {
+        setSaveError(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
+      }
       setSaving(false)
     }
   }
@@ -295,7 +316,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
             <ScanSearch size={20} className="text-orange-500" aria-hidden="true" />
             <span className="font-medium">{t('กำลังดูว่าเป็นน้องแมวไหม…')}</span>
           </div>
-          <p className="-mt-2 text-center text-xs text-stone-500">{t('ครั้งแรกจะช้าหน่อย เพราะต้องโหลดโมเดล AI')}</p>
+          <p className="-mt-2 text-center text-xs text-stone-500">{t('อาจใช้เวลาสักครู่ ถ้า server เพิ่งตื่นหรือต้องให้ AI ช่วยดู')}</p>
         </div>
       )}
 
@@ -305,7 +326,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
             <img src={step.previewUrl} alt="" className="aspect-[4/3] w-full object-cover opacity-60 grayscale" />
           </div>
           <CatIcon size={32} className="text-stone-400" aria-hidden="true" />
-          <p className="text-stone-700">{t(step.message)}</p>
+          <p className="text-stone-700">{lang === 'en' && step.messageEn ? step.messageEn : t(step.message)}</p>
           <button
             type="button"
             onClick={() => {
@@ -316,6 +337,21 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
           >
             {t('ลองรูปใหม่')}
           </button>
+          {step.draft && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  URL.revokeObjectURL(step.previewUrl)
+                  setStep({ kind: 'pick', draft: { ...step.draft!, catCheck: 'user' } })
+                }}
+                className="h-12 w-full rounded-full font-medium text-stone-700 ring-1 ring-stone-300 hover:bg-stone-100"
+              >
+                {t('ใช่ เป็นน้องแมวจริงๆ — ปักหมุดต่อ')}
+              </button>
+              <p className="-mt-1 text-xs text-stone-500">{t('หมุดจะขึ้นว่า "ยังไม่ยืนยันว่าเป็นแมว" จนกว่าผู้ดูแลจะตรวจ')}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -323,6 +359,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         <CatForm
           photoUrl={step.draft.photoUrl}
           catScore={step.draft.catScore}
+          catCheck={step.draft.catCheck ?? 'user'}
           verification={step.verification}
           notices={step.notices}
           guessedFur={step.draft.guessedFur}

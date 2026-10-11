@@ -1,7 +1,7 @@
 import type { Lang } from '../i18n'
 
 /** แก้เนื้อหาข้อกำหนดเมื่อไหร่ให้เพิ่มเลขนี้ ผู้ใช้ทุกคนจะต้องกดยอมรับใหม่ */
-export const TERMS_VERSION = 2
+export const TERMS_VERSION = 3
 export const TERMS_UPDATED = '2026-10-11'
 
 interface Section {
@@ -35,6 +35,7 @@ const TERMS: Record<Lang, Section[]> = {
         'ชื่อ อีเมล และรูปโปรไฟล์จากบัญชี Google ของคุณ (อีเมลไม่แสดงต่อผู้อื่น)',
         'หมุด รูป และรีวิวที่คุณโพสต์จะเป็นข้อมูลสาธารณะ — เราลบข้อมูล EXIF (รวมถึงพิกัดในไฟล์) ออกจากรูปก่อนเก็บ',
         'คำอธิบายและรีวิวของน้องแมว (ไม่รวมชื่อผู้รีวิว) จะถูกส่งให้ Google Gemini เพื่อสรุปเป็นภาษาไทยและอังกฤษ',
+        'รูปที่ระบบตรวจเองแล้วไม่แน่ใจว่าเป็นแมว จะถูกย่อและส่งให้ Google Gemini ช่วยดู (ลบข้อมูล EXIF ออกก่อนแล้ว)',
         'เพื่อความปลอดภัยของบัญชี เราบันทึกอุปกรณ์ IP และตำแหน่งโดยประมาณ (ระดับเมือง) ทุกครั้งที่เข้าสู่ระบบ — คุณดูและสั่งออกจากระบบอุปกรณ์เหล่านี้ได้ที่เมนู “อุปกรณ์ที่เข้าสู่ระบบ”',
         'เราบันทึกกิจกรรมในแอป เช่น การเข้าสู่ระบบ ปักหมุด รีวิว เพิ่มรูป และการรายงาน ให้ผู้ดูแลระบบใช้ตรวจสอบการใช้งานที่ผิดปกติ',
       ],
@@ -72,6 +73,7 @@ const TERMS: Record<Lang, Section[]> = {
         'Your name, email and profile photo from your Google account (your email is never shown to others).',
         'Pins, photos and reviews you post are public. We strip EXIF data (including embedded location) from photos before storing them.',
         "Cat descriptions and reviews (without reviewers' names) are sent to Google Gemini to produce Thai and English summaries.",
+        "Photos our own check isn't sure about are resized and sent to Google Gemini for a second look (with EXIF data already removed).",
         'To keep your account safe, we record the device, IP address and approximate (city-level) location of every sign-in. You can review these devices and sign them out under “Signed-in devices” in the menu.',
         'We log activity in the app, such as sign-ins, pins, reviews, photos and reports, so admins can spot abuse.',
       ],

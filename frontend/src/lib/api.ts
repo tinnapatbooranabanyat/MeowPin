@@ -6,6 +6,7 @@ import type {
   CatPhoto,
   CatReport,
   CatReportReason,
+  CatCheck,
   CatSummary,
   CatTraits,
   DeviceSession,
@@ -27,9 +28,15 @@ export const isConfigured = supabase !== null && Boolean(API_URL)
 
 export class ApiError extends Error {
   readonly status: number
-  constructor(message: string, status: number) {
+  /** เช่น not_cat = ตรวจแล้วไม่เจอแมว (ผู้ใช้ยืนยันเองแล้วส่งใหม่ได้) */
+  readonly code: string | null
+  /** ข้อความภาษาอังกฤษจาก AI (ถ้ามี) */
+  readonly messageEn: string | null
+  constructor(message: string, status: number, code: string | null = null, messageEn: string | null = null) {
     super(message)
     this.status = status
+    this.code = code
+    this.messageEn = messageEn
   }
 }
 
@@ -51,6 +58,8 @@ interface CatRow {
   id: string
   name: string
   fur_color: FurColor
+  fur_color_custom?: string | null
+  cat_check?: CatCheck
   breed?: string | null
   owner_status?: OwnerStatus
   lat: number
@@ -78,6 +87,7 @@ function rowToCat(row: CatRow): Cat {
     id: row.id,
     name: row.name,
     furColor: row.fur_color,
+    furColorCustom: row.fur_color_custom ?? null,
     breed: row.breed ?? null,
     ownerStatus: row.owner_status ?? 'unknown',
     position: { lat: row.lat, lng: row.lng },
@@ -89,6 +99,8 @@ function rowToCat(row: CatRow): Cat {
     sightings: row.sightings_count,
     verification: row.verification,
     catConfidence: row.cat_confidence,
+    // ก่อนรัน migration 0009 ยังไม่มีคอลัมน์นี้ — หมุดเดิมผ่านโมเดลทั้งหมด
+    catCheck: row.cat_check ?? 'model',
     // ค่า default กันพังถ้าฐานข้อมูลยังไม่ได้รัน migration 0002
     isFriendly: row.is_friendly ?? false,
     isClingy: row.is_clingy ?? false,
@@ -131,26 +143,56 @@ async function authHeader(): Promise<Record<string, string>> {
 
 async function readError(res: Response): Promise<ApiError> {
   let message = 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง'
+  let code: string | null = null
+  let messageEn: string | null = null
   try {
     const body = await res.json()
     // FastAPI ส่ง detail เป็นข้อความ หรือเป็น list ตอน validation ไม่ผ่าน
     if (typeof body.detail === 'string') message = body.detail
     else if (Array.isArray(body.detail)) message = 'ข้อมูลไม่ครบหรือไม่ถูกต้อง'
+    if (typeof body.code === 'string') code = body.code
+    if (typeof body.detailEn === 'string') messageEn = body.detailEn
   } catch {
     // ไม่ใช่ JSON
   }
-  return new ApiError(message, res.status)
+  return new ApiError(message, res.status, code, messageEn)
 }
+
+// Render แบบฟรีปิดเครื่องเมื่อไม่มีคนใช้ 15 นาที — request แรกต้องรอเครื่องเปิดเกือบนาที
+// ระหว่างนั้นเชื่อมต่อไม่ได้ หรือได้หน้า error ของ Render (ไม่ใช่ JSON ของเรา) → รอแล้วลองใหม่เอง
+const WAKE_RETRY_DELAYS_MS = [2000, 4000, 6000, 8000, 10_000, 10_000, 10_000, 10_000, 10_000, 10_000]
+const wakingListeners = new Set<(waking: boolean) => void>()
+
+/** ฟังว่ากำลังรอ server ตื่นอยู่ไหม (เอาไปโชว์ข้อความให้ผู้ใช้รู้ว่าไม่ได้ค้าง) */
+export function onBackendWaking(listener: (waking: boolean) => void): () => void {
+  wakingListeners.add(listener)
+  return () => wakingListeners.delete(listener)
+}
+
+const isServerWaking = (res: Response) =>
+  [502, 503, 504].includes(res.status) && !res.headers.get('content-type')?.includes('application/json')
 
 async function callBackend<T>(method: 'POST' | 'DELETE', path: string, body?: BodyInit): Promise<T> {
   if (!API_URL) throw new ApiError('ยังไม่ได้ตั้งค่า VITE_API_URL', 0)
-  const headers = await authHeader()
-  let res: Response
+  let res: Response | null = null
   try {
-    res = await fetch(`${API_URL}${path}`, { method, body, headers })
-  } catch {
-    throw new ApiError('เชื่อมต่อ server ไม่ได้ เช็กอินเทอร์เน็ตแล้วลองใหม่', 0)
+    for (let attempt = 0; ; attempt++) {
+      // ขอ token ใหม่ทุกรอบ เผื่อรอนานจน token เดิมหมดอายุ
+      const headers = await authHeader()
+      try {
+        res = await fetch(`${API_URL}${path}`, { method, body, headers })
+        if (!isServerWaking(res)) break
+      } catch {
+        res = null
+      }
+      if (attempt >= WAKE_RETRY_DELAYS_MS.length) break
+      if (attempt === 0) wakingListeners.forEach((l) => l(true))
+      await new Promise((resolve) => setTimeout(resolve, WAKE_RETRY_DELAYS_MS[attempt]))
+    }
+  } finally {
+    wakingListeners.forEach((l) => l(false))
   }
+  if (!res) throw new ApiError('เชื่อมต่อ server ไม่ได้ เช็กอินเทอร์เน็ตแล้วลองใหม่', 0)
   if (!res.ok) throw await readError(res)
   return (res.status === 204 ? undefined : await res.json()) as T
 }
@@ -180,6 +222,27 @@ export interface NewCatInput extends CatTraits {
   /** ตำแหน่งจาก GPS/EXIF ก่อนผู้ใช้ขยับหมุด — server ใช้ตรวจว่าขยับไกลเกินไหม */
   sourcePosition: LatLng | null
   takenAt: Date | null
+  furColorCustom: string
+  /** ผลตรวจรูปจาก checkCatPhoto (ไม่ต้องตรวจซ้ำ) */
+  checkToken: string | null
+  /** ผู้ใช้ยืนยันเองว่าเป็นแมว ตอนระบบไม่แน่ใจ */
+  confirmCat: boolean
+}
+
+export interface PhotoCheck {
+  isCat: boolean
+  score: number
+  method: CatCheck | null
+  message: string | null
+  messageEn: string | null
+  token: string
+}
+
+/** ตรวจรูปตอนเลือกรูป: โมเดลใน server ก่อน ไม่มั่นใจค่อยถาม AI */
+export function checkCatPhoto(photo: Blob): Promise<PhotoCheck> {
+  const form = new FormData()
+  form.append('photo', photo, 'photo.jpg')
+  return callBackend<PhotoCheck>('POST', '/cats/check-photo', form)
 }
 
 export function createCat(input: NewCatInput): Promise<Cat> {
@@ -187,6 +250,9 @@ export function createCat(input: NewCatInput): Promise<Cat> {
   form.append('photo', input.photo)
   form.append('name', input.name)
   form.append('fur_color', input.furColor)
+  if (input.furColor === 'other') form.append('fur_color_custom', input.furColorCustom)
+  if (input.checkToken) form.append('check_token', input.checkToken)
+  if (input.confirmCat) form.append('confirm_cat', 'true')
   if (input.breed) form.append('breed', input.breed)
   form.append('lat', String(input.position.lat))
   form.append('lng', String(input.position.lng))
@@ -418,10 +484,16 @@ export async function fetchCatPhotos(catId: string): Promise<CatPhoto[]> {
 }
 
 /** ส่งรูป (บีบอัดแล้ว) เข้าอัลบั้ม — server ตรวจว่าเป็นแมวและลบ EXIF อีกรอบ */
-export function uploadCatPhoto(catId: string, photo: File, reviewId?: string): Promise<{ id: string }> {
+export function uploadCatPhoto(
+  catId: string,
+  photo: File,
+  reviewId?: string,
+  confirmCat = false,
+): Promise<{ id: string }> {
   const form = new FormData()
   form.append('photo', photo)
   if (reviewId) form.append('review_id', reviewId)
+  if (confirmCat) form.append('confirm_cat', 'true')
   return callBackend<{ id: string }>('POST', `/cats/${catId}/photos`, form)
 }
 

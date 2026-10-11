@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useMapActions } from '../../hooks/useMapActions'
 import { fetchProfile, fetchUserCats, fetchUserReviews } from '../../lib/api'
-import { FUR_COLORS, timeAgo } from '../../lib/cat'
+import { furLabel, timeAgo } from '../../lib/cat'
 import { CatAvatar } from '../CatAvatar'
 import { PawRating } from '../reviews/PawRating'
 import { Modal } from '../ui/Modal'
@@ -160,7 +160,7 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
                   <CatAvatar cat={cat} className="aspect-square w-full" iconSize={36} />
                   <span className="truncate px-2.5 pt-1.5 text-sm font-medium text-stone-900">{cat.name}</span>
                   <span className="truncate px-2.5 pb-2 text-xs text-stone-500">
-                    {t(FUR_COLORS[cat.furColor].label)} · {timeAgo(cat.lastSeenAt, lang)}
+                    {t(furLabel(cat))} · {timeAgo(cat.lastSeenAt, lang)}
                   </span>
                 </button>
               </li>

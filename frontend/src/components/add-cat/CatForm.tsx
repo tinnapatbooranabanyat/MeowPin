@@ -1,13 +1,15 @@
-import { Check, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { Check, CircleHelp, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION } from '../../lib/cat'
 import { BreedPicker } from './BreedPicker'
-import type { CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../../types'
+import type { CatCheck, CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../../types'
 import { useI18n } from '../../hooks/useI18n'
 
 export interface CatFormValues extends CatTraits {
   name: string
   furColor: FurColor
+  /** สีที่พิมพ์เอง (ใช้เมื่อ furColor = other) */
+  furColorCustom: string
   breed: string | null
   placeName: string
   description: string
@@ -17,6 +19,7 @@ export interface CatFormValues extends CatTraits {
 interface Props {
   photoUrl: string
   catScore: number
+  catCheck: CatCheck
   verification: Verification
   notices: string[]
   guessedFur: FurColor
@@ -31,6 +34,7 @@ const inputClass =
 export function CatForm({
   photoUrl,
   catScore,
+  catCheck,
   verification,
   notices,
   guessedFur,
@@ -41,6 +45,8 @@ export function CatForm({
   const { t } = useI18n()
   const [name, setName] = useState('')
   const [furColor, setFurColor] = useState<FurColor>(guessedFur)
+  const [furColorCustom, setFurColorCustom] = useState('')
+  const [colorError, setColorError] = useState(false)
   const [breed, setBreed] = useState<string | null>(null)
   const [placeName, setPlaceName] = useState('')
   const [description, setDescription] = useState('')
@@ -56,9 +62,14 @@ export function CatForm({
       setNameError(true)
       return
     }
+    if (furColor === 'other' && !furColorCustom.trim()) {
+      setColorError(true)
+      return
+    }
     onSubmit({
       name: name.trim(),
       furColor,
+      furColorCustom: furColorCustom.trim(),
       breed,
       placeName: placeName.trim(),
       description: description.trim(),
@@ -73,10 +84,17 @@ export function CatForm({
       <div className="relative overflow-hidden rounded-2xl bg-stone-100">
         <img src={photoUrl} alt={t('รูปแมวที่จะปักหมุด')} className="aspect-[4/3] w-full object-cover" />
         <div className="absolute bottom-2 left-2 flex flex-wrap gap-1.5">
-          <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-            <ShieldCheck size={13} aria-hidden="true" />
-            {t('แมวจริง {n}%', { n: Math.round(catScore * 100) })}
-          </span>
+          {catCheck === 'user' ? (
+            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+              <CircleHelp size={13} aria-hidden="true" />
+              {t('ยังไม่ยืนยันว่าเป็นแมว')}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+              {catCheck === 'ai' ? <Sparkles size={13} aria-hidden="true" /> : <ShieldCheck size={13} aria-hidden="true" />}
+              {catCheck === 'ai' ? t('AI ยืนยันว่าเป็นแมว') : t('แมวจริง {n}%', { n: Math.round(catScore * 100) })}
+            </span>
+          )}
           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${VERIFICATION[verification].className}`}>
             {t(VERIFICATION[verification].label)}
           </span>
@@ -118,7 +136,10 @@ export function CatForm({
               key={color}
               type="button"
               aria-pressed={furColor === color}
-              onClick={() => setFurColor(color)}
+              onClick={() => {
+                setFurColor(color)
+                setColorError(false)
+              }}
               className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm ring-1 transition-colors ${
                 furColor === color
                   ? 'bg-orange-500 text-white ring-orange-500'
@@ -134,6 +155,24 @@ export function CatForm({
             </button>
           ))}
         </div>
+        {furColor === 'other' && (
+          <div className="mt-1 flex animate-fade-in flex-col gap-1">
+            <input
+              value={furColorCustom}
+              onChange={(e) => {
+                setFurColorCustom(e.target.value)
+                setColorError(false)
+              }}
+              placeholder={t('เช่น ส้มลายเปรอะขาว, เทาควันบุหรี่')}
+              maxLength={30}
+              aria-label={t('พิมพ์สีขนของน้อง')}
+              aria-invalid={colorError}
+              autoFocus
+              className={`${inputClass} ${colorError ? 'border-red-400' : ''}`}
+            />
+            {colorError && <span className="text-sm text-red-600">{t('พิมพ์สีขนของน้องก่อน')}</span>}
+          </div>
+        )}
       </fieldset>
 
       <div className="flex flex-col gap-1.5">

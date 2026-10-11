@@ -21,6 +21,8 @@ class Settings:
     photo_bucket: str = "cat-photos"
     # SSD-MobileNet ฝั่ง server ให้คะแนนต่างจาก COCO-SSD ในเบราว์เซอร์เล็กน้อย จึงใช้เกณฑ์ต่ำกว่า
     cat_threshold: float = 0.4
+    # โมเดลในเครื่องมั่นใจเกินนี้ผ่านเลย ต่ำกว่านี้ให้ Gemini ช่วยดู
+    cat_sure_threshold: float = 0.7
     max_upload_bytes: int = 5 * 1024 * 1024
     # ขยับหมุดจากตำแหน่ง GPS/EXIF เกินระยะนี้ → นับเป็นปักหมุดเอง (ต้องตรงกับ frontend)
     max_adjust_m: float = 50

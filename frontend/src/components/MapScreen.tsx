@@ -9,7 +9,7 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, fetchAdminCounts, recordSighting, type Bounds } from '../lib/api'
+import { deleteCat, fetchAdminCounts, recordSighting, wakeBackend, type Bounds } from '../lib/api'
 import { matchesQuery, seenWithin } from '../lib/cat'
 import type { Cat, FurColor, LatLng } from '../types'
 import { AccountMenu } from './account/AccountMenu'
@@ -147,6 +147,14 @@ export function MapScreen({ mapId }: Props) {
     [cats, furColor, seenToday, friendlyOnly, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
+
+  // ปลุก server ตั้งแต่เปิดแผนที่ และทุกครั้งที่กลับมาที่แท็บ — พอจะปักหมุดจริง server จะได้ตื่นแล้ว
+  useEffect(() => {
+    wakeBackend()
+    const onVisible = () => document.visibilityState === 'visible' && wakeBackend()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   const showToast = useCallback((message: string) => {
     setToast(message)

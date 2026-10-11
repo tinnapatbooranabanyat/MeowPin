@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 from postgrest.exceptions import APIError
 
-from . import detector, summary
+from . import catcheck, detector, summary
 from .auth import current_user_id, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -22,24 +22,20 @@ log = logging.getLogger("meowpin")
 
 FurColor = Literal[
     "orange", "orange_white", "cream", "white", "black", "black_white", "gray", "gray_white",
-    "brown", "tabby", "silver_tabby", "tabby_white", "calico", "tortoiseshell", "pointed",
+    "brown", "tabby", "silver_tabby", "tabby_white", "calico", "tortoiseshell", "pointed", "other",
 ]
 Verification = Literal["camera_gps", "exif_gps", "manual"]
 Neutered = Literal["yes", "no", "unknown"]
 OwnerStatus = Literal["stray", "owned", "unknown"]
 
-REJECTION_MESSAGES = {
-    "dog": "ดูเหมือนน้องหมานะ ไว้มีแอปปักหมุดหมาค่อยมาเจอกัน",
-    "teddy bear": "ตุ๊กตาไม่นับนะ ต้องเป็นแมวตัวจริง",
-    "person": "เจอแต่คน ยังไม่เห็นแมวเลย",
-    "bird": "นี่นกนะ ไม่ใช่แมว",
-}
+MAX_CUSTOM_COLOR = 30
 
 # จำกัดทั้งต่อบัญชีและต่อ IP (กันสร้างหลายบัญชีมาสแปม)
 create_user_limiter = RateLimiter(10, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 create_ip_limiter = RateLimiter(30, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 album_user_limiter = RateLimiter(30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 summary_ip_limiter = RateLimiter(60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+check_user_limiter = RateLimiter(40, 3600, "ตรวจรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 MAX_PHOTOS_PER_REVIEW = 4
 
 
@@ -95,20 +91,63 @@ def resolve_verification(
     return claim
 
 
-def read_cat_photo(photo: UploadFile) -> tuple[Image.Image, detector.Detection]:
-    """อ่านรูปที่อัปโหลด + ตรวจว่าเป็นแมว (ตรวจซ้ำฝั่ง server เพราะการตรวจในเบราว์เซอร์ถูกข้ามได้)"""
+class NotCatError(Exception):
+    """ตรวจแล้วไม่เจอแมว — ผู้ใช้กดยืนยันว่าเป็นแมวแล้วส่งใหม่ได้ (confirm_cat)"""
+
+    def __init__(self, result: catcheck.CatCheck):
+        self.result = result
+
+
+def read_photo(photo: UploadFile) -> tuple[bytes, Image.Image]:
     data = photo.file.read(settings.max_upload_bytes + 1)
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail="รูปใหญ่เกิน 5 MB")
     try:
-        image = open_image(data)
+        return data, open_image(data)
     except InvalidImage as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    detection = detector.detect_cat(image)
-    if not detection.is_cat:
-        message = REJECTION_MESSAGES.get(detection.other_label or "", "ไม่เจอแมวในรูปนี้ ลองถ่ายใหม่ให้เห็นน้องชัดๆ")
-        raise HTTPException(status_code=422, detail=message)
-    return image, detection
+
+
+def resolve_cat_check(
+    data: bytes, image: Image.Image, user_id: str, token: str, confirmed: bool
+) -> tuple[float, catcheck.CheckMethod]:
+    """ใช้ผลตรวจจาก token ถ้ามี (ไม่ต้องเรียก AI ซ้ำ) ไม่งั้นตรวจใหม่ — ไม่ผ่านแต่ผู้ใช้ยืนยันเอง = user"""
+    result = catcheck.verify(token, catcheck.photo_digest(data), user_id) if token else None
+    if result is None:
+        result = catcheck.check(image)
+    if result.ok and result.method:
+        return result.score, result.method
+    if confirmed:
+        return result.score, "user"
+    raise NotCatError(result)
+
+
+def insert_tolerant(client, table: str, row: dict, new_columns: tuple[str, ...]) -> None:
+    """ยังไม่ได้รัน migration ที่เพิ่มคอลัมน์ใหม่ → บันทึกแบบไม่มีคอลัมน์นั้นไปก่อน (ไม่ให้ปักหมุดพัง)"""
+    try:
+        client.table(table).insert(row).execute()
+    except APIError as e:
+        if not any(col in str(e) for col in new_columns):
+            raise
+        log.warning("%s: missing new columns, run the latest migration", table)
+        client.table(table).insert({k: v for k, v in row.items() if k not in new_columns}).execute()
+
+
+def flag_unconfirmed_cat(client, cat_id: UUID, user_id: str, what: str) -> None:
+    """ผู้ใช้ยืนยันเองว่าเป็นแมว → ส่งเข้าคิวรายงานให้ admin ตรวจ (ใช้รายงานแบบ "ไม่ใช่แมว" ที่มีอยู่)"""
+    try:
+        client.table("cat_reports").upsert(
+            {
+                "cat_id": str(cat_id),
+                "user_id": user_id,
+                "reason": "not_cat",
+                "details": f"ตรวจอัตโนมัติ: ระบบไม่แน่ใจว่า{what}เป็นแมว แต่ผู้ใช้ยืนยันว่าเป็นแมว",
+            },
+            on_conflict="cat_id,user_id",
+            ignore_duplicates=True,
+        ).execute()
+    except Exception:
+        log.warning("flag unconfirmed cat failed: %s", cat_id, exc_info=True)
 
 
 def resolve_last_seen(taken_at: datetime | None) -> datetime:
@@ -121,6 +160,31 @@ def resolve_last_seen(taken_at: datetime | None) -> datetime:
     if taken_at > now or taken_at < now - timedelta(days=365):
         return now
     return taken_at
+
+
+@app.exception_handler(NotCatError)
+async def not_cat_handler(_request: Request, exc: NotCatError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.result.message, "detailEn": exc.result.message_en, "code": "not_cat"},
+    )
+
+
+@app.post("/cats/check-photo")
+def check_cat_photo(request: Request, photo: UploadFile):
+    """ตรวจรูปตอนเลือกรูป (ก่อนกรอกรายละเอียด) — คืน token ไว้ใช้ตอนปักหมุดจริง จะได้ไม่ต้องตรวจซ้ำ"""
+    user_id = current_user_id(request)
+    check_user_limiter.check(user_id)
+    data, image = read_photo(photo)
+    result = catcheck.check(image)
+    return {
+        "isCat": result.ok,
+        "score": round(result.score, 4),
+        "method": result.method,
+        "message": result.message,
+        "messageEn": result.message_en,
+        "token": catcheck.sign(catcheck.photo_digest(data), user_id, result),
+    }
 
 
 @app.post("/cats", status_code=201)
@@ -145,6 +209,11 @@ def create_cat(
     # key จากรายการสายพันธุ์ในแอป หรือข้อความที่ผู้ใช้พิมพ์เอง (ว่าง = ไม่ระบุ)
     breed: Annotated[str, Form(max_length=40)] = "",
     owner_status: Annotated[OwnerStatus, Form()] = "unknown",
+    # สีที่ผู้ใช้พิมพ์เอง (ใช้คู่กับ fur_color = other)
+    fur_color_custom: Annotated[str, Form(max_length=MAX_CUSTOM_COLOR)] = "",
+    # ผลตรวจรูปจาก /cats/check-photo และการยืนยันเองว่าเป็นแมว (ตอนระบบไม่แน่ใจ)
+    check_token: Annotated[str, Form(max_length=1000)] = "",
+    confirm_cat: Annotated[bool, Form()] = False,
 ):
     client = get_client()
     user_id = current_user_id(request)
@@ -154,8 +223,12 @@ def create_cat(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="ตั้งชื่อให้น้องก่อน")
+    custom_color = fur_color_custom.strip() if fur_color == "other" else ""
+    if fur_color == "other" and not custom_color:
+        raise HTTPException(status_code=422, detail="พิมพ์สีขนของน้องก่อน")
 
-    image, detection = read_cat_photo(photo)
+    data, image = read_photo(photo)
+    cat_score, cat_check = resolve_cat_check(data, image, user_id, check_token, confirm_cat)
 
     final_verification = resolve_verification(verification, lat, lng, source_lat, source_lng)
     last_seen_at = resolve_last_seen(taken_at)
@@ -184,7 +257,9 @@ def create_cat(
         "description": description.strip(),
         "photo_path": photo_path,
         "verification": final_verification,
-        "cat_confidence": round(detection.score, 4),
+        "cat_confidence": round(cat_score, 4),
+        "cat_check": cat_check,
+        "fur_color_custom": custom_color or None,
         "has_owner": has_owner,
         "created_by": user_id,
         "is_friendly": is_friendly,
@@ -197,7 +272,7 @@ def create_cat(
         "last_seen_at": last_seen_at.isoformat(),
     }
     try:
-        client.table("cats").insert(row).execute()
+        insert_tolerant(client, "cats", row, ("cat_check", "fur_color_custom"))
         client.table("sightings").insert(
             {"cat_id": str(cat_id), "user_id": user_id, "seen_at": last_seen_at.isoformat()}
         ).execute()
@@ -206,6 +281,8 @@ def create_cat(
         bucket.remove([photo_path])
         log.exception("insert cat failed")
         raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
+    if cat_check == "user":
+        flag_unconfirmed_cat(client, cat_id, user_id, "รูปหมุดนี้")
 
     profile = client.table("profiles").select("display_name").eq("id", user_id).limit(1).execute().data
     return {
@@ -220,6 +297,8 @@ def create_cat(
         "sightings": 1,
         "verification": final_verification,
         "catConfidence": row["cat_confidence"],
+        "catCheck": cat_check,
+        "furColorCustom": row["fur_color_custom"],
         "isFriendly": is_friendly,
         "isClingy": is_clingy,
         "isPlayful": is_playful,
@@ -257,6 +336,7 @@ def add_cat_photo(
     request: Request,
     photo: UploadFile,
     review_id: Annotated[UUID | None, Form()] = None,
+    confirm_cat: Annotated[bool, Form()] = False,
 ):
     """เพิ่มรูปเข้าอัลบั้มของแมว (แนบกับรีวิวของตัวเองได้ สูงสุด 4 รูปต่อรีวิว)"""
     client = get_client()
@@ -275,7 +355,8 @@ def add_cat_photo(
         if len(attached) >= MAX_PHOTOS_PER_REVIEW:
             raise HTTPException(status_code=422, detail="แนบรูปได้สูงสุด 4 รูปต่อรีวิว")
 
-    image, detection = read_cat_photo(photo)
+    data, image = read_photo(photo)
+    cat_score, cat_check = resolve_cat_check(data, image, user_id, "", confirm_cat)
     photo_id = uuid4()
     photo_path = f"album/{cat_id}/{photo_id}.webp"
     bucket = client.storage.from_(settings.photo_bucket)
@@ -290,14 +371,17 @@ def add_cat_photo(
         "user_id": user_id,
         "review_id": str(review_id) if review_id else None,
         "photo_path": photo_path,
-        "cat_confidence": round(detection.score, 4),
+        "cat_confidence": round(cat_score, 4),
+        "cat_check": cat_check,
     }
     try:
-        client.table("cat_photos").insert(row).execute()
+        insert_tolerant(client, "cat_photos", row, ("cat_check",))
     except APIError:
         bucket.remove([photo_path])
         log.exception("insert cat photo failed")
         raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
+    if cat_check == "user":
+        flag_unconfirmed_cat(client, cat_id, user_id, "รูปในอัลบั้ม")
     return {"id": row["id"], "photoUrl": public_photo_url(photo_path), "reviewId": row["review_id"]}
 
 

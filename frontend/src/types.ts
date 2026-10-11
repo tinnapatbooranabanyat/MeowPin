@@ -14,6 +14,11 @@ export type FurColor =
   | 'calico'
   | 'tortoiseshell'
   | 'pointed'
+  /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
+  | 'other'
+
+/** ตรวจว่าเป็นแมวด้วยวิธีไหน: โมเดลในเครื่องมั่นใจ / AI (Gemini) ยืนยัน / ผู้ปักหมุดยืนยันเอง (รอ admin ตรวจ) */
+export type CatCheck = 'model' | 'ai' | 'user'
 
 // ระดับความน่าเชื่อถือของตำแหน่ง: ถ่ายในแอป+GPS > EXIF ในรูป > ผู้ใช้ลากหมุดเอง
 export type Verification = 'camera_gps' | 'exif_gps' | 'manual'
@@ -39,6 +44,8 @@ export interface Cat extends CatTraits {
   id: string
   name: string
   furColor: FurColor
+  /** สีที่พิมพ์เอง เมื่อ furColor = other */
+  furColorCustom: string | null
   /** key จาก BREEDS หรือข้อความที่ผู้ใช้พิมพ์เอง (null = ไม่ระบุ) */
   breed: string | null
   ownerStatus: OwnerStatus
@@ -49,8 +56,9 @@ export interface Cat extends CatTraits {
   lastSeenAt: string
   sightings: number
   verification: Verification
-  /** ความมั่นใจของโมเดลว่าเป็นแมวจริง 0–1 */
+  /** ความมั่นใจว่าเป็นแมวจริง 0–1 */
   catConfidence: number
+  catCheck: CatCheck
   createdBy: string | null
   createdByName: string | null
   reviewCount: number

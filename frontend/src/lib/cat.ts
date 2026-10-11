@@ -31,7 +31,7 @@ export const FUR_COLORS: Record<FurColor, { label: string; bg: string; fg: strin
     fg: '#5C2A06',
   },
   tortoiseshell: {
-    label: 'กระดองเต่า',
+    label: 'ลายเปรอะ (กระดองเต่า)',
     bg: 'radial-gradient(circle at 30% 30%, #C9732E 0 22%, transparent 23%), radial-gradient(circle at 70% 65%, #9A5524 0 20%, transparent 21%), #2E2420',
     fg: '#FCE7D2',
   },
@@ -40,6 +40,17 @@ export const FUR_COLORS: Record<FurColor, { label: string; bg: string; fg: strin
     bg: 'radial-gradient(circle at 50% 45%, #F3E6D3 0 38%, #6B4A35 75%)',
     fg: '#3B2618',
   },
+  other: {
+    label: 'สีอื่นๆ (พิมพ์เอง)',
+    bg: 'conic-gradient(#F59E42, #EED9B6, #9CA3AF, #2E2A27, #7B5134, #F59E42)',
+    fg: '#FFFFFF',
+  },
+}
+
+/** ชื่อสีขนสำหรับแสดง (ยังไม่แปล) — สีที่พิมพ์เองใช้ข้อความของผู้ใช้ */
+export function furLabel(cat: { furColor: FurColor; furColorCustom?: string | null }): string {
+  if (cat.furColor === 'other' && cat.furColorCustom) return cat.furColorCustom
+  return FUR_COLORS[cat.furColor].label
 }
 
 /** สายพันธุ์ที่มีให้เลือก — ผู้ใช้พิมพ์ชื่ออื่นเองได้ (เก็บเป็นข้อความตรงๆ) */
@@ -127,7 +138,7 @@ export function seenWithin(cat: Cat, hours: number, now = Date.now()): boolean {
 export function matchesQuery(cat: Cat, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
-  const fur = FUR_COLORS[cat.furColor].label
+  const fur = furLabel(cat)
   // ค้นได้ทั้งชื่อสีขนและสายพันธุ์ ภาษาไทยและอังกฤษ
   return [
     cat.name,

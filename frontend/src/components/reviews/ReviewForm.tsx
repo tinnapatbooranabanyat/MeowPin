@@ -1,6 +1,6 @@
 import { ImagePlus, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { saveReview, uploadCatPhoto } from '../../lib/api'
+import { ApiError, saveReview, uploadCatPhoto } from '../../lib/api'
 import type { Review } from '../../types'
 import { PawRatingInput } from './PawRating'
 import { useI18n } from '../../hooks/useI18n'
@@ -17,11 +17,14 @@ interface Props {
 const MAX_PHOTOS = 4
 
 export function ReviewForm({ catId, existing, attachedPhotos = 0, onCancel, onSaved }: Props) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [paws, setPaws] = useState(existing?.paws ?? 0)
   const [recommend, setRecommend] = useState<boolean | null>(existing?.recommend ?? null)
   const [comment, setComment] = useState(existing?.comment ?? '')
   const [error, setError] = useState<string | null>(null)
+  // ระบบไม่แน่ใจว่ารูปที่แนบเป็นแมว → ให้ติ๊กยืนยันเองแล้วส่งอีกครั้ง
+  const [notCat, setNotCat] = useState(false)
+  const [confirmCat, setConfirmCat] = useState(false)
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
   const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([])
@@ -61,18 +64,24 @@ export function ReviewForm({ catId, existing, attachedPhotos = 0, onCancel, onSa
       if (photos.length) {
         // ไลบรารีบีบอัดรูปโหลดเฉพาะตอนมีรูปจะอัปโหลด
         const { compressPhoto } = await import('../../lib/photo')
-        const failed: { photo: (typeof photos)[number]; reason: string }[] = []
+        const failed: { photo: (typeof photos)[number]; reason: string; notCat: boolean }[] = []
         for (const [i, photo] of photos.entries()) {
           setProgress(t('กำลังอัปโหลดรูป {i}/{n}…', { i: i + 1, n: photos.length }))
           try {
-            await uploadCatPhoto(catId, await compressPhoto(photo.file), reviewId)
+            await uploadCatPhoto(catId, await compressPhoto(photo.file), reviewId, confirmCat)
           } catch (err) {
-            failed.push({ photo, reason: t(err instanceof Error ? err.message : 'อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง') })
+            const isNotCat = err instanceof ApiError && err.code === 'not_cat'
+            const reason =
+              isNotCat && lang === 'en' && err.messageEn
+                ? err.messageEn
+                : t(err instanceof Error ? err.message : 'อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')
+            failed.push({ photo, reason, notCat: isNotCat })
           }
         }
         setProgress(null)
         if (failed.length) {
           setPhotos(failed.map((f) => f.photo))
+          setNotCat(failed.some((f) => f.notCat))
           setError(t('บันทึกรีวิวแล้ว แต่อัปโหลดรูปไม่สำเร็จ {n} รูป: {reason}', { n: failed.length, reason: failed[0].reason }))
           setSaving(false)
           return
@@ -173,6 +182,17 @@ export function ReviewForm({ catId, existing, attachedPhotos = 0, onCancel, onSa
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
+      )}
+      {notCat && (
+        <label className="-mt-1 flex cursor-pointer items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+          <input
+            type="checkbox"
+            checked={confirmCat}
+            onChange={(e) => setConfirmCat(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 accent-orange-500"
+          />
+          {t('รูปนี้เป็นน้องแมวจริงๆ — อัปโหลดเลย (ผู้ดูแลจะตรวจอีกที)')}
+        </label>
       )}
       <div className="flex gap-2">
         <button

@@ -13,7 +13,6 @@ import {
   siRender,
   siSupabase,
   siTailwindcss,
-  siTensorflow,
   siTypescript,
   siVercel,
   siVite,
@@ -41,7 +40,6 @@ const STACK: { title: string; items: Tech[] }[] = [
       { icon: siTailwindcss, name: 'Tailwind CSS', role: 'ตกแต่งหน้าตา ธีมสว่าง/มืด' },
       { icon: siReactquery, name: 'TanStack Query', role: 'ดึงและแคชข้อมูล' },
       { icon: siGooglemaps, name: 'Google Maps Platform', role: 'แผนที่และค้นหาสถานที่' },
-      { icon: siTensorflow, name: 'TensorFlow.js', role: 'เช็กว่าในรูปมีแมวตั้งแต่ในเครื่อง' },
     ],
   },
   {
@@ -49,8 +47,8 @@ const STACK: { title: string; items: Tech[] }[] = [
     items: [
       { icon: siPython, name: 'Python', role: 'ภาษาที่ใช้เขียนเซิร์ฟเวอร์' },
       { icon: siFastapi, name: 'FastAPI', role: 'API สำหรับปักหมุด อัปโหลดรูป และงานของ admin' },
-      { icon: siOnnx, name: 'ONNX Runtime', role: 'ตรวจรูปแมวซ้ำฝั่งเซิร์ฟเวอร์ (SSD MobileNet)' },
-      { icon: siGooglegemini, name: 'Google Gemini', role: 'สรุปรีวิวน้องแมวด้วย AI' },
+      { icon: siOnnx, name: 'ONNX Runtime', role: 'ตรวจรูปแมวด่านแรก (SSD MobileNet)' },
+      { icon: siGooglegemini, name: 'Google Gemini', role: 'สรุปรีวิวและช่วยดูรูปที่ไม่แน่ใจว่าเป็นแมว' },
     ],
   },
   {

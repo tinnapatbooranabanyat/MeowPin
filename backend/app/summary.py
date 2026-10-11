@@ -2,16 +2,10 @@
 
 import hashlib
 import json
-import logging
 from dataclasses import dataclass
 
-import httpx
+from . import gemini
 
-from .config import settings
-
-log = logging.getLogger("meowpin.summary")
-
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MAX_REVIEWS = 30
 
 SYSTEM_INSTRUCTION = """You write short summaries of community notes about one cat on MeowPin, a map of street and \
@@ -70,49 +64,17 @@ def source_hash(data: dict) -> str:
     return hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
-def _request_body(data: dict, with_thinking: bool) -> dict:
-    config: dict = {
-        "responseMimeType": "application/json",
-        "responseSchema": RESPONSE_SCHEMA,
-        "temperature": 0.4,
-        "maxOutputTokens": 2048,
-    }
-    if with_thinking:
-        # สรุปสั้นๆ ไม่ต้องคิดเยอะ — ประหยัดโควตา (low ใช้ได้ทั้ง 3.8 Flash และ 3.5 Flash-Lite)
-        config["thinkingConfig"] = {"thinkingLevel": "low"}
-    return {
-        "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-        "contents": [{"role": "user", "parts": [{"text": json.dumps(data, ensure_ascii=False)}]}],
-        "generationConfig": config,
-    }
-
-
-def _post(body: dict) -> httpx.Response:
-    return httpx.post(
-        GEMINI_URL.format(model=settings.gemini_model),
-        headers={"x-goog-api-key": settings.gemini_api_key},
-        json=body,
-        timeout=40,
-    )
-
-
 def generate(data: dict) -> Summary:
-    if not settings.gemini_api_key:
-        raise SummaryError("ยังไม่ได้ตั้งค่า GEMINI_API_KEY")
-    res = _post(_request_body(data, with_thinking=True))
-    # ถ้ารุ่นที่เลือกไม่รับการตั้งค่า thinking ให้ลองใหม่แบบไม่ใส่
-    if res.status_code == 400 and "thinking" in res.text.lower():
-        res = _post(_request_body(data, with_thinking=False))
-    if res.status_code != 200:
-        log.warning("gemini %s: %s", res.status_code, res.text[:300])
-        raise SummaryError("สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง")
     try:
-        parts = res.json()["candidates"][0]["content"]["parts"]
-        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
-        out = json.loads(text)
+        out = gemini.generate_json(
+            SYSTEM_INSTRUCTION,
+            [{"text": json.dumps(data, ensure_ascii=False)}],
+            RESPONSE_SCHEMA,
+        )
         th, en = str(out["th"]).strip(), str(out["en"]).strip()
-    except (KeyError, IndexError, ValueError, TypeError) as e:
-        log.warning("gemini unexpected response: %s", res.text[:300])
+    except (gemini.GeminiError, KeyError) as e:
+        if isinstance(e, gemini.GeminiError) and "GEMINI_API_KEY" in str(e):
+            raise SummaryError(str(e)) from e
         raise SummaryError("สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง") from e
     if not th or not en:
         raise SummaryError("สรุปด้วย AI ไม่สำเร็จ ลองใหม่ภายหลัง")

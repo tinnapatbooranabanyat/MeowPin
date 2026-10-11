@@ -1,29 +1,10 @@
-import {
-  Cat as CatIcon,
-  CalendarClock,
-  Dna,
-  Eye,
-  Flag,
-  Heart,
-  Home,
-  Images,
-  MapPin,
-  Navigation,
-  Palette,
-  Scissors,
-  Share2,
-  ShieldCheck,
-  Trash2,
-  UserRound,
-  X,
-  type LucideIcon,
-} from 'lucide-react'
+import { CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useCatPhotos } from '../hooks/useCatPhotos'
 import { useMapActions } from '../hooks/useMapActions'
-import { breedLabel, directionsUrl, FUR_COLORS, NEUTERED, OWNER_STATUS, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
+import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION, breedLabel, directionsUrl, furLabel, timeAgo } from '../lib/cat'
 import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
@@ -65,7 +46,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
   }
 
   const subtitle = [
-    t('แมว{fur}', { fur: t(fur.label) }),
+    t('แมว{fur}', { fur: t(furLabel(cat)) }),
     cat.ownerStatus !== 'unknown' ? t(OWNER_STATUS[cat.ownerStatus].label) : null,
     breed,
   ]
@@ -107,9 +88,23 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
               <CatIcon size={64} strokeWidth={1.6} aria-hidden="true" />
             </div>
           )}
-          <span className="pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">
-            <ShieldCheck size={13} aria-hidden="true" />
-            {t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
+          <span
+            className={`pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur ${
+              cat.catCheck === 'user' ? 'bg-amber-400/90 text-amber-950' : 'bg-black/60 text-white'
+            }`}
+          >
+            {cat.catCheck === 'user' ? (
+              <CircleHelp size={13} aria-hidden="true" />
+            ) : cat.catCheck === 'ai' ? (
+              <Sparkles size={13} aria-hidden="true" />
+            ) : (
+              <ShieldCheck size={13} aria-hidden="true" />
+            )}
+            {cat.catCheck === 'user'
+              ? t('ยังไม่ยืนยันว่าเป็นแมว')
+              : cat.catCheck === 'ai'
+                ? t('AI ยืนยันว่าเป็นแมว')
+                : t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
           </span>
           {photos.length > 1 && (
             <button
@@ -277,7 +272,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                     style={{ background: fur.bg }}
                     aria-hidden="true"
                   />
-                  {t(fur.label)}
+                  {t(furLabel(cat))}
                 </span>
               </AboutRow>
               <AboutRow icon={Dna} label={t('สายพันธุ์')}>
@@ -297,8 +292,12 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                   {t(VERIFICATION[cat.verification].label)}
                 </span>
               </AboutRow>
-              <AboutRow icon={ShieldCheck} label={t('ความมั่นใจว่าเป็นแมว')}>
-                {Math.round(cat.catConfidence * 100)}%
+              <AboutRow icon={ShieldCheck} label={t('ตรวจว่าเป็นแมว')}>
+                {cat.catCheck === 'user'
+                  ? t('ผู้ปักหมุดยืนยันเอง (รอผู้ดูแลตรวจ)')
+                  : cat.catCheck === 'ai'
+                    ? t('AI ช่วยดูแล้วว่าเป็นแมว ({n}%)', { n: Math.round(cat.catConfidence * 100) })
+                    : t('ระบบตรวจพบแมว {n}%', { n: Math.round(cat.catConfidence * 100) })}
               </AboutRow>
               <AboutRow icon={UserRound} label={t('ปักหมุดโดย')}>
                 {pinnedBy}
