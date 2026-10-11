@@ -518,4 +518,9 @@ export const EN: Record<string, string> = {
   'บันทึกการแก้ไขหมุด{name}แล้ว': 'Saved changes to {name}',
   'แก้ไขหมุด {cat}': 'edited the pin {cat}',
   'แก้ไขหรือลบได้เฉพาะหมุดที่คุณปักเอง': 'You can only edit or delete pins you created',
+  'เลือกจากแกลเลอรี / ไฟล์': 'Choose from gallery / files',
+  '(เก็บตำแหน่งในรูปได้มากกว่า)': '(more likely to keep the photo location)',
+  'เลือกแอปเอง เช่น แกลเลอรีหรือ Files — เก็บตำแหน่งในรูปได้มากกว่า': 'Pick an app such as Gallery or Files — more likely to keep the photo location',
+  'ไฟล์นี้ไม่ใช่รูปภาพ เลือกไฟล์รูปน้องแมวนะ': "That file isn't an image. Please choose a photo of the cat.",
+  'รูปนี้ไม่มีข้อมูลตำแหน่ง — ถ้าเลือกผ่าน "อัปโหลดรูป" Android จะลบตำแหน่งออก ลองปุ่ม "เลือกจากแกลเลอรี / ไฟล์" แทน หรือเลื่อนแผนที่ไปที่ที่เจอแมว': 'This photo has no location. Android removes it when you pick through "Upload photo" — try "Choose from gallery / files" instead, or move the map to where you met the cat.',
 }

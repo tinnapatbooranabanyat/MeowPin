@@ -1,6 +1,7 @@
-import { Camera, CatIcon, ImageUp, ScanSearch } from 'lucide-react'
+import { Camera, CatIcon, FolderOpen, ImageUp, ScanSearch } from 'lucide-react'
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { ApiError, checkCatPhoto, createCat, wakeBackend } from '../../lib/api'
+import { isAndroid, isImageFile } from '../../lib/device'
 import { distanceMeters, getCurrentPosition, type GpsFix } from '../../lib/geo'
 import { compressPhoto, guessFurColor, loadImage, readPhotoMeta } from '../../lib/photo'
 import type { Cat, CatCheck, FurColor, LatLng, Verification } from '../../types'
@@ -58,10 +59,12 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
   const [gps, setGps] = useState<GpsFix | null | undefined>(undefined)
   const gpsPromise = useRef<Promise<GpsFix | null> | null>(null)
   const uploadInput = useRef<HTMLInputElement>(null)
+  const galleryInput = useRef<HTMLInputElement>(null)
   const nativeCameraInput = useRef<HTMLInputElement>(null)
   const draftPhotoUrl = useRef<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [pickError, setPickError] = useState<string | null>(null)
 
   // StrictMode เรียก effect 2 รอบตอน dev — กันไม่ให้ตรวจรูปเดียวกันซ้ำ
   const started = useRef(false)
@@ -98,6 +101,12 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
   }
 
   async function processPhoto(file: File, source: 'camera' | 'upload') {
+    if (!isImageFile(file)) {
+      setStep({ kind: 'source' })
+      setPickError(t('ไฟล์นี้ไม่ใช่รูปภาพ เลือกไฟล์รูปน้องแมวนะ'))
+      return
+    }
+    setPickError(null)
     const previewUrl = URL.createObjectURL(file)
     setStep({ kind: 'analyzing', previewUrl })
     try {
@@ -219,6 +228,8 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
   const hiddenInputs = (
     <>
       <input ref={uploadInput} type="file" accept="image/*" hidden onChange={onFileChosen('upload')} />
+      {/* ไม่ใส่ accept: Android จะให้เลือกแอปเอง แทน Photo Picker ที่ลบตำแหน่ง GPS ออกจากรูป */}
+      {isAndroid && <input ref={galleryInput} type="file" hidden onChange={onFileChosen('upload')} />}
       <input
         ref={nativeCameraInput}
         type="file"
@@ -252,7 +263,9 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
     // มีตำแหน่งจากรูป/GPS → เริ่มหมุดที่นั่นเลย (เดิมเริ่มที่จุดกดค้าง ทำให้ดูเหมือนอ่านตำแหน่งในรูปไม่ได้)
     const hint = !draft.sourceKnown
       ? draft.source === 'upload'
-        ? t('รูปนี้ไม่มีข้อมูลตำแหน่ง — มือถือหลายรุ่นลบตำแหน่งออกตอนเลือกรูปจากแกลเลอรี เลื่อนแผนที่ไปที่ที่เจอแมว หรือใช้ "ถ่ายรูปตอนนี้" เพื่อยืนยันด้วย GPS')
+        ? isAndroid
+          ? t('รูปนี้ไม่มีข้อมูลตำแหน่ง — ถ้าเลือกผ่าน "อัปโหลดรูป" Android จะลบตำแหน่งออก ลองปุ่ม "เลือกจากแกลเลอรี / ไฟล์" แทน หรือเลื่อนแผนที่ไปที่ที่เจอแมว')
+          : t('รูปนี้ไม่มีข้อมูลตำแหน่ง — มือถือหลายรุ่นลบตำแหน่งออกตอนเลือกรูปจากแกลเลอรี เลื่อนแผนที่ไปที่ที่เจอแมว หรือใช้ "ถ่ายรูปตอนนี้" เพื่อยืนยันด้วย GPS')
         : t('ไม่ได้ตำแหน่ง GPS ตอนถ่าย เลื่อนแผนที่ไปที่ที่เจอแมวเลย')
       : sourceFar
         ? t('ย้ายหมุดไปตำแหน่งจาก{source}แล้ว (ห่างจากจุดที่คุณกดค้างประมาณ {m} ม.)', {
@@ -300,6 +313,19 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
             subtitle={t('ใช้ตำแหน่งจากข้อมูลในรูป (ถ้ามี)')}
             onClick={() => uploadInput.current?.click()}
           />
+          {isAndroid && (
+            <SourceButton
+              icon={<FolderOpen size={26} />}
+              title={t('เลือกจากแกลเลอรี / ไฟล์')}
+              subtitle={t('เลือกแอปเอง เช่น แกลเลอรีหรือ Files — เก็บตำแหน่งในรูปได้มากกว่า')}
+              onClick={() => galleryInput.current?.click()}
+            />
+          )}
+          {pickError && (
+            <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+              {pickError}
+            </p>
+          )}
           <p className="px-1 text-xs leading-relaxed text-stone-500">
             {t('รูปที่ส่งต่อผ่าน LINE หรือ Facebook และรูปแคปหน้าจอมักไม่มีข้อมูลตำแหน่ง ถ้าไม่มีจะให้ปักหมุดเองแทน')}
           </p>

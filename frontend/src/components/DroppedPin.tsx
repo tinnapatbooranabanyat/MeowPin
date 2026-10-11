@@ -1,8 +1,9 @@
 import { AdvancedMarker } from '@vis.gl/react-google-maps'
-import { Camera, ImageUp, X } from 'lucide-react'
+import { Camera, FolderOpen, ImageUp, X } from 'lucide-react'
 import { useEffect, useRef, type ChangeEvent } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { wakeBackend } from '../lib/api'
+import { isAndroid } from '../lib/device'
 import { PawPin } from './PawPin'
 import type { LatLng } from '../types'
 import { useI18n } from '../hooks/useI18n'
@@ -23,6 +24,7 @@ export function DroppedPin({ position, onClose, onCamera, onFile }: Props) {
   // input อยู่ที่นี่ (ไม่ใช่ใน flow ที่ lazy-load) เพื่อให้ .click() เกิดใน gesture เดียวกับที่ผู้ใช้กด
   // ไม่งั้น Safari จะบล็อกหน้าต่างเลือกไฟล์
   const fileInput = useRef<HTMLInputElement>(null)
+  const galleryInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     wakeBackend()
@@ -84,7 +86,20 @@ export function DroppedPin({ position, onClose, onCamera, onFile }: Props) {
             <span className="text-[11px] font-normal text-orange-700">{t('ใช้ตำแหน่งในรูปถ้ามี')}</span>
           </button>
         </div>
+        {isAndroid && (
+          <button
+            type="button"
+            onClick={() => requireLogin(t(LOGIN_REASON)) && galleryInput.current?.click()}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50"
+          >
+            <FolderOpen size={18} aria-hidden="true" />
+            {t('เลือกจากแกลเลอรี / ไฟล์')}
+            <span className="text-xs font-normal text-stone-500">{t('(เก็บตำแหน่งในรูปได้มากกว่า)')}</span>
+          </button>
+        )}
         <input ref={fileInput} type="file" accept="image/*" hidden onChange={onFileChange} />
+        {/* ไม่ใส่ accept: Android จะให้เลือกแอปเอง แทน Photo Picker ที่ลบตำแหน่ง GPS ออกจากรูป */}
+        {isAndroid && <input ref={galleryInput} type="file" hidden onChange={onFileChange} />}
       </div>
     </>
   )
