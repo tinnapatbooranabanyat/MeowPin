@@ -1,7 +1,7 @@
 import type { Lang } from '../i18n'
 
 /** แก้เนื้อหาข้อกำหนดเมื่อไหร่ให้เพิ่มเลขนี้ ผู้ใช้ทุกคนจะต้องกดยอมรับใหม่ */
-export const TERMS_VERSION = 4
+export const TERMS_VERSION = 5
 export const TERMS_UPDATED = '2026-10-11'
 
 interface Section {
@@ -38,6 +38,7 @@ const TERMS: Record<Lang, Section[]> = {
         'รูปที่ใช้ปักหมุดและรูปในอัลบั้มจะถูกย่อและส่งให้ Google Gemini ตรวจว่าเป็นแมวจริง (ลบข้อมูล EXIF ออกก่อนแล้ว)',
         'เพื่อความปลอดภัยของบัญชี เราบันทึกอุปกรณ์ IP และตำแหน่งโดยประมาณ (ระดับเมือง) ทุกครั้งที่เข้าสู่ระบบ — คุณดูและสั่งออกจากระบบอุปกรณ์เหล่านี้ได้ที่เมนู “อุปกรณ์ที่เข้าสู่ระบบ”',
         'เราบันทึกกิจกรรมในแอป เช่น การเข้าสู่ระบบ ปักหมุด รีวิว เพิ่มรูป และการรายงาน ให้ผู้ดูแลระบบใช้ตรวจสอบการใช้งานที่ผิดปกติ',
+        'ถ้าแอปเกิดข้อผิดพลาด อาจส่งรายละเอียดทางเทคนิค (เช่น ข้อความ error และรุ่นเบราว์เซอร์ ไม่รวมข้อมูลส่วนตัว) ให้บริการ Sentry เพื่อใช้แก้ไขปัญหา',
       ],
     },
     {
@@ -76,6 +77,7 @@ const TERMS: Record<Lang, Section[]> = {
         "Pin and album photos are resized and sent to Google Gemini to check that they show a real cat (with EXIF data already removed).",
         'To keep your account safe, we record the device, IP address and approximate (city-level) location of every sign-in. You can review these devices and sign them out under “Signed-in devices” in the menu.',
         'We log activity in the app, such as sign-ins, pins, reviews, photos and reports, so admins can spot abuse.',
+        'If the app hits an error, it may send technical details (such as the error message and browser version, without personal data) to Sentry so we can fix it.',
       ],
     },
     {

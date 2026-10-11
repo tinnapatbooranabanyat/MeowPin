@@ -1,6 +1,7 @@
 import { RotateCw } from 'lucide-react'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { translate } from '../i18n'
+import { reportError } from '../lib/monitoring'
 
 interface State {
   error: Error | null
@@ -16,6 +17,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[app] render crashed', error, info.componentStack)
+    reportError(error, { componentStack: info.componentStack })
   }
 
   render() {

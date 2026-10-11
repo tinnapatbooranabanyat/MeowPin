@@ -5,6 +5,9 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './components/auth/AuthProvider.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { initMonitoring } from './lib/monitoring.ts'
+
+initMonitoring()
 
 // ลิงก์แชร์ /c/:id ปกติ Vercel ส่งต่อให้แล้ว (api/share.ts) — เผื่อเปิดตรงๆ (เช่นตอนรันในเครื่อง) ก็แปลงเป็น ?cat=
 const sharePath = window.location.pathname.match(/^\/c\/([0-9a-f-]{36})\/?$/i)

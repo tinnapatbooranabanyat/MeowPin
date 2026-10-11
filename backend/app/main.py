@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 import httpx
+import sentry_sdk
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -60,6 +61,10 @@ async def lifespan(_app: FastAPI):
     yield
 
 
+# แจ้ง error ไป Sentry เมื่อตั้ง SENTRY_DSN — ไม่ส่งข้อมูลส่วนตัว และไม่เก็บ trace (เอาแค่ error)
+if settings.sentry_dsn:
+    sentry_sdk.init(dsn=settings.sentry_dsn, send_default_pii=False, traces_sample_rate=0, environment="production")
+
 app = FastAPI(title="MeowPin API", lifespan=lifespan)
 
 
@@ -69,6 +74,8 @@ async def catch_unhandled(request: Request, call_next):
         return await call_next(request)
     except Exception as e:
         log.exception("unhandled error on %s %s", request.method, request.url.path)
+        # ไม่ได้ตั้ง SENTRY_DSN = ไม่ทำอะไร
+        sentry_sdk.capture_exception(e)
         return JSONResponse(
             status_code=500,
             content={"detail": f"server มีปัญหา ({type(e).__name__}) ลองใหม่อีกครั้ง", "code": "server_error"},
