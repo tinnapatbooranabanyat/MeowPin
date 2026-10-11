@@ -9,6 +9,7 @@ import { furLabel, timeAgo } from '../../lib/cat'
 import { CatAvatar } from '../CatAvatar'
 import { PawRating } from '../reviews/PawRating'
 import { Modal } from '../ui/Modal'
+import { BadgeList } from './BadgeList'
 import { UserAvatar } from './UserAvatar'
 
 type Tab = 'reviews' | 'cats'
@@ -85,6 +86,8 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
             </button>
           )}
         </div>
+
+        <BadgeList userId={userId} isMe={isMe} />
 
         <div className="flex border-b border-stone-200" role="tablist">
           <button type="button" role="tab" aria-selected={tab === 'reviews'} onClick={() => setTab('reviews')} className={tabClass(tab === 'reviews')}>

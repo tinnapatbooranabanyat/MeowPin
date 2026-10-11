@@ -23,6 +23,7 @@ import { CatMarkers } from './CatMarkers'
 import { CatPanel } from './CatPanel'
 import { CatReportDialog } from './CatReportDialog'
 import { EditCatDialog } from './EditCatDialog'
+import { LeaderboardDialog } from './LeaderboardDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { FilterChips } from './FilterChips'
@@ -92,6 +93,7 @@ type Dialog =
   | { kind: 'admin' }
   | { kind: 'catReport'; cat: Cat }
   | { kind: 'editCat'; cat: Cat }
+  | { kind: 'leaderboard' }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -428,6 +430,7 @@ export function MapScreen({ mapId }: Props) {
                 onReportBug={() => setDialog({ kind: 'bugReport' })}
                 onOpenAdmin={() => setDialog({ kind: 'admin' })}
                 onSupport={() => setDialog({ kind: 'support' })}
+                onOpenLeaderboard={() => setDialog({ kind: 'leaderboard' })}
               />
             </div>
           </>
@@ -515,6 +518,9 @@ export function MapScreen({ mapId }: Props) {
               showToast(t('ส่งรายงานแล้ว ขอบคุณที่ช่วยกันนะ'))
             }}
           />
+        )}
+        {dialog?.kind === 'leaderboard' && bounds && (
+          <LeaderboardDialog bounds={bounds} onClose={() => setDialog(null)} />
         )}
         {dialog?.kind === 'editCat' && (
           <EditCatDialog

@@ -17,6 +17,22 @@ export type FurColor =
   /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
   | 'other'
 
+export interface UserStats {
+  pins: number
+  reviews: number
+  sightings: number
+  feedings: number
+  photos: number
+  helps: number
+}
+
+export interface LeaderboardRow {
+  userId: string
+  name: string
+  avatarUrl: string | null
+  points: number
+}
+
 export type FoodKind = 'dry' | 'wet' | 'treat' | 'other'
 
 export interface FeedingsToday {

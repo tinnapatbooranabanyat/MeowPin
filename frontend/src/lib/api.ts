@@ -15,6 +15,7 @@ import type {
   FoodKind,
   HelpKind,
   HelpRequest,
+  LeaderboardRow,
   FurColor,
   LatLng,
   Neutered,
@@ -23,6 +24,7 @@ import type {
   ReportCategory,
   Review,
   UserReview,
+  UserStats,
   Verification,
 } from '../types'
 import type { CatFormValues } from '../components/add-cat/CatForm'
@@ -728,6 +730,27 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
 export async function markNotificationsRead(): Promise<void> {
   const { error } = await db().from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
   if (error) throw new ApiError('บันทึกไม่สำเร็จ', 500)
+}
+
+// ═══════════════ ตราสัญลักษณ์ + อันดับในพื้นที่ ═══════════════
+/** null = ยังไม่ได้รัน migration 0015 */
+export async function fetchUserStats(userId: string): Promise<UserStats | null> {
+  const { data, error } = await db().rpc('user_stats', { p_user_id: userId })
+  if (error || !data) return null
+  return (data as UserStats[])[0] ?? null
+}
+
+export async function fetchAreaLeaderboard(bounds: Bounds): Promise<LeaderboardRow[]> {
+  const { data, error } = await db().rpc('area_leaderboard', {
+    min_lat: bounds.minLat,
+    min_lng: bounds.minLng,
+    max_lat: bounds.maxLat,
+    max_lng: bounds.maxLng,
+  })
+  if (error || !data) return []
+  return (data as { user_id: string; display_name: string; avatar_url: string | null; avatar_path: string | null; points: number }[]).map(
+    (r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), points: r.points }),
+  )
 }
 
 // ═══════════════ บันทึกการให้อาหาร ═══════════════
