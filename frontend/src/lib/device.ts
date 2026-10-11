@@ -2,6 +2,9 @@
 // input ที่ไม่ใส่ accept → Chrome ให้เลือกแอปเอง (แกลเลอรี/Google Photos/Files) ที่มีโอกาสได้ไฟล์ต้นฉบับพร้อมตำแหน่ง
 export const isAndroid = /Android/i.test(navigator.userAgent)
 
+/** accept ของช่องอัปโหลดรูป: Android ไม่ใส่ (ให้เลือกแอปเอง) / เครื่องอื่นรับเฉพาะรูป */
+export const UPLOAD_ACCEPT = isAndroid ? undefined : 'image/*'
+
 const IMAGE_EXT = /\.(jpe?g|png|webp|heic|heif|gif|avif)$/i
 
 /** ไฟล์ที่เลือกผ่านช่องแบบไม่จำกัดชนิด ต้องเช็กเองว่าเป็นรูป */
