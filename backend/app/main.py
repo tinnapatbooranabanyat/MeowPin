@@ -38,12 +38,12 @@ OwnerStatus = Literal["stray", "owned", "unknown"]
 MAX_CUSTOM_COLOR = 30
 
 # จำกัดทั้งต่อบัญชีและต่อ IP (กันสร้างหลายบัญชีมาสแปม)
-create_user_limiter = RateLimiter(10, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
-create_ip_limiter = RateLimiter(30, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
-album_user_limiter = RateLimiter(30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
-summary_ip_limiter = RateLimiter(60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
-check_user_limiter = RateLimiter(40, 3600, "ตรวจรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
-post_user_limiter = RateLimiter(5, 86400, "ลงประกาศได้วันละ 5 ครั้ง พรุ่งนี้ลองใหม่นะ")
+create_user_limiter = RateLimiter("create_user", 10, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+create_ip_limiter = RateLimiter("create_ip", 30, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+album_user_limiter = RateLimiter("album_user", 30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+summary_ip_limiter = RateLimiter("summary_ip", 60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+check_user_limiter = RateLimiter("check_user", 40, 3600, "ตรวจรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+post_user_limiter = RateLimiter("post_user", 5, 86400, "ลงประกาศได้วันละ 5 ครั้ง พรุ่งนี้ลองใหม่นะ")
 MAX_PHOTOS_PER_REVIEW = 4
 
 
