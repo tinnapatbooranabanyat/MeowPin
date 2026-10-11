@@ -1,0 +1,19 @@
+# Render แบบฟรีปิดเครื่องเมื่อไม่มีคนใช้ 15 นาที แล้ว request แรกต้องรอเกือบนาที
+# → เรียก /health ทุก 10 นาทีไม่ให้หลับ (Render ฟรีให้ 750 ชม./เดือน พอเปิดได้ทั้งเดือน 1 service)
+# หมายเหตุ: GitHub อาจรันช้ากว่าเวลาที่ตั้งไว้บ้างตอนคนใช้เยอะ และหยุดรันเองถ้า repo ไม่มี commit 60 วัน
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        run: curl --silent --show-error --fail --max-time 120 https://meowpin-api.onrender.com/health
