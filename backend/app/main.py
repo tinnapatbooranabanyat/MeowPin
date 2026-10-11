@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 from postgrest.exceptions import APIError
 
-from . import detector
+from . import detector, summary
 from .auth import current_user_id, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -39,6 +39,7 @@ REJECTION_MESSAGES = {
 create_user_limiter = RateLimiter(10, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 create_ip_limiter = RateLimiter(30, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 album_user_limiter = RateLimiter(30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+summary_ip_limiter = RateLimiter(60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 MAX_PHOTOS_PER_REVIEW = 4
 
 
@@ -79,6 +80,7 @@ def health():
         "ok": True,
         "model": settings.model_path.exists(),
         "database": bool(settings.supabase_url and settings.supabase_secret_key),
+        "ai_summary": bool(settings.gemini_api_key),
     }
 
 
@@ -295,3 +297,69 @@ def add_cat_photo(
         log.exception("insert cat photo failed")
         raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
     return {"id": row["id"], "photoUrl": public_photo_url(photo_path), "reviewId": row["review_id"]}
+
+
+def _summary_response(row: dict) -> dict:
+    return {
+        "th": row["summary_th"],
+        "en": row["summary_en"],
+        "reviewCount": row["review_count"],
+        "generatedAt": row["generated_at"],
+    }
+
+
+@app.post("/cats/{cat_id}/summary")
+def refresh_cat_summary(cat_id: UUID, request: Request):
+    """สรุปแมวด้วย AI — คืนของเดิมถ้าข้อมูลไม่เปลี่ยนหรือเพิ่งสรุปไป ไม่งั้นสร้างใหม่ด้วย Gemini"""
+    summary_ip_limiter.check(client_ip(request))
+    client = get_client()
+    cats = (
+        client.table("cats")
+        .select("name, description, place_name, fur_color, breed, owner_status, neutered, is_friendly, is_clingy, is_playful")
+        .eq("id", str(cat_id))
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not cats:
+        raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    reviews = (
+        client.table("reviews")
+        .select("paws, recommend, comment")
+        .eq("cat_id", str(cat_id))
+        .order("created_at", desc=True)
+        .limit(summary.MAX_REVIEWS)
+        .execute()
+        .data
+    )
+    if len(reviews) < settings.summary_min_reviews:
+        return {"summary": None, "reason": "not_enough_reviews"}
+
+    data = summary.build_input(cats[0], reviews)
+    digest = summary.source_hash(data)
+    existing = client.table("cat_summaries").select("*").eq("cat_id", str(cat_id)).limit(1).execute().data
+    if existing:
+        row = existing[0]
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(row["generated_at"])).total_seconds()
+        if row["source_hash"] == digest or age < settings.summary_cooldown_s:
+            return {"summary": _summary_response(row)}
+
+    try:
+        result = summary.generate(data)
+    except summary.SummaryError as e:
+        # มีสรุปเก่าอยู่ก็ส่งของเก่าไปก่อน ดีกว่าไม่มีอะไรเลย
+        if existing:
+            return {"summary": _summary_response(existing[0])}
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    row = {
+        "cat_id": str(cat_id),
+        "summary_th": result.th,
+        "summary_en": result.en,
+        "review_count": len(reviews),
+        "source_hash": digest,
+        "model": settings.gemini_model,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    client.table("cat_summaries").upsert(row).execute()
+    return {"summary": _summary_response(row)}
