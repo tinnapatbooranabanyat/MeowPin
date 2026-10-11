@@ -36,28 +36,6 @@ export function AiSummary({ cat }: { cat: Cat }) {
 
   const data = summary.data
   if (!data) {
-    // รีวิวยังไม่พอ: โชว์ว่ามีฟีเจอร์นี้ และขาดอีกกี่รีวิว (ไม่งั้นไม่มีใครรู้ว่ามี)
-    if (summary.isSuccess && cat.reviewCount < MIN_REVIEWS) {
-      return (
-        <section className="rounded-2xl border border-dashed border-orange-300 px-4 py-3">
-          <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-orange-700">
-            <Sparkles size={14} aria-hidden="true" />
-            {t('สรุปโดย AI')}
-          </h3>
-          <p className="text-sm text-stone-600">
-            {t('เมื่อมีรีวิวครบ {min} รีวิว AI จะสรุปนิสัยและสิ่งที่ควรรู้เกี่ยวกับน้องให้', { min: MIN_REVIEWS })}
-          </p>
-          <div className="mt-2 flex items-center gap-2" aria-label={t('{n} จาก {min} รีวิว', { n: cat.reviewCount, min: MIN_REVIEWS })}>
-            {Array.from({ length: MIN_REVIEWS }, (_, i) => (
-              <span key={i} className={`h-1.5 flex-1 rounded-full ${i < cat.reviewCount ? 'bg-orange-400' : 'bg-stone-200'}`} />
-            ))}
-            <span className="text-xs text-stone-500">
-              {cat.reviewCount}/{MIN_REVIEWS}
-            </span>
-          </div>
-        </section>
-      )
-    }
     if (!refresh.isPending) return null
     return (
       <div className="flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-800 ring-1 ring-orange-200">

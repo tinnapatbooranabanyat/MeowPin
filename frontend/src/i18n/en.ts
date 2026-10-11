@@ -439,7 +439,4 @@ export const EN: Record<string, string> = {
   'เก็บโค้ด และ deploy อัตโนมัติเมื่อ push': 'Hosts the code; every push deploys automatically',
   'ดูซอร์สโค้ดบน GitHub': 'View source on GitHub',
   'ได้ข้อมูลจาก Google แล้ว แต่เบราว์เซอร์สร้าง session ไม่ได้': 'Google signed you in, but the browser couldn’t create a session',
-  'สรุปโดย AI': 'AI summary',
-  'เมื่อมีรีวิวครบ {min} รีวิว AI จะสรุปนิสัยและสิ่งที่ควรรู้เกี่ยวกับน้องให้': 'Once this cat has {min} reviews, AI will summarize its personality and what visitors should know.',
-  '{n} จาก {min} รีวิว': '{n} of {min} reviews',
 }
