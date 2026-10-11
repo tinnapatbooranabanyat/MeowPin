@@ -30,6 +30,23 @@ import { Toast } from './Toast'
 import { UserLocationMarker } from './UserLocationMarker'
 
 const DEFAULT_CENTER = { lat: 13.7595, lng: 100.4975 }
+// จำมุมกล้องไว้ในแท็บนี้ — โหลดหน้าใหม่ (เช่นเปลี่ยนภาษาแผนที่) แล้วกลับมาที่เดิม
+const CAMERA_KEY = 'meowpin.camera'
+
+function readSavedCamera(): { center: google.maps.LatLngLiteral; zoom: number } | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CAMERA_KEY) ?? 'null') as {
+      center?: google.maps.LatLngLiteral
+      zoom?: number
+    } | null
+    if (saved && typeof saved.center?.lat === 'number' && typeof saved.center.lng === 'number' && typeof saved.zoom === 'number') {
+      return { center: saved.center, zoom: saved.zoom }
+    }
+  } catch {
+    // ไม่มีหรืออ่านไม่ได้ก็เริ่มที่จุดเริ่มต้น
+  }
+  return null
+}
 const DEFAULT_ZOOM = 16
 const HINT_KEY = 'meowpin.longPressHintDismissed'
 
@@ -99,7 +116,7 @@ export function MapScreen({ mapId }: Props) {
   const [hintDismissed, setHintDismissed] = useState(readHintDismissed)
   const toastTimer = useRef<number | undefined>(undefined)
   // เปลี่ยนธีมแล้ว Google Maps ต้องสร้างแผนที่ใหม่ — จำมุมกล้องไว้ไม่ให้เด้งกลับจุดเริ่มต้น
-  const [camera, setCamera] = useState({ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM })
+  const [camera, setCamera] = useState(() => readSavedCamera() ?? { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM })
 
   const catsQuery = useCatsInView(bounds)
   const cats = useMemo(() => catsQuery.data ?? [], [catsQuery.data])
@@ -302,7 +319,14 @@ export function MapScreen({ mapId }: Props) {
   const updateCamera = (gmap: google.maps.Map) => {
     const center = gmap.getCenter()?.toJSON()
     const zoom = gmap.getZoom()
-    if (center && zoom !== undefined) setCamera({ center, zoom })
+    if (center && zoom !== undefined) {
+      setCamera({ center, zoom })
+      try {
+        sessionStorage.setItem(CAMERA_KEY, JSON.stringify({ center, zoom }))
+      } catch {
+        // private mode — แค่ไม่จำ
+      }
+    }
     const literal = gmap.getBounds()?.toJSON()
     if (!literal) return
     const next = snapBounds(literal)

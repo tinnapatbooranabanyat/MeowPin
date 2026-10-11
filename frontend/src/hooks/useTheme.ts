@@ -50,12 +50,15 @@ function setThemePref(next: ThemePref, origin?: { x: number; y: number }) {
   const root = document.documentElement
   root.classList.add('theme-transition')
   const transition = startViewTransition(() => flushSync(apply))
-  transition.ready.then(() =>
-    root.animate(
-      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 550, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' },
-    ),
-  )
+  transition.ready
+    .then(() =>
+      root.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+        { duration: 550, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' },
+      ),
+    )
+    // ถูกข้าม (กดเปลี่ยนซ้ำเร็วๆ) — ธีมเปลี่ยนแล้ว แค่ไม่มี animation
+    .catch(() => {})
   transition.finished.finally(() => root.classList.remove('theme-transition'))
 }
 
