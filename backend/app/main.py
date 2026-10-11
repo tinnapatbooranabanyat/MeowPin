@@ -1,14 +1,16 @@
 import logging
+from io import BytesIO
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi.responses import JSONResponse
-from PIL import Image
+from fastapi.responses import JSONResponse, Response
+from PIL import Image, ImageOps
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
@@ -542,3 +544,31 @@ def refresh_cat_summary(cat_id: UUID, request: Request):
     }
     client.table("cat_summaries").upsert(row).execute()
     return {"summary": _summary_response(row)}
+
+
+# ── รูปตัวอย่างตอนแชร์ลิงก์ (LINE/Facebook) — JPEG 1200x630 เพราะบางแอปไม่แสดง WebP ──
+OG_SIZE = (1200, 630)
+_og_cache: dict[str, bytes] = {}
+
+
+@app.get("/cats/{cat_id}/og.jpg")
+def cat_share_image(cat_id: UUID):
+    client = get_client()
+    rows = client.table("cats").select("photo_path").eq("id", str(cat_id)).limit(1).execute().data
+    if not rows or not rows[0].get("photo_path"):
+        raise HTTPException(status_code=404, detail="ไม่พบรูปของน้องตัวนี้")
+    path = rows[0]["photo_path"]
+    if path not in _og_cache:
+        try:
+            res = httpx.get(public_photo_url(path), timeout=15)
+            res.raise_for_status()
+            image = ImageOps.fit(Image.open(BytesIO(res.content)).convert("RGB"), OG_SIZE)
+        except (httpx.HTTPError, OSError) as e:
+            raise HTTPException(status_code=404, detail="โหลดรูปไม่สำเร็จ") from e
+        out = BytesIO()
+        image.save(out, "JPEG", quality=82, optimize=True)
+        if len(_og_cache) > 200:
+            _og_cache.clear()
+        _og_cache[path] = out.getvalue()
+    # ชื่อไฟล์รูปไม่เปลี่ยน (เปลี่ยนรูป = ไฟล์ใหม่) จึงแคชได้นาน
+    return Response(_og_cache[path], media_type="image/jpeg", headers={"cache-control": "public, max-age=86400"})

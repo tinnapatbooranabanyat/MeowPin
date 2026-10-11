@@ -310,7 +310,8 @@ export function MapScreen({ mapId }: Props) {
   }
 
   const shareCat = async (cat: Cat) => {
-    const url = `${window.location.origin}/?cat=${cat.id}`
+    // /c/:id = หน้าที่มีรูปตัวอย่างให้ LINE/Facebook (คนกดจะถูกส่งต่อไปหน้าน้องเอง — ดู api/share.ts)
+    const url = `${window.location.origin}/c/${cat.id}`
     const data = {
       title: t('{name} บน MeowPin', { name: cat.name }),
       text: cat.placeName ? t('มาดู{name} ที่{place}', { name: cat.name, place: cat.placeName }) : cat.name,
