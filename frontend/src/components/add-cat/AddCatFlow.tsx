@@ -14,6 +14,8 @@ import { useI18n } from '../../hooks/useI18n'
 // ขยับหมุดจากตำแหน่ง GPS/EXIF เกินระยะนี้ → นับเป็นปักหมุดเอง
 const MAX_ADJUST_M = 50
 const OLD_PHOTO_DAYS = 30
+// รูปไม่มีตำแหน่งแต่เพิ่งถ่ายภายในเวลานี้ → ใช้ตำแหน่งปัจจุบันของเครื่องเป็นจุดเริ่ม (น่าจะยังอยู่ใกล้น้อง)
+const FRESH_PHOTO_MIN = 60
 
 interface Draft {
   /** รูปที่บีบอัดแล้ว (WebP ไม่มี EXIF) ส่งขึ้น server */
@@ -28,6 +30,10 @@ interface Draft {
   sourcePosition: LatLng
   /** false = sourcePosition เป็นแค่ศูนย์กลางแผนที่ ไม่ใช่ GPS/EXIF */
   sourceKnown: boolean
+  /** รูปไม่มีตำแหน่ง เลยใช้ GPS ของเครื่องตอนนี้แทน (นับเป็นปักหมุดเอง) */
+  fromDevice: boolean
+  /** มือถือลบตำแหน่งออกจากรูป (มีช่อง GPS แต่ค่าว่าง) */
+  gpsRedacted: boolean
   /** ได้รูปมาจากกล้องในแอป หรืออัปโหลดจากเครื่อง */
   source: 'camera' | 'upload'
   verification: Verification
@@ -129,6 +135,17 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         sourcePosition = meta.position
         verification = 'exif_gps'
       }
+      // Android/iOS มักลบตำแหน่งออกจากรูปตอนเลือกผ่านเบราว์เซอร์ แต่เวลาถ่ายยังอยู่ — รูปเพิ่งถ่ายก็ใช้ GPS ตอนนี้แทน
+      let fromDevice = false
+      const fresh = meta?.takenAt && Date.now() - meta.takenAt.getTime() < FRESH_PHOTO_MIN * 60_000
+      if (source === 'upload' && !meta?.position && fresh) {
+        requestGps()
+        const fix = await gpsPromise.current
+        if (fix) {
+          sourcePosition = fix.position
+          fromDevice = true
+        }
+      }
 
       draftPhotoUrl.current = photoUrl
       const checked = check instanceof Error ? null : check
@@ -141,6 +158,8 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         guessedFur: guessFurColor(img),
         sourcePosition,
         sourceKnown: verification !== 'manual',
+        fromDevice,
+        gpsRedacted: meta?.gpsRedacted ?? false,
         source,
         verification,
         takenAt: meta?.takenAt ?? null,
@@ -259,9 +278,13 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
     const sourceFar = draft.sourceKnown && distance > MAX_ADJUST_M
     const sourceName = t(draft.verification === 'camera_gps' ? 'GPS ตอนถ่าย' : 'ข้อมูลในรูป')
     // มีตำแหน่งจากรูป/GPS → เริ่มหมุดที่นั่นเลย (เดิมเริ่มที่จุดกดค้าง ทำให้ดูเหมือนอ่านตำแหน่งในรูปไม่ได้)
-    const hint = !draft.sourceKnown
+    const hint = draft.fromDevice
+      ? t('รูปนี้ไม่มีข้อมูลตำแหน่ง แต่เพิ่งถ่ายไม่นาน เลยวางหมุดที่ตำแหน่งปัจจุบันของคุณให้ ขยับได้ถ้าไม่ตรง')
+      : !draft.sourceKnown
       ? draft.source === 'upload'
-        ? isAndroid
+        ? draft.gpsRedacted
+          ? t('มือถือลบตำแหน่งออกจากรูปนี้ตอนเลือกรูป — เลื่อนแผนที่ไปที่ที่เจอแมว หรือครั้งหน้าใช้ "ถ่ายรูปตอนนี้" ในแอปเพื่อให้ได้ตำแหน่งอัตโนมัติ')
+          : isAndroid
           ? t('รูปนี้ไม่มีข้อมูลตำแหน่ง — ลองเลือกรูปผ่านแอป Files (โฟลเดอร์ DCIM → Camera) ซึ่งมักเก็บตำแหน่งไว้ หรือเลื่อนแผนที่ไปที่ที่เจอแมว')
           : t('รูปนี้ไม่มีข้อมูลตำแหน่ง — มือถือหลายรุ่นลบตำแหน่งออกตอนเลือกรูปจากแกลเลอรี เลื่อนแผนที่ไปที่ที่เจอแมว หรือใช้ "ถ่ายรูปตอนนี้" เพื่อยืนยันด้วย GPS')
         : t('ไม่ได้ตำแหน่ง GPS ตอนถ่าย เลื่อนแผนที่ไปที่ที่เจอแมวเลย')
@@ -273,7 +296,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
         : t(draft.verification === 'camera_gps' ? 'ตำแหน่งจาก GPS ตอนถ่าย ขยับได้เล็กน้อยถ้าไม่ตรง' : 'ตำแหน่งจากข้อมูลในรูป เช็กอีกทีว่าถูกที่')
     return (
       <LocationPicker
-        initialPosition={draft.sourceKnown ? draft.sourcePosition : origin}
+        initialPosition={draft.sourceKnown || draft.fromDevice ? draft.sourcePosition : origin}
         verification={draft.verification}
         hint={hint}
         alternative={

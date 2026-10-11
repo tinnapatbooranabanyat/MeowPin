@@ -5,23 +5,27 @@ import type { FurColor, LatLng } from '../types'
 export interface PhotoMeta {
   position: LatLng | null
   takenAt: Date | null
+  /** มีช่อง GPS ในรูปแต่ค่าถูกล้างเป็น 0 — มือถือ/เบราว์เซอร์ลบตำแหน่งออกตอนเลือกรูป */
+  gpsRedacted: boolean
 }
 
 /** อ่าน GPS และเวลาที่ถ่ายจาก EXIF — ต้องอ่านจากไฟล์ต้นฉบับก่อนบีบอัด เพราะการบีบอัดจะลบ EXIF ทิ้ง */
 export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
   try {
     // ต้องใช้ exifr.gps() แยก — ถ้าใช้ parse แบบ pick จะไม่ได้ latitude/longitude ที่แปลงแล้ว
-    const [gps, data] = await Promise.all([
+    const [gps, data, rawGps] = await Promise.all([
       exifr.gps(file).catch(() => undefined),
       exifr.parse(file, ['DateTimeOriginal']).catch(() => undefined),
+      exifr.parse(file, { gps: true, exif: false, translateValues: false, reviveValues: false }).catch(() => undefined),
     ])
     const lat = gps?.latitude
     const lng = gps?.longitude
     const valid = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)
     const takenAt = data?.DateTimeOriginal instanceof Date ? data.DateTimeOriginal : null
-    return { position: valid ? { lat: lat!, lng: lng! } : null, takenAt }
+    const hasGpsTags = !!rawGps && Object.keys(rawGps).some((key) => key.startsWith('GPS'))
+    return { position: valid ? { lat: lat!, lng: lng! } : null, takenAt, gpsRedacted: !valid && hasGpsTags }
   } catch {
-    return { position: null, takenAt: null }
+    return { position: null, takenAt: null, gpsRedacted: false }
   }
 }
 
