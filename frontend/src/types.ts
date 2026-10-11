@@ -91,6 +91,16 @@ export interface Review {
   author: { displayName: string; avatarUrl: string | null } | null
 }
 
+/** รูปในอัลบั้มของแมว (รูปหลักตอนปักหมุด + รูปที่แนบกับรีวิว) */
+export interface CatPhoto {
+  id: string
+  url: string
+  userId: string | null
+  uploaderName: string | null
+  reviewId: string | null
+  createdAt: string
+}
+
 export type ReportCategory = 'bug' | 'idea' | 'other'
 
 export type CatReportReason = 'not_cat' | 'inappropriate' | 'wrong_location' | 'duplicate' | 'privacy' | 'other'

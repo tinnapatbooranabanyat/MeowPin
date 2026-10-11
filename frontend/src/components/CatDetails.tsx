@@ -6,6 +6,7 @@ import {
   Flag,
   Heart,
   Home,
+  Images,
   MapPin,
   Navigation,
   Palette,
@@ -20,9 +21,11 @@ import {
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { useCatPhotos } from '../hooks/useCatPhotos'
 import { useMapActions } from '../hooks/useMapActions'
 import { breedLabel, directionsUrl, FUR_COLORS, NEUTERED, OWNER_STATUS, timeAgo, TRAITS, VERIFICATION } from '../lib/cat'
 import type { Cat } from '../types'
+import { CatGallery } from './CatGallery'
 import { PawBurst } from './PawBurst'
 import { PhotoLightbox } from './PhotoLightbox'
 import { PawRating } from './reviews/PawRating'
@@ -49,7 +52,9 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
   const { openProfile } = useMapActions()
   const [tab, setTab] = useState<Tab>('overview')
   const [burst, setBurst] = useState(0)
-  const [lightbox, setLightbox] = useState(false)
+  const [lightbox, setLightbox] = useState<number | null>(null)
+  const [gallery, setGallery] = useState(false)
+  const { photos } = useCatPhotos(cat)
   const fur = FUR_COLORS[cat.furColor]
   const traits = TRAITS.filter((trait) => cat[trait.key])
   const breed = breedLabel(cat.breed, lang)
@@ -93,7 +98,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
           }`}
         >
           {cat.photoUrl ? (
-            <button type="button" onClick={() => setLightbox(true)} className="block size-full" aria-label={t('ดูรูปเต็ม')}>
+            <button type="button" onClick={() => setLightbox(0)} className="block size-full" aria-label={t('ดูรูปเต็ม')}>
               <img src={cat.photoUrl} alt={cat.name} className="size-full animate-fade-in object-cover" />
             </button>
           ) : (
@@ -105,6 +110,16 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
             <ShieldCheck size={13} aria-hidden="true" />
             {t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
           </span>
+          {photos.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setGallery(true)}
+              className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition hover:bg-black/75 active:scale-95"
+            >
+              <Images size={13} aria-hidden="true" />
+              {t('รูปทั้งหมด ({n})', { n: photos.length })}
+            </button>
+          )}
           {onClose && (
             <button
               type="button"
@@ -211,6 +226,29 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
               </div>
             )}
 
+            {photos.length > 1 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-stone-800">{t('รูปภาพ')}</h3>
+                  <button type="button" onClick={() => setGallery(true)} className="text-xs font-medium text-orange-700 hover:underline">
+                    {t('ดูทั้งหมด ({n})', { n: photos.length })}
+                  </button>
+                </div>
+                <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+                  {photos.slice(0, 8).map((photo, i) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => setLightbox(i)}
+                      className="size-24 shrink-0 overflow-hidden rounded-xl bg-stone-200 transition hover:opacity-90 active:scale-95"
+                    >
+                      <img src={photo.url} alt="" loading="lazy" className="size-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {cat.description ? (
               <TranslatableText text={cat.description} className="text-[15px] leading-relaxed text-stone-700" />
             ) : (
@@ -277,7 +315,10 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
         )}
       </div>
 
-      {lightbox && cat.photoUrl && <PhotoLightbox src={cat.photoUrl} alt={cat.name} onClose={() => setLightbox(false)} />}
+      {lightbox !== null && (
+        <PhotoLightbox photos={photos} startIndex={lightbox} alt={cat.name} onClose={() => setLightbox(null)} />
+      )}
+      {gallery && <CatGallery name={cat.name} photos={photos} onClose={() => setGallery(false)} />}
     </div>
   )
 }

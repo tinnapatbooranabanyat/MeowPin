@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from PIL import Image
 from postgrest.exceptions import APIError
 
 from . import detector
@@ -37,6 +38,8 @@ REJECTION_MESSAGES = {
 # จำกัดทั้งต่อบัญชีและต่อ IP (กันสร้างหลายบัญชีมาสแปม)
 create_user_limiter = RateLimiter(10, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 create_ip_limiter = RateLimiter(30, 3600, "เพิ่มแมวบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+album_user_limiter = RateLimiter(30, 3600, "อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
+MAX_PHOTOS_PER_REVIEW = 4
 
 
 @asynccontextmanager
@@ -90,6 +93,22 @@ def resolve_verification(
     return claim
 
 
+def read_cat_photo(photo: UploadFile) -> tuple[Image.Image, detector.Detection]:
+    """อ่านรูปที่อัปโหลด + ตรวจว่าเป็นแมว (ตรวจซ้ำฝั่ง server เพราะการตรวจในเบราว์เซอร์ถูกข้ามได้)"""
+    data = photo.file.read(settings.max_upload_bytes + 1)
+    if len(data) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail="รูปใหญ่เกิน 5 MB")
+    try:
+        image = open_image(data)
+    except InvalidImage as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    detection = detector.detect_cat(image)
+    if not detection.is_cat:
+        message = REJECTION_MESSAGES.get(detection.other_label or "", "ไม่เจอแมวในรูปนี้ ลองถ่ายใหม่ให้เห็นน้องชัดๆ")
+        raise HTTPException(status_code=422, detail=message)
+    return image, detection
+
+
 def resolve_last_seen(taken_at: datetime | None) -> datetime:
     now = datetime.now(timezone.utc)
     if taken_at is None:
@@ -134,19 +153,7 @@ def create_cat(
     if not name:
         raise HTTPException(status_code=422, detail="ตั้งชื่อให้น้องก่อน")
 
-    data = photo.file.read(settings.max_upload_bytes + 1)
-    if len(data) > settings.max_upload_bytes:
-        raise HTTPException(status_code=413, detail="รูปใหญ่เกิน 5 MB")
-    try:
-        image = open_image(data)
-    except InvalidImage as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    # ตรวจซ้ำฝั่ง server — การตรวจในเบราว์เซอร์ถูกข้ามได้
-    detection = detector.detect_cat(image)
-    if not detection.is_cat:
-        message = REJECTION_MESSAGES.get(detection.other_label or "", "ไม่เจอแมวในรูปนี้ ลองถ่ายใหม่ให้เห็นน้องชัดๆ")
-        raise HTTPException(status_code=422, detail=message)
+    image, detection = read_cat_photo(photo)
 
     final_verification = resolve_verification(verification, lat, lng, source_lat, source_lng)
     last_seen_at = resolve_last_seen(taken_at)
@@ -233,6 +240,58 @@ def delete_cat(cat_id: UUID, request: Request):
     rows = client.table("cats").select("photo_path").eq("id", str(cat_id)).limit(1).execute().data
     if not rows:
         raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    album = client.table("cat_photos").select("photo_path").eq("cat_id", str(cat_id)).execute().data
     client.table("cats").delete().eq("id", str(cat_id)).execute()
-    if rows[0]["photo_path"]:
-        client.storage.from_(settings.photo_bucket).remove([rows[0]["photo_path"]])
+    paths = [p for p in [rows[0]["photo_path"], *(a["photo_path"] for a in album)] if p]
+    if paths:
+        client.storage.from_(settings.photo_bucket).remove(paths)
+
+
+@app.post("/cats/{cat_id}/photos", status_code=201)
+def add_cat_photo(
+    cat_id: UUID,
+    request: Request,
+    photo: UploadFile,
+    review_id: Annotated[UUID | None, Form()] = None,
+):
+    """เพิ่มรูปเข้าอัลบั้มของแมว (แนบกับรีวิวของตัวเองได้ สูงสุด 4 รูปต่อรีวิว)"""
+    client = get_client()
+    user_id = current_user_id(request)
+    album_user_limiter.check(user_id)
+
+    if not client.table("cats").select("id").eq("id", str(cat_id)).limit(1).execute().data:
+        raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    if review_id:
+        review = (
+            client.table("reviews").select("user_id, cat_id").eq("id", str(review_id)).limit(1).execute().data
+        )
+        if not review or review[0]["user_id"] != user_id or review[0]["cat_id"] != str(cat_id):
+            raise HTTPException(status_code=403, detail="แนบรูปได้เฉพาะรีวิวของตัวเอง")
+        attached = client.table("cat_photos").select("id").eq("review_id", str(review_id)).execute().data
+        if len(attached) >= MAX_PHOTOS_PER_REVIEW:
+            raise HTTPException(status_code=422, detail="แนบรูปได้สูงสุด 4 รูปต่อรีวิว")
+
+    image, detection = read_cat_photo(photo)
+    photo_id = uuid4()
+    photo_path = f"album/{cat_id}/{photo_id}.webp"
+    bucket = client.storage.from_(settings.photo_bucket)
+    bucket.upload(
+        path=photo_path,
+        file=to_public_webp(image),
+        file_options={"content-type": "image/webp", "cache-control": "31536000"},
+    )
+    row = {
+        "id": str(photo_id),
+        "cat_id": str(cat_id),
+        "user_id": user_id,
+        "review_id": str(review_id) if review_id else None,
+        "photo_path": photo_path,
+        "cat_confidence": round(detection.score, 4),
+    }
+    try:
+        client.table("cat_photos").insert(row).execute()
+    except APIError:
+        bucket.remove([photo_path])
+        log.exception("insert cat photo failed")
+        raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
+    return {"id": row["id"], "photoUrl": public_photo_url(photo_path), "reviewId": row["review_id"]}

@@ -1,6 +1,7 @@
 import type {
   BugReport,
   Cat,
+  CatPhoto,
   CatReport,
   CatReportReason,
   CatTraits,
@@ -361,16 +362,56 @@ export interface ReviewInput {
   comment: string
 }
 
-/** ไม่ใช้ upsert เพราะผู้ใช้ไม่มีสิทธิ์ update คอลัมน์ cat_id — แยก insert / update แทน */
-export async function saveReview(catId: string, input: ReviewInput, existingId?: string): Promise<void> {
-  const query = existingId
-    ? db().from('reviews').update(input).eq('id', existingId)
-    : db().from('reviews').insert({ cat_id: catId, ...input })
-  const { error } = await query
-  if (error) {
-    if (error.code === '23505') throw new ApiError('คุณรีวิวน้องตัวนี้ไปแล้ว', 409)
+/** ไม่ใช้ upsert เพราะผู้ใช้ไม่มีสิทธิ์ update คอลัมน์ cat_id — แยก insert / update แทน คืน id ของรีวิว */
+export async function saveReview(catId: string, input: ReviewInput, existingId?: string): Promise<string> {
+  if (existingId) {
+    const { error } = await db().from('reviews').update(input).eq('id', existingId)
+    if (error) throw new ApiError('บันทึกรีวิวไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+    return existingId
+  }
+  const { data, error } = await db().from('reviews').insert({ cat_id: catId, ...input }).select('id').single()
+  if (error || !data) {
+    if (error?.code === '23505') throw new ApiError('คุณรีวิวน้องตัวนี้ไปแล้ว', 409)
     throw new ApiError('บันทึกรีวิวไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
   }
+  return data.id as string
+}
+
+// ═══════════════ อัลบั้มรูป ═══════════════
+
+export async function fetchCatPhotos(catId: string): Promise<CatPhoto[]> {
+  const { data, error } = await db()
+    .from('cat_photos')
+    .select('id, photo_path, user_id, review_id, created_at, profiles(display_name)')
+    .eq('cat_id', catId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  // ยังไม่ได้รัน migration 0005 → ถือว่าอัลบั้มว่าง
+  if (error) return []
+  type Row = {
+    id: string
+    photo_path: string
+    user_id: string | null
+    review_id: string | null
+    created_at: string
+    profiles: { display_name: string } | null
+  }
+  return (data as unknown as Row[]).map((r) => ({
+    id: r.id,
+    url: photoUrl(r.photo_path) ?? '',
+    userId: r.user_id,
+    uploaderName: r.profiles?.display_name ?? null,
+    reviewId: r.review_id,
+    createdAt: r.created_at,
+  }))
+}
+
+/** ส่งรูป (บีบอัดแล้ว) เข้าอัลบั้ม — server ตรวจว่าเป็นแมวและลบ EXIF อีกรอบ */
+export function uploadCatPhoto(catId: string, photo: File, reviewId?: string): Promise<{ id: string }> {
+  const form = new FormData()
+  form.append('photo', photo)
+  if (reviewId) form.append('review_id', reviewId)
+  return callBackend<{ id: string }>('POST', `/cats/${catId}/photos`, form)
 }
 
 export async function deleteReview(reviewId: string): Promise<void> {

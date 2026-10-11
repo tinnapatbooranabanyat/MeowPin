@@ -6,15 +6,19 @@ import { deleteReview, fetchReviews } from '../../lib/api'
 import { timeAgo } from '../../lib/cat'
 import type { Cat, Review } from '../../types'
 import { UserAvatar } from '../account/UserAvatar'
+import { PhotoLightbox } from '../PhotoLightbox'
 import { TranslatableText } from '../TranslatableText'
 import { PawRating } from './PawRating'
 import { ReviewForm } from './ReviewForm'
 import { useI18n } from '../../hooks/useI18n'
+import { useCatPhotos } from '../../hooks/useCatPhotos'
 import { useMapActions } from '../../hooks/useMapActions'
 
 export function ReviewSection({ cat }: { cat: Cat }) {
   const { t, lang } = useI18n()
   const { openProfile } = useMapActions()
+  const { photos } = useCatPhotos(cat)
+  const [lightbox, setLightbox] = useState<number | null>(null)
   const { userId, isAdmin, requireLogin } = useAuth()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
@@ -26,6 +30,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
     queryClient.invalidateQueries({ queryKey: ['reviews', cat.id] })
     queryClient.invalidateQueries({ queryKey: ['cats'] })
     queryClient.invalidateQueries({ queryKey: ['cat', cat.id] })
+    queryClient.invalidateQueries({ queryKey: ['catPhotos', cat.id] })
   }
 
   const startWriting = () => {
@@ -83,6 +88,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
         <ReviewForm
           catId={cat.id}
           existing={mine}
+          attachedPhotos={mine ? photos.filter((p) => p.reviewId === mine.id).length : 0}
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false)
@@ -138,10 +144,29 @@ export function ReviewSection({ cat }: { cat: Cat }) {
                 </span>
               </div>
               {review.comment && <TranslatableText text={review.comment} className="mt-1 text-sm text-stone-700" />}
+              {photos.some((p) => p.reviewId === review.id) && (
+                <div className="mt-2 flex gap-1.5">
+                  {photos.map((photo, i) =>
+                    photo.reviewId === review.id ? (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        onClick={() => setLightbox(i)}
+                        className="size-16 overflow-hidden rounded-lg bg-stone-200 transition hover:opacity-90 active:scale-95"
+                      >
+                        <img src={photo.url} alt="" loading="lazy" className="size-full object-cover" />
+                      </button>
+                    ) : null,
+                  )}
+                </div>
+              )}
             </div>
           </li>
         ))}
       </ul>
+      {lightbox !== null && (
+        <PhotoLightbox photos={photos} startIndex={lightbox} alt={cat.name} onClose={() => setLightbox(null)} />
+      )}
     </section>
   )
 }

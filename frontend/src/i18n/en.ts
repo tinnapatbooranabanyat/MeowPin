@@ -378,4 +378,21 @@ export const EN: Record<string, string> = {
     'Moved the pin to the {source} location (about {m} m from the spot you picked)',
   'ใช้จุดที่กดค้างแทน': 'Use the spot I picked instead',
   'กลับไปตำแหน่งจาก{source}': 'Back to the {source} location',
+
+  // ── อัลบั้มรูป ──
+  'รูปทั้งหมด ({n})': 'All photos ({n})',
+  'รูปทั้งหมดของ {name} ({n})': 'All photos of {name} ({n})',
+  'รูปภาพ': 'Photos',
+  'ดูทั้งหมด ({n})': 'See all ({n})',
+  'รูปก่อนหน้า': 'Previous photo',
+  'รูปถัดไป': 'Next photo',
+  'รูปจาก {name}': 'Photo by {name}',
+  'เพิ่มรูป': 'Add photo',
+  'ลบรูปนี้': 'Remove this photo',
+  'รูปจะเข้าไปอยู่ในอัลบั้มของน้อง (สูงสุด {n} รูปต่อรีวิว)': 'Photos go into this cat’s album (up to {n} per review)',
+  'กำลังอัปโหลดรูป {i}/{n}…': 'Uploading photo {i}/{n}…',
+  'บันทึกรีวิวแล้ว แต่อัปโหลดรูปไม่สำเร็จ {n} รูป: {reason}': 'Review saved, but {n} photo(s) failed to upload: {reason}',
+  'อัปโหลดรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่': 'You’re uploading photos too often. Take a break and try again.',
+  'แนบรูปได้เฉพาะรีวิวของตัวเอง': 'You can only add photos to your own review',
+  'แนบรูปได้สูงสุด 4 รูปต่อรีวิว': 'Up to 4 photos per review',
 }
