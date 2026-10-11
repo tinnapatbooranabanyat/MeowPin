@@ -86,10 +86,10 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
       {open && (
         <div
           role="menu"
-          className="absolute top-14 right-0 z-40 w-76 origin-top-right animate-pop-in max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-surface py-2 shadow-xl ring-1 ring-stone-200"
+          className="absolute top-14 right-0 z-40 max-h-[calc(100dvh-5.5rem)] w-76 max-w-[calc(100vw-2rem)] origin-top-right animate-pop-in overflow-y-auto overscroll-contain rounded-2xl bg-surface py-2 shadow-xl ring-1 ring-stone-200"
         >
           {session ? (
-            <div className="flex items-center gap-3 border-b border-stone-100 px-4 pt-2 pb-3">
+            <div className="flex items-center gap-3 px-4 pt-2 pb-3">
               <UserAvatar name={profile?.displayName} url={profile?.avatarUrl} className="size-11 text-lg" />
               <div className="min-w-0">
                 <p className="truncate font-medium text-stone-900">{profile?.displayName ?? '…'}</p>
@@ -102,13 +102,13 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
               </div>
             </div>
           ) : (
-            <div className="border-b border-stone-100 px-4 pt-1 pb-3">
+            <div className="px-4 pt-1 pb-3">
               <p className="text-sm text-stone-600">{t('เข้าสู่ระบบเพื่อปักหมุดแมว รีวิว และบันทึกว่าเจอน้อง')}</p>
             </div>
           )}
 
           {session ? (
-            <>
+            <MenuSection title={t('บัญชี')}>
               <MenuItem icon={<IdCard size={18} />} onClick={pick(onOpenMyProfile)}>
                 {t('โปรไฟล์และประวัติรีวิว')}
               </MenuItem>
@@ -118,61 +118,83 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
               <MenuItem icon={<MonitorSmartphone size={18} />} onClick={pick(() => setDevicesOpen(true))}>
                 {t('อุปกรณ์ที่เข้าสู่ระบบ')}
               </MenuItem>
-            </>
+            </MenuSection>
           ) : (
-            <MenuItem icon={<LogIn size={18} />} onClick={pick(signInWithGoogle)} disabled={loading}>
-              {t('เข้าสู่ระบบด้วย Google')}
-            </MenuItem>
+            <div className="border-t border-stone-100 py-1">
+              <MenuItem icon={<LogIn size={18} />} onClick={pick(signInWithGoogle)} disabled={loading}>
+                {t('เข้าสู่ระบบด้วย Google')}
+              </MenuItem>
+            </div>
           )}
-          {isAdmin && (
-            <MenuItem icon={<Inbox size={18} />} onClick={pick(onOpenAdmin)}>
-              <span className="flex flex-1 items-center justify-between">
-                {t('จัดการรายงาน')}
-                {pendingReports > 0 && (
-                  <span className="rounded-full bg-red-500 px-1.5 text-xs leading-5 font-medium text-white">
-                    {pendingReports}
-                  </span>
-                )}
-              </span>
-            </MenuItem>
-          )}
-          <MenuItem icon={<Bug size={18} />} onClick={pick(onReportBug)}>
-            {t('รายงานปัญหา / เสนอไอเดีย')}
-          </MenuItem>
-          <MenuItem icon={<HeartHandshake size={18} className="text-orange-500" />} onClick={pick(onSupport)}>
-            {t('สนับสนุนทีมงาน')}
-          </MenuItem>
-          <MenuItem icon={<ScrollText size={18} />} onClick={pick(openTerms)}>
-            {t('ข้อกำหนดการใช้งาน')}
-          </MenuItem>
-          <MenuItem icon={<Info size={18} />} onClick={pick(() => setAboutOpen(true))}>
-            {t('เกี่ยวกับเว็บไซต์')}
-          </MenuItem>
 
-          <div className="mt-1 flex flex-col gap-3 border-t border-stone-100 px-4 pt-3 pb-2">
-            <Segmented
-              label={t('ธีม')}
-              icon={pref === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-              options={THEMES.map((o) => ({ ...o, label: t(o.label) }))}
-              value={pref}
-              onChange={(value, e) => setThemePref(value, { x: e.clientX, y: e.clientY })}
-            />
-            <Segmented
-              label={t('ภาษา')}
-              icon={<Languages size={16} />}
-              options={LANGS}
-              value={lang}
-              onChange={setLang}
-            />
-          </div>
+          {isAdmin && (
+            <MenuSection title={t('ผู้ดูแลระบบ')}>
+              <MenuItem icon={<Inbox size={18} />} onClick={pick(onOpenAdmin)}>
+                <span className="flex flex-1 items-center justify-between">
+                  {t('จัดการรายงาน')}
+                  {pendingReports > 0 && (
+                    <span className="rounded-full bg-red-500 px-1.5 text-xs leading-5 font-medium text-white">
+                      {pendingReports}
+                    </span>
+                  )}
+                </span>
+              </MenuItem>
+            </MenuSection>
+          )}
+
+          <MenuSection title={t('ช่วยเหลือ')}>
+            <MenuItem icon={<Bug size={18} />} onClick={pick(onReportBug)}>
+              {t('รายงานปัญหา / เสนอไอเดีย')}
+            </MenuItem>
+            <MenuItem icon={<HeartHandshake size={18} className="text-orange-500" />} onClick={pick(onSupport)}>
+              {t('สนับสนุนทีมงาน')}
+            </MenuItem>
+          </MenuSection>
+
+          <MenuSection title={t('การแสดงผล')}>
+            <div className="flex flex-col gap-3 px-4 pt-1 pb-2">
+              <Segmented
+                label={t('ธีม')}
+                icon={pref === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                options={THEMES.map((o) => ({ ...o, label: t(o.label) }))}
+                value={pref}
+                onChange={(value, e) => setThemePref(value, { x: e.clientX, y: e.clientY })}
+              />
+              <Segmented
+                label={t('ภาษา')}
+                icon={<Languages size={16} />}
+                options={LANGS}
+                value={lang}
+                onChange={setLang}
+              />
+            </div>
+          </MenuSection>
 
           {session && (
-            <div className="mt-1 border-t border-stone-100 pt-1">
+            <div className="border-t border-stone-100 py-1">
               <MenuItem icon={<LogOut size={18} />} onClick={pick(signOut)}>
                 {t('ออกจากระบบ')}
               </MenuItem>
             </div>
           )}
+
+          {/* ลิงก์รองไว้ท้ายเมนูแบบตัวเล็ก (เหมือน Google) ไม่ต้องแย่งที่เมนูหลัก */}
+          <div className="flex items-center justify-center gap-1.5 border-t border-stone-100 px-4 pt-2.5 pb-1 text-xs text-stone-500">
+            <button type="button" role="menuitem" onClick={pick(openTerms)} className="flex items-center gap-1 rounded hover:text-stone-800 hover:underline">
+              <ScrollText size={13} aria-hidden="true" />
+              {t('ข้อกำหนดการใช้งาน')}
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={pick(() => setAboutOpen(true))}
+              className="flex items-center gap-1 rounded hover:text-stone-800 hover:underline"
+            >
+              <Info size={13} aria-hidden="true" />
+              {t('เกี่ยวกับเว็บไซต์')}
+            </button>
+          </div>
         </div>
       )}
       {devicesOpen && session && (
@@ -185,6 +207,15 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           <AboutDialog onClose={() => setAboutOpen(false)} />
         </Suspense>
       )}
+    </div>
+  )
+}
+
+function MenuSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div role="group" aria-label={title} className="border-t border-stone-100 py-1">
+      <p className="px-4 pt-1.5 pb-0.5 text-xs font-medium text-stone-500">{title}</p>
+      {children}
     </div>
   )
 }
@@ -206,7 +237,7 @@ function MenuItem({
       role="menuitem"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] text-stone-700 hover:bg-orange-50"
+      className="flex w-full items-center gap-3 px-4 py-2 text-left text-[15px] text-stone-700 hover:bg-orange-50"
     >
       <span className="text-stone-500">{icon}</span>
       {children}

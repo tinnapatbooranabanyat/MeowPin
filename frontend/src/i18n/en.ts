@@ -486,4 +486,8 @@ export const EN: Record<string, string> = {
   'โหลดหน้าใหม่แล้วลองอีกครั้งนะ': 'Reload the page and try again.',
   'โหลดหน้าใหม่': 'Reload',
   'กำลังเตรียมรูป…': 'Preparing photo…',
+  'บัญชี': 'Account',
+  'ผู้ดูแลระบบ': 'Admin',
+  'ช่วยเหลือ': 'Help',
+  'การแสดงผล': 'Display',
 }
