@@ -143,10 +143,6 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
         {t('ดูซอร์สโค้ดบน GitHub')}
         <ExternalLink size={15} aria-hidden="true" />
       </a>
-
-      <p className="mt-4 text-center text-xs text-stone-500">
-        {t('โลโก้จาก Simple Icons — ชื่อและโลโก้เป็นเครื่องหมายการค้าของเจ้าของแต่ละราย')}
-      </p>
     </Modal>
   )
 }
