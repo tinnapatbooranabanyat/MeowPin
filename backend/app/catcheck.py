@@ -1,4 +1,7 @@
-"""ตรวจว่ารูปมีแมวจริงไหม: โมเดลในเครื่องก่อน (เร็ว ฟรี) → ไม่มั่นใจค่อยถาม Gemini → ยังไม่ใช่ก็ให้ผู้ใช้ยืนยันเอง
+"""ตรวจว่ารูปมีแมวจริงไหม: ถาม Gemini ก่อน (เร็วและแม่น) → Gemini ใช้ไม่ได้ค่อยใช้โมเดลในเครื่อง
+→ ยังไม่ใช่แมวก็ให้ผู้ใช้ยืนยันเอง
+
+ไม่ใช้โมเดลในเครื่องเป็นด่านแรก เพราะบน Render แบบฟรี (CPU 0.1 คอร์) แค่โหลดโมเดลก็เกือบนาที
 
 ผลตรวจตอนเลือกรูป (/cats/check-photo) ส่งกลับเป็น token ที่เซ็นไว้ ผูกกับไฟล์รูปนั้น — ตอนปักหมุดจริง
 ส่ง token กลับมา จะได้ไม่ต้องเรียก Gemini ซ้ำ (และปลอมผลเองไม่ได้เพราะไม่รู้ key)
@@ -102,22 +105,32 @@ def check(image: Image.Image) -> CatCheck:
 
 
 def _check(image: Image.Image) -> CatCheck:
-    detection = detector.detect_cat(image)
-    if detection.score >= settings.cat_sure_threshold:
-        return CatCheck(ok=True, score=detection.score, method="model")
-    # โมเดลเล็กพลาดบ่อยกับรูปใกล้ แมวนอนขด แมวดำ กลางคืน — ให้ Gemini ช่วยดูอีกที
     try:
         is_cat, confidence, reason, reason_en = _ask_gemini(image)
     except gemini.GeminiError as e:
-        log.warning("gemini cat check unavailable: %s", e)
-        is_cat, confidence, reason, reason_en = False, 0.0, "", ""
-        # AI ใช้ไม่ได้ (ไม่มี key / โควตาหมด): เชื่อโมเดลเดิมตามเกณฑ์เดิม
-        if detection.is_cat:
-            return CatCheck(ok=True, score=detection.score, method="model")
+        # ไม่มี key / โควตาหมด / Google ล่ม → ใช้โมเดลในเครื่องแทน (ช้ากว่าแต่ไม่ต้องพึ่งใคร)
+        log.warning("gemini cat check unavailable, using local model: %s", e)
+        return _check_with_model(image)
     if is_cat:
-        return CatCheck(ok=True, score=max(confidence, detection.score), method="ai")
-    if reason:
-        return CatCheck(ok=False, score=detection.score, method=None, message=reason, message_en=reason_en or None)
+        return CatCheck(ok=True, score=confidence, method="ai")
+    return CatCheck(
+        ok=False,
+        score=confidence,
+        method=None,
+        message=reason or DEFAULT_REJECTION,
+        message_en=reason_en or None,
+    )
+
+
+def _check_with_model(image: Image.Image) -> CatCheck:
+    try:
+        detection = detector.detect_cat(image)
+    except RuntimeError as e:
+        # ไม่มีไฟล์โมเดล — ตรวจไม่ได้เลย ให้ผู้ใช้ยืนยันเอง
+        log.warning("%s", e)
+        return CatCheck(ok=False, score=0.0, method=None, message=DEFAULT_REJECTION)
+    if detection.is_cat:
+        return CatCheck(ok=True, score=detection.score, method="model")
     message = REJECTION_MESSAGES.get(detection.other_label or "", DEFAULT_REJECTION)
     return CatCheck(ok=False, score=detection.score, method=None, message=message)
 

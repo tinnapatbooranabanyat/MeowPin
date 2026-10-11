@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from functools import lru_cache
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-import onnxruntime as ort
 from PIL import Image
 
 from .config import settings
@@ -20,8 +21,15 @@ class Detection:
     other_label: str | None = None
 
 
+if TYPE_CHECKING:
+    import onnxruntime as ort
+
+
 @lru_cache(maxsize=1)
-def _session() -> ort.InferenceSession:
+def _session() -> "ort.InferenceSession":
+    # import ตอนใช้ครั้งแรกเท่านั้น (ใช้แค่ตอน Gemini ใช้ไม่ได้) — import อย่างเดียวก็ 10 วินาทีบน Render ฟรี
+    import onnxruntime as ort
+
     if not settings.model_path.exists():
         raise RuntimeError(
             f"ไม่พบโมเดลที่ {settings.model_path} — รัน python scripts/download_model.py ก่อน"

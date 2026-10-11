@@ -316,7 +316,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
             <ScanSearch size={20} className="text-orange-500" aria-hidden="true" />
             <span className="font-medium">{t('กำลังดูว่าเป็นน้องแมวไหม…')}</span>
           </div>
-          <p className="-mt-2 text-center text-xs text-stone-500">{t('อาจใช้เวลาสักครู่ ถ้า server เพิ่งตื่นหรือต้องให้ AI ช่วยดู')}</p>
+          <p className="-mt-2 text-center text-xs text-stone-500">{t('อาจใช้เวลาสักครู่ ถ้า server เพิ่งตื่น')}</p>
         </div>
       )}
 

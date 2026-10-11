@@ -47,8 +47,8 @@ const STACK: { title: string; items: Tech[] }[] = [
     items: [
       { icon: siPython, name: 'Python', role: 'ภาษาที่ใช้เขียนเซิร์ฟเวอร์' },
       { icon: siFastapi, name: 'FastAPI', role: 'API สำหรับปักหมุด อัปโหลดรูป และงานของ admin' },
-      { icon: siOnnx, name: 'ONNX Runtime', role: 'ตรวจรูปแมวด่านแรก (SSD MobileNet)' },
-      { icon: siGooglegemini, name: 'Google Gemini', role: 'สรุปรีวิวและช่วยดูรูปที่ไม่แน่ใจว่าเป็นแมว' },
+      { icon: siOnnx, name: 'ONNX Runtime', role: 'ตรวจรูปแมวสำรองตอน AI ใช้ไม่ได้ (SSD MobileNet)' },
+      { icon: siGooglegemini, name: 'Google Gemini', role: 'ตรวจว่ารูปเป็นแมวจริง และสรุปรีวิวน้องแมว' },
     ],
   },
   {

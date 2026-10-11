@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 from postgrest.exceptions import APIError
 
-from . import catcheck, detector, summary
+from . import catcheck, summary
 from .auth import current_user_id, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -44,11 +44,7 @@ MAX_PHOTOS_PER_REVIEW = 4
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # โหลดโมเดลตั้งแต่เปิด server — request แรกจะได้ไม่ช้า
-    try:
-        detector.warm_up()
-    except RuntimeError as e:
-        log.warning("%s", e)
+    # ไม่โหลดโมเดล ONNX ตอนเปิด server แล้ว (ตรวจแมวด้วย Gemini เป็นหลัก) — server ตื่นเร็วขึ้นมาก
     if settings.admin_emails:
         try:
             sync_admin_emails(settings.admin_emails)
