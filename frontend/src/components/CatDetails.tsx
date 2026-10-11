@@ -10,6 +10,7 @@ import { fetchIsFollowing, setFollowing } from '../lib/api'
 import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
+import { FeedingCard } from './FeedingCard'
 import { HelpSection } from './HelpSection'
 import { SightingTimes } from './SightingTimes'
 import { PawBurst } from './PawBurst'
@@ -279,6 +280,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
             <HelpSection cat={cat} />
 
             <AiSummary cat={cat} />
+
+            <FeedingCard cat={cat} />
 
             <SightingTimes catId={cat.id} />
 

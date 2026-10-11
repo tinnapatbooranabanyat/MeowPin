@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, PawPrint, Pencil, Trash2, X, type LucideIcon } from 'lucide-react'
+import { Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, PawPrint, Pencil, Trash2, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -14,7 +14,7 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
   { key: 'cats', label: 'หมุด', actions: ['cat_create', 'cat_update', 'cat_delete'] },
   { key: 'reviews', label: 'รีวิว', actions: ['review_create', 'review_update', 'review_delete'] },
   { key: 'photos', label: 'รูป', actions: ['photo_add'] },
-  { key: 'sightings', label: 'เจอน้อง', actions: ['sighting'] },
+  { key: 'sightings', label: 'เจอน้อง', actions: ['sighting', 'feeding'] },
   { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report'] },
   { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_resolve'] },
 ]
@@ -33,8 +33,11 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   bug_report: { icon: Bug, text: 'ส่งรายงานปัญหา / ไอเดีย', tone: 'bg-violet-100 text-violet-700' },
   cat_report: { icon: Flag, text: 'รายงานหมุด {cat}', tone: 'bg-red-100 text-red-700' },
   help_request: { icon: HeartPulse, text: 'แจ้งว่า {cat} ต้องการความช่วยเหลือ', tone: 'bg-red-100 text-red-700' },
+  feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
 }
+
+const FOOD_LABELS: Record<string, string> = { dry: 'อาหารเม็ด', wet: 'อาหารเปียก', treat: 'ขนม', other: 'อื่นๆ' }
 
 const BUG_CATEGORIES: Record<string, string> = { bug: 'เจอปัญหา / บั๊ก', idea: 'เสนอไอเดีย', other: 'อื่นๆ' }
 
@@ -136,6 +139,7 @@ function ActivityRow({
   if (detail.paws) extras.push(t('{n} อุ้งเท้า', { n: detail.paws }))
   if (entry.action === 'review_delete' && detail.by_other) extras.push(t('ลบโดย admin'))
   if (detail.category) extras.push(t(BUG_CATEGORIES[detail.category] ?? detail.category))
+  if (detail.food) extras.push(t(FOOD_LABELS[detail.food] ?? detail.food))
   if (detail.kind) extras.push(t(HELP_KINDS[detail.kind as HelpKind]?.label ?? detail.kind))
   if (detail.reason) extras.push(t(CAT_REPORT_REASONS[detail.reason as CatReportReason]?.label ?? detail.reason))
   if (entry.action === 'sign_in') {

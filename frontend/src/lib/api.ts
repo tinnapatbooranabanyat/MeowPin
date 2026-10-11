@@ -11,6 +11,8 @@ import type {
   CatSummary,
   CatTraits,
   DeviceSession,
+  FeedingsToday,
+  FoodKind,
   HelpKind,
   HelpRequest,
   FurColor,
@@ -726,6 +728,24 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
 export async function markNotificationsRead(): Promise<void> {
   const { error } = await db().from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
   if (error) throw new ApiError('บันทึกไม่สำเร็จ', 500)
+}
+
+// ═══════════════ บันทึกการให้อาหาร ═══════════════
+/** null = ยังไม่ได้รัน migration 0014 (ไม่ต้องแสดงการ์ด) */
+export async function fetchFeedingsToday(catId: string): Promise<FeedingsToday | null> {
+  const { data, error } = await db().rpc('cat_feedings_today', { p_cat_id: catId })
+  if (error) return null
+  const row = (data as { feedings: number; last_fed_at: string | null; mine: boolean }[])[0]
+  return { feedings: row?.feedings ?? 0, lastFedAt: row?.last_fed_at ?? null, mine: row?.mine ?? false }
+}
+
+export async function recordFeeding(catId: string, food: FoodKind): Promise<void> {
+  const { error } = await db().rpc('record_feeding', { p_cat_id: catId, p_food: food })
+  if (error) {
+    if (error.message.includes('too_soon')) throw new ApiError('คุณเพิ่งบันทึกการให้อาหารน้องตัวนี้ไป รอสัก 2 ชั่วโมงนะ', 429)
+    if (error.message.includes('login_required')) throw new ApiError('เข้าสู่ระบบก่อนนะ', 401)
+    throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
 }
 
 // ═══════════════ ช่วงเวลาที่มักเจอ ═══════════════

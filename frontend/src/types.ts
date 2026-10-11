@@ -17,6 +17,15 @@ export type FurColor =
   /** สีที่ผู้ใช้พิมพ์เอง (ดูที่ Cat.furColorCustom) */
   | 'other'
 
+export type FoodKind = 'dry' | 'wet' | 'treat' | 'other'
+
+export interface FeedingsToday {
+  feedings: number
+  lastFedAt: string | null
+  /** เราบันทึกไปแล้ววันนี้ */
+  mine: boolean
+}
+
 export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen'
 
 export interface AppNotification {
@@ -198,6 +207,7 @@ export type ActivityAction =
   | 'cat_report'
   | 'help_request'
   | 'help_resolve'
+  | 'feeding'
 
 export interface ActivityEntry {
   id: number
@@ -213,6 +223,7 @@ export interface ActivityEntry {
     category?: string
     reason?: string
     kind?: string
+    food?: string
     ip?: string
     user_agent?: string
     city?: string
