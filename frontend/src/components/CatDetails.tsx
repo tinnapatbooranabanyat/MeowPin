@@ -9,6 +9,7 @@ import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
 import { HelpSection } from './HelpSection'
+import { SightingTimes } from './SightingTimes'
 import { PawBurst } from './PawBurst'
 import { PhotoLightbox } from './PhotoLightbox'
 import { PawRating } from './reviews/PawRating'
@@ -256,6 +257,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
             <HelpSection cat={cat} />
 
             <AiSummary cat={cat} />
+
+            <SightingTimes catId={cat.id} />
 
             {cat.description ? (
               <TranslatableText text={cat.description} className="text-[15px] leading-relaxed text-stone-700" />

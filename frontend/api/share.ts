@@ -77,6 +77,7 @@ export async function GET(request: Request) {
 <body><a href="${escape(appUrl)}">${escape(title)}</a><script>location.replace(${JSON.stringify(appUrl)})</script></body>
 </html>`
   return new Response(html, {
-    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=600' },
+    // ห้าม CDN เก็บไว้: คำตอบต่างกันระหว่าง bot กับคน (คนต้องได้ 302 ไปหน้าแผนที่)
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', vary: 'User-Agent' },
   })
 }

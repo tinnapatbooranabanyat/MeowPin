@@ -681,6 +681,16 @@ export async function fetchAdminCounts(): Promise<AdminCounts> {
   return { catReports, bugReports }
 }
 
+// ═══════════════ ช่วงเวลาที่มักเจอ ═══════════════
+/** จำนวนครั้งที่เจอน้องในแต่ละชั่วโมง (เวลาไทย) index 0–23 — ยังไม่ได้รัน migration 0012 ก็ได้ศูนย์ทั้งหมด */
+export async function fetchSightingHours(catId: string): Promise<number[]> {
+  const counts = Array<number>(24).fill(0)
+  const { data, error } = await db().rpc('cat_sighting_hours', { p_cat_id: catId })
+  if (error || !data) return counts
+  for (const row of data as { hour: number; sightings: number }[]) counts[row.hour] = row.sightings
+  return counts
+}
+
 // ═══════════════ น้องต้องการความช่วยเหลือ ═══════════════
 interface HelpRow {
   id: string
