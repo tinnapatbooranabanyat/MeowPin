@@ -79,16 +79,12 @@ export const EN: Record<string, string> = {
   'ข้อมูลแมว': 'Cat details',
   'ข้อมูลของ {name}': 'About {name}',
   'ไม่ระบุสถานที่': 'No place given',
-  'แมว{fur} · เจอล่าสุด {when}': '{fur} cat · last seen {when}',
   'แมวจริง {n}%': 'Real cat {n}%',
-  'เจอแล้ว {n} ครั้ง': 'Seen {n} times',
   'นำทาง': 'Directions',
   'ฉันเจอด้วย': 'I saw it too',
   'แชร์': 'Share',
   'ยังไม่มีคำอธิบาย': 'No description yet',
-  'ปักหมุดโดย {name}': 'Pinned by {name}',
   'ทีม MeowPin': 'the MeowPin team',
-  'รายงานหมุดนี้': 'Report this pin',
   'ลบหมุดนี้ (เจ้าของแพลตฟอร์ม)': 'Delete this pin (platform owner)',
   'บันทึกแล้วว่าคุณเจอ{name}': 'Logged that you saw {name}',
   'ลบหมุด "{name}" ถาวร? รีวิวและประวัติการเจอจะหายไปด้วย':
@@ -191,10 +187,7 @@ export const EN: Record<string, string> = {
   'ถ้า server เพิ่งตื่นจากโหมดพัก อาจใช้เวลาสักครู่': 'If the server was asleep, this can take a moment',
   'ตำแหน่งจาก GPS ตอนถ่าย ขยับได้เล็กน้อยถ้าไม่ตรง': 'Location from your GPS when the photo was taken — nudge it if it’s off',
   'ตำแหน่งจากข้อมูลในรูป เช็กอีกทีว่าถูกที่': 'Location from the photo’s data — double-check it',
-  'รูปนี้ไม่มีข้อมูลตำแหน่ง เลื่อนแผนที่ไปที่ที่เจอแมวเลย': 'This photo has no location data. Move the map to where you found the cat.',
   'เจอแมวตรงไหน': 'Where’s the cat?',
-  'ตำแหน่งจาก{source}ห่างจากจุดที่คุณกดค้างประมาณ {m} ม.': 'The {source} location is about {m} m from the spot you picked',
-  'ย้ายไปตำแหน่งจาก{source}': 'Move to the {source} location',
   'ยืนยันตำแหน่งนี้': 'Confirm this location',
 
   // ── ตรวจว่าเป็นแมว ──
@@ -353,4 +346,36 @@ export const EN: Record<string, string> = {
   'ตรวจชื่อบัญชีในแอปธนาคารให้ตรงก่อนกดโอน': 'Check the account name in your banking app before you confirm',
   'เปลี่ยนจำนวนเงิน': 'Change amount',
   'บันทึกรูป QR': 'Save QR image',
+
+  // ── หน้าข้อมูลแมว (แบบ Google Maps) ──
+  'แมว{fur}': '{fur} cat',
+  'ดูรูปเต็ม': 'View full photo',
+  'ภาพรวม': 'Overview',
+  'รีวิว': 'Reviews',
+  'เกี่ยวกับ': 'About',
+  'รายงาน': 'Report',
+  'เจอล่าสุด {when} · เจอแล้ว {n} ครั้ง': 'Last seen {when} · seen {n} times',
+  'ปักหมุดโดย': 'Pinned by',
+  'ไม่ระบุ': 'Not specified',
+  'สถานะ': 'Status',
+  'ทำหมัน': 'Neutered',
+  'นิสัย': 'Personality',
+  'ตำแหน่ง': 'Location',
+  'ความมั่นใจว่าเป็นแมว': 'Cat confidence',
+
+  // ── แปลข้อความที่ผู้ใช้เขียน ──
+  'ดูคำแปล': 'See translation',
+  'ดูต้นฉบับ': 'See original',
+  'กำลังแปล…': 'Translating…',
+  'ดูคำแปลใน Google Translate': 'See translation in Google Translate',
+  'แปลอัตโนมัติโดยเบราว์เซอร์': 'Translated automatically by your browser',
+
+  // ── เลือกตำแหน่งตอนปักหมุด ──
+  'รูปนี้ไม่มีข้อมูลตำแหน่ง — มือถือหลายรุ่นลบตำแหน่งออกตอนเลือกรูปจากแกลเลอรี เลื่อนแผนที่ไปที่ที่เจอแมว หรือใช้ "ถ่ายรูปตอนนี้" เพื่อยืนยันด้วย GPS':
+    'This photo has no location data — many phones remove it when you pick a photo from the gallery. Move the map to where you found the cat, or use “Take a photo now” to verify with GPS.',
+  'ไม่ได้ตำแหน่ง GPS ตอนถ่าย เลื่อนแผนที่ไปที่ที่เจอแมวเลย': 'No GPS location when the photo was taken. Move the map to where you found the cat.',
+  'ย้ายหมุดไปตำแหน่งจาก{source}แล้ว (ห่างจากจุดที่คุณกดค้างประมาณ {m} ม.)':
+    'Moved the pin to the {source} location (about {m} m from the spot you picked)',
+  'ใช้จุดที่กดค้างแทน': 'Use the spot I picked instead',
+  'กลับไปตำแหน่งจาก{source}': 'Back to the {source} location',
 }

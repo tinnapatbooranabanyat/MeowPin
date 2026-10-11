@@ -6,6 +6,7 @@ import { deleteReview, fetchReviews } from '../../lib/api'
 import { timeAgo } from '../../lib/cat'
 import type { Cat, Review } from '../../types'
 import { UserAvatar } from '../account/UserAvatar'
+import { TranslatableText } from '../TranslatableText'
 import { PawRating } from './PawRating'
 import { ReviewForm } from './ReviewForm'
 import { useI18n } from '../../hooks/useI18n'
@@ -136,7 +137,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
                   {t(review.recommend ? 'แนะนำ' : 'ไม่แนะนำ')}
                 </span>
               </div>
-              {review.comment && <p className="mt-1 text-sm whitespace-pre-wrap text-stone-700">{review.comment}</p>}
+              {review.comment && <TranslatableText text={review.comment} className="mt-1 text-sm text-stone-700" />}
             </div>
           </li>
         ))}

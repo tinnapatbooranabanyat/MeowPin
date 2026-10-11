@@ -24,6 +24,8 @@ interface Draft {
   sourcePosition: LatLng
   /** false = sourcePosition เป็นแค่ศูนย์กลางแผนที่ ไม่ใช่ GPS/EXIF */
   sourceKnown: boolean
+  /** ได้รูปมาจากกล้องในแอป หรืออัปโหลดจากเครื่อง */
+  source: 'camera' | 'upload'
   verification: Verification
   takenAt: Date | null
 }
@@ -132,6 +134,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
           guessedFur: guessFurColor(img, detection.bbox),
           sourcePosition,
           sourceKnown: verification !== 'manual',
+          source,
           verification,
           takenAt: meta?.takenAt ?? null,
         },
@@ -222,18 +225,32 @@ export function AddCatFlow({ origin, start, onClose, onAdded }: Props) {
 
   if (step.kind === 'pick') {
     const { draft } = step
-    const sourceFar = draft.sourceKnown && distanceMeters(origin, draft.sourcePosition) > MAX_ADJUST_M
+    const distance = distanceMeters(origin, draft.sourcePosition)
+    const sourceFar = draft.sourceKnown && distance > MAX_ADJUST_M
+    const sourceName = t(draft.verification === 'camera_gps' ? 'GPS ตอนถ่าย' : 'ข้อมูลในรูป')
+    // มีตำแหน่งจากรูป/GPS → เริ่มหมุดที่นั่นเลย (เดิมเริ่มที่จุดกดค้าง ทำให้ดูเหมือนอ่านตำแหน่งในรูปไม่ได้)
+    const hint = !draft.sourceKnown
+      ? draft.source === 'upload'
+        ? t('รูปนี้ไม่มีข้อมูลตำแหน่ง — มือถือหลายรุ่นลบตำแหน่งออกตอนเลือกรูปจากแกลเลอรี เลื่อนแผนที่ไปที่ที่เจอแมว หรือใช้ "ถ่ายรูปตอนนี้" เพื่อยืนยันด้วย GPS')
+        : t('ไม่ได้ตำแหน่ง GPS ตอนถ่าย เลื่อนแผนที่ไปที่ที่เจอแมวเลย')
+      : sourceFar
+        ? t('ย้ายหมุดไปตำแหน่งจาก{source}แล้ว (ห่างจากจุดที่คุณกดค้างประมาณ {m} ม.)', {
+            source: sourceName,
+            m: Math.round(distance),
+          })
+        : t(draft.verification === 'camera_gps' ? 'ตำแหน่งจาก GPS ตอนถ่าย ขยับได้เล็กน้อยถ้าไม่ตรง' : 'ตำแหน่งจากข้อมูลในรูป เช็กอีกทีว่าถูกที่')
     return (
       <LocationPicker
-        initialPosition={origin}
-        verification={sourceFar ? 'manual' : draft.verification}
+        initialPosition={draft.sourceKnown ? draft.sourcePosition : origin}
+        verification={draft.verification}
+        hint={hint}
         alternative={
           sourceFar
             ? {
-                position: draft.sourcePosition,
-                distance: distanceMeters(origin, draft.sourcePosition),
-                label: draft.verification === 'camera_gps' ? 'GPS ตอนถ่าย' : 'ข้อมูลในรูป',
-                verification: draft.verification,
+                position: origin,
+                verification: 'manual',
+                goLabel: t('ใช้จุดที่กดค้างแทน'),
+                backLabel: t('กลับไปตำแหน่งจาก{source}', { source: sourceName }),
               }
             : undefined
         }

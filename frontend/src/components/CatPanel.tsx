@@ -1,4 +1,3 @@
-import { X } from 'lucide-react'
 import type { Cat } from '../types'
 import { CatDetails } from './CatDetails'
 import { useI18n } from '../hooks/useI18n'
@@ -18,17 +17,17 @@ export function CatPanel({ cat, onClose, onSighting, onShare, onDelete, onReport
   return (
     <aside
       aria-label={t('ข้อมูลของ {name}', { name: cat.name })}
-      className="absolute top-20 left-4 z-20 animate-slide-in-left max-h-[calc(100%-6rem)] w-[380px] overflow-y-auto rounded-3xl bg-surface p-5 shadow-xl ring-1 ring-stone-200"
+      className="absolute top-20 left-4 z-20 max-h-[calc(100%-6rem)] w-[400px] animate-slide-in-left overflow-x-hidden overflow-y-auto rounded-3xl bg-surface shadow-xl ring-1 ring-stone-200"
     >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 rounded-full p-1.5 text-stone-500 hover:bg-stone-100"
-        aria-label={t('ปิด')}
-      >
-        <X size={20} />
-      </button>
-      <CatDetails cat={cat} onSighting={onSighting} onShare={onShare} onDelete={onDelete} onReport={onReport} />
+      <CatDetails
+        variant="panel"
+        cat={cat}
+        onClose={onClose}
+        onSighting={onSighting}
+        onShare={onShare}
+        onDelete={onDelete}
+        onReport={onReport}
+      />
     </aside>
   )
 }
