@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
 from postgrest.exceptions import APIError
@@ -18,6 +19,8 @@ from .geo import blur, distance_m
 from .images import InvalidImage, open_image, to_public_webp
 from .ratelimit import RateLimiter, client_ip
 
+# log ของแอป (เช่นเวลาที่ใช้ตรวจรูป) ให้ขึ้นใน Render Logs
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("meowpin")
 
 FurColor = Literal[
@@ -57,6 +60,22 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="MeowPin API", lifespan=lifespan)
+
+
+async def catch_unhandled(request: Request, call_next):
+    """error ที่ไม่ได้ดักไว้: ตอบเป็น JSON (และผ่าน CORS) — ไม่งั้นเบราว์เซอร์เห็นแค่ว่าเชื่อมต่อไม่ได้"""
+    try:
+        return await call_next(request)
+    except Exception as e:
+        log.exception("unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"server มีปัญหา ({type(e).__name__}) ลองใหม่อีกครั้ง", "code": "server_error"},
+        )
+
+
+# ต้องเพิ่มก่อน CORS: middleware ที่เพิ่มทีหลังจะอยู่ชั้นนอก → CORS ใส่ header ให้คำตอบ error นี้ด้วย
+app.add_middleware(BaseHTTPMiddleware, dispatch=catch_unhandled)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,

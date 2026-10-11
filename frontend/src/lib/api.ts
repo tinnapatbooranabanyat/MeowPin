@@ -169,6 +169,16 @@ export function onBackendWaking(listener: (waking: boolean) => void): () => void
   return () => wakingListeners.delete(listener)
 }
 
+/** server ตอบ /health เร็วไหม — ตื่นอยู่แล้วแต่ request ล้ม = ปัญหาอื่น ไม่ต้องรอ */
+async function backendAwake(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(6000) })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 const isServerWaking = (res: Response) =>
   [502, 503, 504].includes(res.status) && !res.headers.get('content-type')?.includes('application/json')
 
@@ -186,7 +196,10 @@ async function callBackend<T>(method: 'POST' | 'DELETE', path: string, body?: Bo
         res = null
       }
       if (attempt >= WAKE_RETRY_DELAYS_MS.length) break
-      if (attempt === 0) wakingListeners.forEach((l) => l(true))
+      if (attempt === 0) {
+        if (await backendAwake()) break
+        wakingListeners.forEach((l) => l(true))
+      }
       await new Promise((resolve) => setTimeout(resolve, WAKE_RETRY_DELAYS_MS[attempt]))
     }
   } finally {

@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import time
 from dataclasses import dataclass
 from io import BytesIO
@@ -17,6 +18,8 @@ from PIL import Image
 
 from . import detector, gemini
 from .config import settings
+
+log = logging.getLogger("meowpin.catcheck")
 
 CheckMethod = Literal["model", "ai", "user"]
 
@@ -89,13 +92,24 @@ def _ask_gemini(image: Image.Image) -> tuple[bool, float, str, str]:
 
 
 def check(image: Image.Image) -> CatCheck:
+    started = time.monotonic()
+    result = _check(image)
+    log.info(
+        "cat check: ok=%s method=%s score=%.2f in %.1fs",
+        result.ok, result.method, result.score, time.monotonic() - started,
+    )
+    return result
+
+
+def _check(image: Image.Image) -> CatCheck:
     detection = detector.detect_cat(image)
     if detection.score >= settings.cat_sure_threshold:
         return CatCheck(ok=True, score=detection.score, method="model")
     # โมเดลเล็กพลาดบ่อยกับรูปใกล้ แมวนอนขด แมวดำ กลางคืน — ให้ Gemini ช่วยดูอีกที
     try:
         is_cat, confidence, reason, reason_en = _ask_gemini(image)
-    except gemini.GeminiError:
+    except gemini.GeminiError as e:
+        log.warning("gemini cat check unavailable: %s", e)
         is_cat, confidence, reason, reason_en = False, 0.0, "", ""
         # AI ใช้ไม่ได้ (ไม่มี key / โควตาหมด): เชื่อโมเดลเดิมตามเกณฑ์เดิม
         if detection.is_cat:

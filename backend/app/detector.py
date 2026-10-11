@@ -10,6 +10,7 @@ from .config import settings
 # id ของ COCO แบบ 90 คลาสที่ SSD-MobileNet ใช้
 COCO_CAT = 17
 COCO_LABELS = {1: "person", 16: "bird", 17: "cat", 18: "dog", 88: "teddy bear"}
+MAX_INPUT_SIDE = 640
 
 
 @dataclass
@@ -25,7 +26,11 @@ def _session() -> ort.InferenceSession:
         raise RuntimeError(
             f"ไม่พบโมเดลที่ {settings.model_path} — รัน python scripts/download_model.py ก่อน"
         )
-    return ort.InferenceSession(str(settings.model_path), providers=["CPUExecutionProvider"])
+    # Render แบบฟรีได้ CPU แค่ 0.1 คอร์ — หลาย thread มีแต่แย่งกันเอง
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    options.inter_op_num_threads = 1
+    return ort.InferenceSession(str(settings.model_path), options, providers=["CPUExecutionProvider"])
 
 
 def warm_up() -> None:
@@ -34,7 +39,12 @@ def warm_up() -> None:
 
 def detect_cat(image: Image.Image) -> Detection:
     """ตรวจว่ามีแมวในรูปไหม — โมเดลรับ uint8 NHWC ขนาดใดก็ได้ แล้วย่อเป็น 300x300 เอง"""
-    pixels = np.asarray(image.convert("RGB"), dtype=np.uint8)[None]
+    # โมเดลย่อเหลือ 300x300 เองอยู่แล้ว — ย่อก่อนให้เบาลง (ผลตรวจไม่ต่าง)
+    small = image.convert("RGB")
+    if max(small.size) > MAX_INPUT_SIDE:
+        small = small.copy()
+        small.thumbnail((MAX_INPUT_SIDE, MAX_INPUT_SIDE))
+    pixels = np.asarray(small, dtype=np.uint8)[None]
     _boxes, classes, scores, _num = _session().run(None, {"inputs": pixels})
     classes, scores = classes[0].astype(int), scores[0]
 
