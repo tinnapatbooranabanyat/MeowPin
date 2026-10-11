@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, PawPrint, Pencil, Trash2, Utensils, X, type LucideIcon } from 'lucide-react'
+import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -37,6 +37,9 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   post_create: { icon: Megaphone, text: 'ลงประกาศ', tone: 'bg-red-100 text-red-700' },
   post_resolve: { icon: CheckCircle2, text: 'ปิดประกาศ', tone: 'bg-emerald-100 text-emerald-700' },
   post_delete: { icon: Trash2, text: 'ลบประกาศ', tone: 'bg-stone-200 text-stone-700' },
+  user_ban: { icon: Ban, text: 'ระงับบัญชีผู้ใช้', tone: 'bg-red-100 text-red-700' },
+  user_unban: { icon: UserCheck, text: 'ยกเลิกการระงับบัญชี', tone: 'bg-emerald-100 text-emerald-700' },
+  cat_verify: { icon: ShieldCheck, text: 'ยืนยันว่า {cat} เป็นแมวจริง', tone: 'bg-emerald-100 text-emerald-700' },
   feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
 }
@@ -144,6 +147,7 @@ function ActivityRow({
   if (entry.action === 'review_delete' && detail.by_other) extras.push(t('ลบโดย admin'))
   if (detail.category) extras.push(t(BUG_CATEGORIES[detail.category] ?? detail.category))
   if (detail.title) extras.push(`${t(detail.post_kind === 'adoption' ? 'หาบ้าน' : 'แมวหาย')}: ${detail.title}`)
+  if (detail.target_name) extras.push(detail.target_name)
   if (detail.food) extras.push(t(FOOD_LABELS[detail.food] ?? detail.food))
   if (detail.kind) extras.push(t(HELP_KINDS[detail.kind as HelpKind]?.label ?? detail.kind))
   if (detail.reason) extras.push(t(CAT_REPORT_REASONS[detail.reason as CatReportReason]?.label ?? detail.reason))

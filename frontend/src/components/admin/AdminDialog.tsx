@@ -8,8 +8,9 @@ import { photoUrl } from '../../lib/supabase'
 import type { BugReport, CatReport } from '../../types'
 import { Modal } from '../ui/Modal'
 import { ActivityLog } from './ActivityLog'
+import { UnverifiedCats } from './UnverifiedCats'
 
-type Tab = 'cats' | 'bugs' | 'activity'
+type Tab = 'cats' | 'bugs' | 'unverified' | 'activity'
 type Status = 'open' | 'resolved'
 
 const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: string }> = {
@@ -37,7 +38,7 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
 
   return (
     <Modal title={t('จัดการรายงาน')} onClose={onClose} wide>
-      <div className="mb-4 flex gap-5 border-b border-stone-200">
+      <div className="no-scrollbar mb-4 flex gap-5 overflow-x-auto border-b border-stone-200">
         <button type="button" onClick={() => setTab('cats')} className={tabClass(tab === 'cats')}>
           {t('หมุดที่ถูกรายงาน')}
           {!!counts?.catReports && <Badge n={counts.catReports} />}
@@ -46,12 +47,15 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
           {t('ปัญหา / ไอเดีย')}
           {!!counts?.bugReports && <Badge n={counts.bugReports} />}
         </button>
+        <button type="button" onClick={() => setTab('unverified')} className={tabClass(tab === 'unverified')}>
+          {t('รอตรวจว่าเป็นแมว')}
+        </button>
         <button type="button" onClick={() => setTab('activity')} className={tabClass(tab === 'activity')}>
           {t('กิจกรรม')}
         </button>
       </div>
 
-      <div className={`mb-4 flex gap-2 ${tab === 'activity' ? 'hidden' : ''}`}>
+      <div className={`mb-4 flex gap-2 ${tab === 'activity' || tab === 'unverified' ? 'hidden' : ''}`}>
         {(['open', 'resolved'] as const).map((s) => (
           <button
             key={s}
@@ -69,6 +73,7 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
 
       {tab === 'cats' && <CatReportsList status={status} onOpenCat={onOpenCat} />}
       {tab === 'bugs' && <BugReportsList status={status} />}
+      {tab === 'unverified' && <UnverifiedCats onOpenCat={onOpenCat} />}
       {tab === 'activity' && <ActivityLog onOpenCat={onOpenCat} />}
     </Modal>
   )

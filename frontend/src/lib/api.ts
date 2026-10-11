@@ -321,6 +321,32 @@ export function updateCat(catId: string, values: CatFormValues): Promise<void> {
   )
 }
 
+/** admin: ตรวจแล้วว่าเป็นแมวจริง */
+export function verifyCat(catId: string): Promise<void> {
+  return callBackend<void>('POST', `/cats/${catId}/verify`)
+}
+
+/** หมุดที่ผู้ใช้ยืนยันเองว่าเป็นแมว (รอ admin ตรวจ) */
+export async function fetchUnverifiedCats(): Promise<Cat[]> {
+  const { data, error } = await db()
+    .from('cats_public')
+    .select('*')
+    .eq('cat_check', 'user')
+    .order('last_seen_at', { ascending: false })
+    .limit(100)
+  if (error || !data) return []
+  return (data as CatRow[]).map(rowToCat)
+}
+
+/** admin: ระงับ/ยกเลิกการระงับบัญชี */
+export async function setUserBan(userId: string, banned: boolean, reason = ''): Promise<void> {
+  const { error } = await db().rpc('set_user_ban', { p_user_id: userId, p_banned: banned, p_reason: reason })
+  if (error) {
+    if (error.message.includes('cannot_ban_admin')) throw new ApiError('ระงับบัญชีเจ้าของแพลตฟอร์มไม่ได้', 403)
+    throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+}
+
 export function deleteCat(catId: string): Promise<void> {
   return callBackend<void>('DELETE', `/cats/${catId}`)
 }
@@ -350,6 +376,7 @@ interface ProfileRow {
   avatar_path?: string | null
   created_at: string
   terms_version?: number
+  banned_at?: string | null
 }
 
 /** รูปที่อัปโหลดเองมาก่อนรูปจาก Google (avatar_path ยังไม่มีถ้ายังไม่ได้รัน migration 0003) */
@@ -366,6 +393,7 @@ function rowToProfile(row: ProfileRow): Profile {
     avatarPath: row.avatar_path ?? null,
     createdAt: row.created_at,
     termsVersion: row.terms_version ?? null,
+    bannedAt: row.banned_at ?? null,
   }
 }
 

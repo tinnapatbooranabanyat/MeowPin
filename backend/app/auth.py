@@ -15,6 +15,13 @@ def current_user_id(request: Request) -> str:
         raise HTTPException(status_code=401, detail="เซสชันหมดอายุ เข้าสู่ระบบใหม่อีกครั้ง") from e
     if not response or not response.user:
         raise HTTPException(status_code=401, detail="เซสชันหมดอายุ เข้าสู่ระบบใหม่อีกครั้ง")
+    try:
+        profile = get_client().table("profiles").select("banned_at").eq("id", response.user.id).limit(1).execute().data
+    except Exception:
+        # ยังไม่ได้รัน migration 0017 (ไม่มีคอลัมน์ banned_at)
+        profile = []
+    if profile and profile[0].get("banned_at"):
+        raise HTTPException(status_code=403, detail="บัญชีนี้ถูกระงับการใช้งาน")
     return response.user.id
 
 

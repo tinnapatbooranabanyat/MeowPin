@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, MapPin, Pencil, PawPrint, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Ban, CalendarDays, MapPin, PawPrint, Pencil, ThumbsDown, ThumbsUp, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useMapActions } from '../../hooks/useMapActions'
-import { fetchProfile, fetchUserCats, fetchUserReviews } from '../../lib/api'
+import { fetchProfile, fetchUserCats, fetchUserReviews, setUserBan } from '../../lib/api'
 import { furLabel, timeAgo } from '../../lib/cat'
 import { CatAvatar } from '../CatAvatar'
 import { PawRating } from '../reviews/PawRating'
@@ -23,7 +23,13 @@ interface Props {
 // หน้าโปรไฟล์ของผู้ใช้: ประวัติรีวิว + แมวที่ปักหมุด (ดูของคนอื่นได้ด้วย)
 export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
   const { t, lang } = useI18n()
-  const { userId: me } = useAuth()
+  const { userId: me, isAdmin } = useAuth()
+  const queryClient = useQueryClient()
+  const ban = useMutation({
+    mutationFn: (banned: boolean) =>
+      setUserBan(userId, banned, banned ? (window.prompt(t('เหตุผลที่ระงับ (ไม่บังคับ)')) ?? '') : ''),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['userProfile', userId] }),
+  })
   const { openCat } = useMapActions()
   const [tab, setTab] = useState<Tab>('reviews')
   const isMe = me === userId
@@ -86,6 +92,33 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
             </button>
           )}
         </div>
+
+        {profile.data?.bannedAt && (
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{t('บัญชีนี้ถูกระงับการใช้งาน')}</p>
+        )}
+        {isAdmin && !isMe && profile.data && (
+          <div className="-mt-1">
+            <button
+              type="button"
+              disabled={ban.isPending}
+              onClick={() => {
+                const banned = !profile.data!.bannedAt
+                if (!banned || window.confirm(t('ระงับบัญชี {name}? จะออกจากระบบทุกเครื่องและเขียนข้อมูลอะไรไม่ได้อีก', { name: profile.data!.displayName }))) {
+                  ban.mutate(banned)
+                }
+              }}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 disabled:opacity-60 ${
+                profile.data.bannedAt
+                  ? 'text-emerald-700 ring-emerald-200 hover:bg-emerald-50'
+                  : 'text-red-700 ring-red-200 hover:bg-red-50'
+              }`}
+            >
+              {profile.data.bannedAt ? <UserCheck size={15} aria-hidden="true" /> : <Ban size={15} aria-hidden="true" />}
+              {t(profile.data.bannedAt ? 'ยกเลิกการระงับบัญชี' : 'ระงับบัญชีนี้ (ผู้ดูแล)')}
+            </button>
+            {ban.error && <p className="mt-1 text-sm text-red-700">{t(ban.error.message)}</p>}
+          </div>
+        )}
 
         <BadgeList userId={userId} isMe={isMe} />
 

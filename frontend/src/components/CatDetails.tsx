@@ -121,9 +121,11 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
             )}
             {cat.catCheck === 'user'
               ? t('ยังไม่ยืนยันว่าเป็นแมว')
-              : cat.catCheck === 'ai'
-                ? t('AI ยืนยันว่าเป็นแมว')
-                : t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
+              : cat.catCheck === 'admin'
+                ? t('ผู้ดูแลยืนยันว่าเป็นแมว')
+                : cat.catCheck === 'ai'
+                  ? t('AI ยืนยันว่าเป็นแมว')
+                  : t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
           </span>
           {photos.length > 1 && (
             <button
@@ -333,6 +335,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
               <AboutRow icon={ShieldCheck} label={t('ตรวจว่าเป็นแมว')}>
                 {cat.catCheck === 'user'
                   ? t('ผู้ปักหมุดยืนยันเอง (รอผู้ดูแลตรวจ)')
+                  : cat.catCheck === 'admin'
+                    ? t('ผู้ดูแลตรวจแล้วว่าเป็นแมว')
                   : cat.catCheck === 'ai'
                     ? t('AI ช่วยดูแล้วว่าเป็นแมว ({n}%)', { n: Math.round(cat.catConfidence * 100) })
                     : t('ระบบตรวจพบแมว {n}%', { n: Math.round(cat.catConfidence * 100) })}

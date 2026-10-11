@@ -671,3 +671,18 @@ def delete_post(post_id: UUID, request: Request):
     if post.get("photo_path"):
         client.storage.from_(settings.photo_bucket).remove([post["photo_path"]])
     log_activity(client, user_id, "post_delete", None, {"post_kind": post["kind"], "title": post["title"]})
+
+
+@app.post("/cats/{cat_id}/verify")
+def verify_cat(cat_id: UUID, request: Request):
+    """admin ตรวจแล้วว่าเป็นแมวจริง (หมุดที่ผู้ใช้ยืนยันเอง) — ปิดรายงาน "ไม่ใช่แมว" ของหมุดนี้ด้วย"""
+    admin_id = current_user_id(request)
+    require_admin(admin_id)
+    client = get_client()
+    rows = client.table("cats").select("name").eq("id", str(cat_id)).limit(1).execute().data
+    if not rows:
+        raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    client.table("cats").update({"cat_check": "admin"}).eq("id", str(cat_id)).execute()
+    client.table("cat_reports").update({"status": "resolved"}).eq("cat_id", str(cat_id)).eq("reason", "not_cat").eq("status", "open").execute()
+    log_activity(client, admin_id, "cat_verify", cat_id, {"cat_name": rows[0]["name"]})
+    return {"ok": True}

@@ -84,7 +84,7 @@ export interface HelpRequest {
 }
 
 /** ตรวจว่าเป็นแมวด้วยวิธีไหน: โมเดลในเครื่องมั่นใจ / AI (Gemini) ยืนยัน / ผู้ปักหมุดยืนยันเอง (รอ admin ตรวจ) */
-export type CatCheck = 'model' | 'ai' | 'user'
+export type CatCheck = 'model' | 'ai' | 'user' | 'admin'
 
 // ระดับความน่าเชื่อถือของตำแหน่ง: ถ่ายในแอป+GPS > EXIF ในรูป > ผู้ใช้ลากหมุดเอง
 export type Verification = 'camera_gps' | 'exif_gps' | 'manual'
@@ -144,6 +144,8 @@ export interface Profile {
   /** path ใน bucket avatars (null = ใช้รูปจาก Google) */
   avatarPath: string | null
   createdAt: string
+  /** ถูกระงับบัญชีเมื่อ (null = ปกติ) */
+  bannedAt: string | null
   /** เวอร์ชันข้อกำหนดที่ยอมรับล่าสุด (0 = ยังไม่เคย, null = ยังไม่ได้รัน migration 0007) */
   termsVersion: number | null
 }
@@ -245,6 +247,9 @@ export type ActivityAction =
   | 'post_create'
   | 'post_resolve'
   | 'post_delete'
+  | 'user_ban'
+  | 'user_unban'
+  | 'cat_verify'
 
 export interface ActivityEntry {
   id: number
@@ -262,6 +267,7 @@ export interface ActivityEntry {
     kind?: string
     food?: string
     post_kind?: string
+    target_name?: string
     title?: string
     ip?: string
     user_agent?: string
