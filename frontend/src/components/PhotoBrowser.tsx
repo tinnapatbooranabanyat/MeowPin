@@ -57,7 +57,8 @@ export function PhotoBrowser({ cat, photos, startIndex, onClose }: Props) {
 
   const viewer = photo && (
     <div
-      className="relative flex min-h-0 flex-1 flex-col items-center justify-center bg-black p-4"
+      // min-w-0 + overflow-hidden: รูปใหญ่มาก (กว้างหลายพันพิกเซล) ต้องไม่ดันพื้นที่ให้กว้างเกินจอ (Safari)
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden bg-black p-4"
       // ปัดซ้าย-ขวาเพื่อเปลี่ยนรูป (มือถือ)
       onPointerDown={(e) => (swipeStart.current = e.clientX)}
       onPointerUp={(e) => {
@@ -86,7 +87,7 @@ export function PhotoBrowser({ cat, photos, startIndex, onClose }: Props) {
         key={photo.id}
         src={photo.url}
         alt={cat.name}
-        className="max-h-[calc(100%-5rem)] max-w-full animate-fade-in rounded-lg object-contain"
+        className="max-h-[calc(100%-5rem)] min-h-0 max-w-full animate-fade-in rounded-lg object-contain"
         draggable={false}
       />
       <PhotoActions catId={cat.id} photo={photo} onReport={() => setReporting(true)} onDeleted={() => setSelected((i) => (i ? i - 1 : 0))} />
@@ -142,7 +143,8 @@ export function PhotoBrowser({ cat, photos, startIndex, onClose }: Props) {
             <p className={`mt-2 text-xs ${add.message.tone === 'ok' ? 'text-emerald-700' : 'text-red-700'}`}>{add.message.text}</p>
           )}
         </div>
-        <ul className="thin-scrollbar grid flex-1 auto-rows-min grid-cols-2 gap-1.5 overflow-y-auto px-4 pb-4">
+        {/* pt-1.5: เว้นที่ให้กรอบส้มของรูปที่เลือก ไม่โดนขอบบนตัด */}
+        <ul className="thin-scrollbar grid flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto px-4 pt-1.5 pb-4">
           {photos.map((p, i) => {
             const count = likes.count(photoRef(p))
             const active = index === i
