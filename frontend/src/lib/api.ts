@@ -25,6 +25,10 @@ import type {
   Profile,
   ReportCategory,
   Review,
+  ReviewReply,
+  ReviewReport,
+  ReviewReportReason,
+  ReviewSocial,
   UserReview,
   UserStats,
   Verification,
@@ -508,6 +512,110 @@ export async function fetchReviews(catId: string): Promise<Review[]> {
     createdAt: r.created_at,
     author: r.profiles ? { displayName: r.profiles.display_name, avatarUrl: effectiveAvatar(r.profiles) } : null,
   }))
+}
+
+// ═══════════════ ถูกใจ / ตอบกลับ / รายงานรีวิว ═══════════════
+interface ReplyRow {
+  id: string
+  review_id: string
+  user_id: string
+  body: string
+  created_at: string
+  profiles: ProfileRow | null
+}
+
+/** ถูกใจ + ความเห็นของรีวิวทั้งหมดในหน้า (ยังไม่ได้รัน migration 0019 ก็ได้ค่าว่าง) */
+export async function fetchReviewSocial(reviewIds: string[], userId: string | null): Promise<Record<string, ReviewSocial>> {
+  const out: Record<string, ReviewSocial> = {}
+  if (!reviewIds.length) return out
+  for (const id of reviewIds) out[id] = { likes: 0, liked: false, replies: [] }
+  const [likes, replies] = await Promise.all([
+    db().from('review_likes').select('review_id, user_id').in('review_id', reviewIds),
+    db()
+      .from('review_replies')
+      .select('id, review_id, user_id, body, created_at, profiles(*)')
+      .in('review_id', reviewIds)
+      .order('created_at', { ascending: true }),
+  ])
+  for (const like of (likes.data ?? []) as { review_id: string; user_id: string }[]) {
+    out[like.review_id].likes += 1
+    if (like.user_id === userId) out[like.review_id].liked = true
+  }
+  for (const r of (replies.data ?? []) as unknown as ReplyRow[]) {
+    const reply: ReviewReply = {
+      id: r.id,
+      reviewId: r.review_id,
+      userId: r.user_id,
+      body: r.body,
+      createdAt: r.created_at,
+      author: r.profiles ? { displayName: r.profiles.display_name, avatarUrl: effectiveAvatar(r.profiles) } : null,
+    }
+    out[r.review_id].replies.push(reply)
+  }
+  return out
+}
+
+export async function setReviewLike(reviewId: string, like: boolean): Promise<void> {
+  const { error } = like
+    ? await db().from('review_likes').insert({ review_id: reviewId })
+    : await db().from('review_likes').delete().eq('review_id', reviewId)
+  if (error && error.code !== '23505') throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export async function addReviewReply(reviewId: string, body: string): Promise<void> {
+  const { error } = await db().from('review_replies').insert({ review_id: reviewId, body })
+  if (error) throw new ApiError('ส่งความเห็นไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export async function deleteReviewReply(replyId: string): Promise<void> {
+  const { error } = await db().from('review_replies').delete().eq('id', replyId)
+  if (error) throw new ApiError('ลบไม่สำเร็จ', 500)
+}
+
+export async function reportReview(reviewId: string, reason: ReviewReportReason, details: string): Promise<void> {
+  const { error } = await db().from('review_reports').insert({ review_id: reviewId, reason, details })
+  if (error) {
+    if (error.code === '23505') throw new ApiError('คุณรายงานรีวิวนี้ไปแล้ว', 409)
+    throw new ApiError('ส่งรายงานไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+}
+
+interface ReviewReportRow {
+  id: string
+  review_id: string
+  reason: string
+  details: string
+  created_at: string
+  profiles: { display_name: string } | null
+  reviews: { comment: string; paws: number; cat_id: string; profiles: { display_name: string } | null; cats: { name: string } | null } | null
+}
+
+export async function fetchReviewReports(status: 'open' | 'resolved'): Promise<ReviewReport[]> {
+  const { data, error } = await db()
+    .from('review_reports')
+    .select('id, review_id, reason, details, created_at, profiles(display_name), reviews(comment, paws, cat_id, profiles(display_name), cats(name))')
+    .eq('status', status)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error || !data) return []
+  return (data as unknown as ReviewReportRow[]).map((r) => ({
+    id: r.id,
+    reviewId: r.review_id,
+    reason: r.reason,
+    details: r.details,
+    createdAt: r.created_at,
+    reporterName: r.profiles?.display_name ?? null,
+    comment: r.reviews?.comment ?? null,
+    paws: r.reviews?.paws ?? null,
+    authorName: r.reviews?.profiles?.display_name ?? null,
+    catId: r.reviews?.cat_id ?? null,
+    catName: r.reviews?.cats?.name ?? null,
+  }))
+}
+
+export async function setReviewReportStatus(ids: string[], status: 'open' | 'resolved'): Promise<void> {
+  const { error } = await db().from('review_reports').update({ status }).in('id', ids)
+  if (error) throw new ApiError('อัปเดตรายงานไม่สำเร็จ', 500)
 }
 
 export interface ReviewInput {

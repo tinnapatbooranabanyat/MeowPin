@@ -8,9 +8,10 @@ import { photoUrl } from '../../lib/supabase'
 import type { BugReport, CatReport } from '../../types'
 import { Modal } from '../ui/Modal'
 import { ActivityLog } from './ActivityLog'
+import { ReviewReportsList } from './ReviewReportsList'
 import { UnverifiedCats } from './UnverifiedCats'
 
-type Tab = 'cats' | 'bugs' | 'unverified' | 'activity'
+type Tab = 'cats' | 'reviews' | 'bugs' | 'unverified' | 'activity'
 type Status = 'open' | 'resolved'
 
 const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: string }> = {
@@ -43,6 +44,9 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
           {t('หมุดที่ถูกรายงาน')}
           {!!counts?.catReports && <Badge n={counts.catReports} />}
         </button>
+        <button type="button" onClick={() => setTab('reviews')} className={tabClass(tab === 'reviews')}>
+          {t('รีวิวที่ถูกรายงาน')}
+        </button>
         <button type="button" onClick={() => setTab('bugs')} className={tabClass(tab === 'bugs')}>
           {t('ปัญหา / ไอเดีย')}
           {!!counts?.bugReports && <Badge n={counts.bugReports} />}
@@ -72,6 +76,7 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
       </div>
 
       {tab === 'cats' && <CatReportsList status={status} onOpenCat={onOpenCat} />}
+      {tab === 'reviews' && <ReviewReportsList status={status} onOpenCat={onOpenCat} />}
       {tab === 'bugs' && <BugReportsList status={status} />}
       {tab === 'unverified' && <UnverifiedCats onOpenCat={onOpenCat} />}
       {tab === 'activity' && <ActivityLog onOpenCat={onOpenCat} />}

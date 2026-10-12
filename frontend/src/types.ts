@@ -60,13 +60,45 @@ export interface FeedingsToday {
   mine: boolean
 }
 
-export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen'
+export type ReviewReportReason = 'spam' | 'inappropriate' | 'harassment' | 'false_info' | 'other'
+
+export interface ReviewReply {
+  id: string
+  reviewId: string
+  userId: string
+  body: string
+  createdAt: string
+  author: { displayName: string; avatarUrl: string | null } | null
+}
+
+/** ถูกใจ + ความเห็นของรีวิวหนึ่งอัน */
+export interface ReviewSocial {
+  likes: number
+  liked: boolean
+  replies: ReviewReply[]
+}
+
+export interface ReviewReport {
+  id: string
+  reviewId: string
+  reason: string
+  details: string
+  createdAt: string
+  reporterName: string | null
+  comment: string | null
+  paws: number | null
+  authorName: string | null
+  catId: string | null
+  catName: string | null
+}
+
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply'
 
 export interface AppNotification {
   id: number
   kind: NotificationKind
   catId: string | null
-  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number }
+  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number; body?: string }
   createdAt: string
   readAt: string | null
 }
@@ -250,6 +282,8 @@ export type ActivityAction =
   | 'user_ban'
   | 'user_unban'
   | 'cat_verify'
+  | 'review_reply'
+  | 'review_report'
 
 export interface ActivityEntry {
   id: number

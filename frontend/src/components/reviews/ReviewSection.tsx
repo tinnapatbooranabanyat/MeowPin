@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { deleteReview, fetchReviews } from '../../lib/api'
+import { deleteReview, fetchReviewSocial, fetchReviews } from '../../lib/api'
 import { timeAgo } from '../../lib/cat'
 import type { Cat, Review } from '../../types'
 import { UserAvatar } from '../account/UserAvatar'
@@ -10,6 +10,7 @@ import { PhotoLightbox } from '../PhotoLightbox'
 import { TranslatableText } from '../TranslatableText'
 import { PawRating } from './PawRating'
 import { ReviewForm } from './ReviewForm'
+import { ReviewSocialBar } from './ReviewSocialBar'
 import { useI18n } from '../../hooks/useI18n'
 import { useCatPhotos } from '../../hooks/useCatPhotos'
 import { useMapActions } from '../../hooks/useMapActions'
@@ -24,6 +25,12 @@ export function ReviewSection({ cat }: { cat: Cat }) {
   const [editing, setEditing] = useState(false)
   const reviews = useQuery({ queryKey: ['reviews', cat.id], queryFn: () => fetchReviews(cat.id) })
   const mine = reviews.data?.find((r) => r.userId === userId)
+  const reviewIds = (reviews.data ?? []).map((r) => r.id)
+  const social = useQuery({
+    queryKey: ['reviewSocial', cat.id, userId, reviewIds.join(',')],
+    queryFn: () => fetchReviewSocial(reviewIds, userId),
+    enabled: reviewIds.length > 0,
+  })
 
   // รีวิวเปลี่ยน → ค่าเฉลี่ยอุ้งเท้าในหมุด/แผงแมวต้องโหลดใหม่ด้วย
   const refresh = () => {
@@ -161,6 +168,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
                   )}
                 </div>
               )}
+              <ReviewSocialBar review={review} social={social.data?.[review.id]} catId={cat.id} />
             </div>
           </li>
         ))}

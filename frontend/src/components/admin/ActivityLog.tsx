@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
+import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -12,10 +12,10 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
   { key: 'all', label: 'ทั้งหมด', actions: null },
   { key: 'sign_in', label: 'การเข้าสู่ระบบ', actions: ['sign_in'] },
   { key: 'cats', label: 'หมุด', actions: ['cat_create', 'cat_update', 'cat_delete'] },
-  { key: 'reviews', label: 'รีวิว', actions: ['review_create', 'review_update', 'review_delete'] },
+  { key: 'reviews', label: 'รีวิว', actions: ['review_create', 'review_update', 'review_delete', 'review_reply'] },
   { key: 'photos', label: 'รูป', actions: ['photo_add'] },
   { key: 'sightings', label: 'เจอน้อง', actions: ['sighting', 'feeding'] },
-  { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report'] },
+  { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report', 'review_report'] },
   { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_resolve'] },
   { key: 'posts', label: 'ประกาศ', actions: ['post_create', 'post_resolve', 'post_delete'] },
 ]
@@ -40,6 +40,8 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   user_ban: { icon: Ban, text: 'ระงับบัญชีผู้ใช้', tone: 'bg-red-100 text-red-700' },
   user_unban: { icon: UserCheck, text: 'ยกเลิกการระงับบัญชี', tone: 'bg-emerald-100 text-emerald-700' },
   cat_verify: { icon: ShieldCheck, text: 'ยืนยันว่า {cat} เป็นแมวจริง', tone: 'bg-emerald-100 text-emerald-700' },
+  review_reply: { icon: MessageCircle, text: 'ตอบกลับรีวิวของ {cat}', tone: 'bg-sky-100 text-sky-700' },
+  review_report: { icon: Flag, text: 'รายงานรีวิวของ {cat}', tone: 'bg-red-100 text-red-700' },
   feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
 }
