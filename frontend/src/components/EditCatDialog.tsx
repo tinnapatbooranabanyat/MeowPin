@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { MapPinned, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useUpsertCat } from '../hooks/useCats'
 import { useI18n } from '../hooks/useI18n'
@@ -12,10 +12,11 @@ interface Props {
   onClose: () => void
   onSaved: (cat: Cat) => void
   onDelete: (cat: Cat) => void
+  onMove: (cat: Cat) => void
 }
 
-/** แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) — รูปและตำแหน่งแก้ไม่ได้ */
-export function EditCatDialog({ cat, onClose, onSaved, onDelete }: Props) {
+/** แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) — รูปแก้ไม่ได้ ตำแหน่งย้ายได้ด้วยปุ่มย้ายหมุด */
+export function EditCatDialog({ cat, onClose, onSaved, onDelete, onMove }: Props) {
   const { t } = useI18n()
   const upsertCat = useUpsertCat()
   const [saving, setSaving] = useState(false)
@@ -65,7 +66,16 @@ export function EditCatDialog({ cat, onClose, onSaved, onDelete }: Props) {
         submitError={error}
         onSubmit={save}
       />
-      <p className="mt-3 text-center text-xs text-stone-500">{t('รูปและตำแหน่งหมุดแก้ไม่ได้ ถ้าผิดให้ลบแล้วปักหมุดใหม่')}</p>
+      <button
+        type="button"
+        onClick={() => onMove(cat)}
+        disabled={saving}
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium text-stone-700 ring-1 ring-stone-300 hover:bg-stone-100 disabled:opacity-60"
+      >
+        <MapPinned size={15} aria-hidden="true" />
+        {t('ย้ายตำแหน่งหมุด')}
+      </button>
+      <p className="mt-3 text-center text-xs text-stone-500">{t('รูปหลักแก้ไม่ได้ ถ้าผิดให้ลบแล้วปักหมุดใหม่')}</p>
       <button
         type="button"
         onClick={() => onDelete(cat)}

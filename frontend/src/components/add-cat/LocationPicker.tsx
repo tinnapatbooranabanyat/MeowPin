@@ -16,10 +16,14 @@ interface Props {
   alternative?: { position: LatLng; verification: Verification; goLabel: string; backLabel: string }
   onBack: () => void
   onConfirm: (position: LatLng) => void
+  title?: string
+  confirmLabel?: string
+  /** กำลังบันทึก (ปุ่มยืนยันกดซ้ำไม่ได้) */
+  busy?: boolean
 }
 
 // ใช้แผนที่หลักเลือกตำแหน่ง (หมุดค้างกลางจอ เลื่อนแผนที่แทน) — ไม่ต้องโหลดแผนที่ใหม่ ประหยัดโควตา Google
-export function LocationPicker({ initialPosition, verification, hint, alternative, onBack, onConfirm }: Props) {
+export function LocationPicker({ initialPosition, verification, hint, alternative, onBack, onConfirm, title, confirmLabel, busy = false }: Props) {
   const { t } = useI18n()
   const map = useMap()
   const [onAlternative, setOnAlternative] = useState(false)
@@ -66,7 +70,7 @@ export function LocationPicker({ initialPosition, verification, hint, alternativ
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="font-display text-lg text-stone-900">{t('เจอแมวตรงไหน')}</h2>
+          <h2 className="font-display text-lg text-stone-900">{title ?? t('เจอแมวตรงไหน')}</h2>
           <span
             className={`ml-auto rounded-full px-2.5 py-1 text-xs font-medium ${VERIFICATION[shownVerification].className}`}
           >
@@ -107,9 +111,11 @@ export function LocationPicker({ initialPosition, verification, hint, alternativ
         <button
           type="button"
           onClick={confirm}
-          className="h-13 w-full max-w-sm rounded-full bg-orange-500 font-medium text-white shadow-lg transition hover:bg-orange-600 active:scale-95"
+          disabled={busy}
+          className="flex h-13 w-full max-w-sm items-center justify-center gap-2 rounded-full bg-orange-500 font-medium text-white shadow-lg transition hover:bg-orange-600 active:scale-95 disabled:opacity-70"
         >
-          {t('ยืนยันตำแหน่งนี้')}
+          {busy && <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />}
+          {confirmLabel ?? t('ยืนยันตำแหน่งนี้')}
         </button>
       </div>
     </div>

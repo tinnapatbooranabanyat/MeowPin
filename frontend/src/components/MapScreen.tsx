@@ -9,7 +9,7 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, fetchAdminCounts, recordSighting, wakeBackend, type Bounds } from '../lib/api'
+import { deleteCat, fetchAdminCounts, moveCat, recordSighting, wakeBackend, type Bounds } from '../lib/api'
 import { matchesQuery, seenWithin } from '../lib/cat'
 import type { Cat, FurColor, LatLng } from '../types'
 import { AccountMenu } from './account/AccountMenu'
@@ -30,6 +30,7 @@ import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { PlaceMarker } from './PlaceMarker'
+import { LocationPicker } from './add-cat/LocationPicker'
 import { usePlaceSearch, type FoundPlace, type PlaceSuggestion } from '../hooks/usePlaceSearch'
 import { FilterChips } from './FilterChips'
 import { SearchBar } from './SearchBar'
@@ -129,6 +130,11 @@ export function MapScreen({ mapId }: Props) {
   const [droppedPin, setDroppedPin] = useState<LatLng | null>(null)
   const [placePin, setPlacePin] = useState<FoundPlace | null>(null)
   const [adding, setAdding] = useState<{ origin: LatLng; start: AddCatStart } | null>(null)
+  // กำลังย้ายหมุด (เลือกตำแหน่งใหม่บนแผนที่)
+  const [moving, setMoving] = useState<Cat | null>(null)
+  const [movingSaving, setMovingSaving] = useState(false)
+  // ระหว่างปักหมุดใหม่/ย้ายหมุด ซ่อนปุ่มอื่นบนแผนที่
+  const busy = adding !== null || moving !== null
   const [dialog, setDialog] = useState<Dialog>(null)
   const [hintDismissed, setHintDismissed] = useState(readHintDismissed)
   const toastTimer = useRef<number | undefined>(undefined)
@@ -208,7 +214,7 @@ export function MapScreen({ mapId }: Props) {
   )
 
   const selectCat = (cat: Cat) => {
-    if (adding) return
+    if (busy) return
     setDroppedPin(null)
     setSelectedId(cat.id)
     focusCat(cat)
@@ -229,8 +235,38 @@ export function MapScreen({ mapId }: Props) {
       setSelectedId(null)
       setDroppedPin(position)
     }, []),
-    adding === null,
+    !busy,
   )
+
+  const startMoving = (cat: Cat) => {
+    setDialog(null)
+    setSelectedId(null)
+    setDroppedPin(null)
+    setPlacePin(null)
+    setMoving(cat)
+  }
+
+  const finishMoving = (cat: Cat) => {
+    setMoving(null)
+    setMovingSaving(false)
+    setSelectedId(cat.id)
+    focusCat(cat)
+  }
+
+  const saveMove = async (position: LatLng) => {
+    if (!moving || movingSaving) return
+    setMovingSaving(true)
+    try {
+      const result = await moveCat(moving.id, position)
+      const moved = { ...moving, ...result }
+      upsertCat(moved)
+      finishMoving(moved)
+      showToast(t('ย้ายหมุด{name}แล้ว', { name: moving.name }))
+    } catch (e) {
+      setMovingSaving(false)
+      showToast(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
+    }
+  }
 
   const startAdding = (start: AddCatStart) => {
     if (!droppedPin) return
@@ -414,7 +450,7 @@ export function MapScreen({ mapId }: Props) {
   }
 
   const sheetOpen = !isDesktop && (selectedCat !== null || droppedPin !== null)
-  const showHint = !hintDismissed && !adding && !droppedPin && !selectedCat
+  const showHint = !hintDismissed && !busy && !droppedPin && !selectedCat
 
   return (
     <MapActionsContext.Provider value={mapActions}>
@@ -432,7 +468,7 @@ export function MapScreen({ mapId }: Props) {
           zoomControl={isDesktop}
           clickableIcons={false}
           onClick={() => {
-            if (adding || consumeClick()) return
+            if (busy || consumeClick()) return
             setSelectedId(null)
             setDroppedPin(null)
             setPlacePin(null)
@@ -441,7 +477,7 @@ export function MapScreen({ mapId }: Props) {
         >
           <CatMarkers cats={visibleCats} selectedId={selectedId} onSelect={selectCat} />
           {userPosition && <UserLocationMarker position={userPosition} />}
-          {placePin && !adding && (
+          {placePin && !busy && (
             <PlaceMarker
               position={placePin.position}
               name={placePin.name}
@@ -451,7 +487,7 @@ export function MapScreen({ mapId }: Props) {
               }}
             />
           )}
-          {droppedPin && !adding && (
+          {droppedPin && !busy && (
             <DroppedPin
               position={droppedPin}
               onClose={() => setDroppedPin(null)}
@@ -461,7 +497,7 @@ export function MapScreen({ mapId }: Props) {
           )}
         </Map>
 
-        {!adding && (
+        {!busy && (
           <>
             {/* เว้นที่ขวาบนให้ปุ่มโปรไฟล์ (48px + ระยะขอบ) */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-4 pr-20 md:flex-row md:items-start md:gap-3">
@@ -504,7 +540,7 @@ export function MapScreen({ mapId }: Props) {
           </>
         )}
 
-        {!adding && !sheetOpen && (
+        {!busy && !sheetOpen && (
           <button
             type="button"
             onClick={() => setDialog({ kind: 'nearby' })}
@@ -517,7 +553,7 @@ export function MapScreen({ mapId }: Props) {
             {t('แมวใกล้ฉัน')}
           </button>
         )}
-        {!adding && !sheetOpen && (
+        {!busy && !sheetOpen && (
           <button
             type="button"
             onClick={locateMe}
@@ -565,6 +601,25 @@ export function MapScreen({ mapId }: Props) {
             onShare={shareCat}
             onDelete={removeCat}
             onReport={reportCat}
+          />
+        )}
+
+        {moving && (
+          <LocationPicker
+            initialPosition={moving.position}
+            verification={moving.verification}
+            title={t('ย้ายหมุดน้อง{name}', { name: moving.name })}
+            hint={t(
+              moving.ownerStatus === 'owned'
+                ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — น้องมีเจ้าของ หมุดจะถูกขยับสุ่ม 50–100 ม. เพื่อไม่ให้ระบุบ้านได้'
+                : moving.verification !== 'manual'
+                  ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — ถ้าย้ายเกิน 50 ม. ป้ายยืนยันตำแหน่งจะหายไป'
+                  : 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่',
+            )}
+            confirmLabel={t('ย้ายมาที่นี่')}
+            busy={movingSaving}
+            onBack={() => finishMoving(moving)}
+            onConfirm={saveMove}
           />
         )}
 
@@ -635,6 +690,7 @@ export function MapScreen({ mapId }: Props) {
             cat={dialog.cat}
             onClose={() => setDialog(null)}
             onDelete={removeCat}
+            onMove={startMoving}
             onSaved={(cat) => {
               setDialog(null)
               showToast(t('บันทึกการแก้ไขหมุด{name}แล้ว', { name: cat.name }))

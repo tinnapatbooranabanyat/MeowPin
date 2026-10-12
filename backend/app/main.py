@@ -414,6 +414,39 @@ def update_cat(cat_id: UUID, body: CatUpdate, request: Request):
     return {"ok": True}
 
 
+class CatMove(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+
+
+@app.patch("/cats/{cat_id}/location")
+def move_cat(cat_id: UUID, body: CatMove, request: Request):
+    """ย้ายหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม)
+    - ย้ายเกินระยะที่ขยับได้ → ป้าย "ยืนยันด้วย GPS/ข้อมูลในรูป" หายไป (กลายเป็นปักหมุดเอง)
+    - น้องมีเจ้าของ → เบลอตำแหน่งใหม่อีกครั้ง ไม่ให้ระบุบ้านได้"""
+    user_id = current_user_id(request)
+    client = get_client()
+    current = load_own_cat(client, cat_id, user_id, "name, owner_status, verification")
+    pos = client.table("cats_public").select("lat, lng").eq("id", str(cat_id)).limit(1).execute().data
+    moved = distance_m(pos[0]["lat"], pos[0]["lng"], body.lat, body.lng) if pos else float("inf")
+
+    verification = current.get("verification") or "manual"
+    if moved > settings.max_adjust_m:
+        verification = "manual"
+    lat, lng = body.lat, body.lng
+    if current.get("owner_status") == "owned":
+        lat, lng = blur(lat, lng)
+
+    client.table("cats").update(
+        {"location": f"SRID=4326;POINT({lng} {lat})", "verification": verification}
+    ).eq("id", str(cat_id)).execute()
+    log_activity(
+        client, user_id, "cat_update", cat_id,
+        {"cat_name": current.get("name"), "moved_m": round(moved) if pos else None},
+    )
+    return {"lat": lat, "lng": lng, "verification": verification}
+
+
 @app.delete("/cats/{cat_id}", status_code=204)
 def delete_cat(cat_id: UUID, request: Request):
     """ลบหมุดแมว (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) — ลบรูปใน storage ด้วย, รีวิวและการเจอลบตามด้วย cascade"""

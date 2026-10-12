@@ -331,6 +331,16 @@ export function updateCat(catId: string, values: CatFormValues): Promise<void> {
   )
 }
 
+/** ย้ายหมุด — คืนตำแหน่งที่บันทึกจริง (น้องมีเจ้าของถูกเบลอ) และป้ายยืนยันตำแหน่งที่เหลือ */
+export async function moveCat(catId: string, position: LatLng): Promise<{ position: LatLng; verification: Verification }> {
+  const res = await callBackendJson<{ lat: number; lng: number; verification: Verification }>(
+    'PATCH',
+    `/cats/${catId}/location`,
+    position,
+  )
+  return { position: { lat: res.lat, lng: res.lng }, verification: res.verification }
+}
+
 /** admin: ตรวจแล้วว่าเป็นแมวจริง */
 export function verifyCat(catId: string): Promise<void> {
   return callBackend<void>('POST', `/cats/${catId}/verify`)
