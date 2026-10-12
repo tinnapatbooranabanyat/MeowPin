@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
 import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, Hourglass, MapPinned, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
@@ -7,6 +7,8 @@ import { CAT_REPORT_REASONS, HELP_KINDS, timeAgo } from '../../lib/cat'
 import { parseUserAgent } from '../../lib/userAgent'
 import type { ActivityAction, ActivityEntry, CatReportReason, HelpKind } from '../../types'
 import { UserAvatar } from '../account/UserAvatar'
+import { rangeToIso, type DateRange } from '../../lib/dates'
+import { DateRangePicker } from '../ui/DateRangePicker'
 
 const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[] = [
   { key: 'all', label: 'ทั้งหมด', actions: null },
@@ -57,19 +59,24 @@ export function ActivityLog({ onOpenCat }: { onOpenCat: (catId: string) => void 
   const { t } = useI18n()
   const [filter, setFilter] = useState('all')
   const [user, setUser] = useState<{ id: string; name: string } | null>(null)
+  const [dates, setDates] = useState<DateRange | null>(null)
   const actions = FILTERS.find((f) => f.key === filter)?.actions ?? null
+  const range = dates ? rangeToIso(dates) : null
 
   const log = useInfiniteQuery({
-    queryKey: ['activity', filter, user?.id ?? null],
-    queryFn: ({ pageParam }) => fetchActivity({ actions, userId: user?.id ?? null, page: pageParam }),
+    queryKey: ['activity', filter, user?.id ?? null, range?.from ?? null, range?.to ?? null],
+    queryFn: ({ pageParam }) => fetchActivity({ actions, userId: user?.id ?? null, range, page: pageParam }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.length === ACTIVITY_PAGE_SIZE ? pages.length : undefined),
+    // เปลี่ยนตัวกรองแล้วแสดงรายการเดิมไว้ระหว่างโหลด — หน้าต่างไม่กระตุก
+    placeholderData: keepPreviousData,
   })
   const entries = log.data?.pages.flat() ?? []
 
   return (
     <div>
-      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+      {/* ขึ้นบรรทัดใหม่แทนการเลื่อนข้าง — เห็นครบทุกปุ่ม ไม่มีแถบเลื่อน */}
+      <div className="mb-3 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -83,6 +90,10 @@ export function ActivityLog({ onOpenCat }: { onOpenCat: (catId: string) => void 
             {t(f.label)}
           </button>
         ))}
+      </div>
+
+      <div className="mb-3">
+        <DateRangePicker value={dates} onChange={setDates} />
       </div>
 
       {user && (
@@ -106,7 +117,7 @@ export function ActivityLog({ onOpenCat }: { onOpenCat: (catId: string) => void 
         </p>
       )}
       {log.isSuccess && entries.length === 0 && (
-        <p className="py-8 text-center text-sm text-stone-500">{t('ยังไม่มีกิจกรรม')}</p>
+        <p className="py-8 text-center text-sm text-stone-500">{t(dates || user || filter !== 'all' ? 'ไม่มีกิจกรรมที่ตรงกับตัวกรอง' : 'ยังไม่มีกิจกรรม')}</p>
       )}
 
       <ol className="flex flex-col">

@@ -1227,6 +1227,8 @@ export const ACTIVITY_PAGE_SIZE = 50
 export async function fetchActivity(options: {
   actions: ActivityAction[] | null
   userId: string | null
+  /** ช่วงเวลา ISO [from, to) */
+  range?: { from: string; to: string } | null
   page: number
 }): Promise<ActivityEntry[]> {
   let query = db()
@@ -1236,6 +1238,7 @@ export async function fetchActivity(options: {
     .range(options.page * ACTIVITY_PAGE_SIZE, (options.page + 1) * ACTIVITY_PAGE_SIZE - 1)
   if (options.actions) query = query.in('action', options.actions)
   if (options.userId) query = query.eq('user_id', options.userId)
+  if (options.range) query = query.gte('created_at', options.range.from).lt('created_at', options.range.to)
   const { data, error } = await query
   if (error) throw new ApiError('โหลดบันทึกกิจกรรมไม่สำเร็จ', 500)
   return (data as unknown as ActivityRow[]).map((r) => ({
