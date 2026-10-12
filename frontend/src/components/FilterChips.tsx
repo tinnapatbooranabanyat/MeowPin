@@ -5,8 +5,9 @@ import { FUR_COLORS } from '../lib/cat'
 import type { FurColor } from '../types'
 
 interface Props {
-  furColor: FurColor | null
-  onFurColorChange: (color: FurColor | null) => void
+  /** ว่าง = ทุกสี */
+  furColors: FurColor[]
+  onFurColorsChange: (colors: FurColor[]) => void
   seenToday: boolean
   onSeenTodayChange: (value: boolean) => void
   friendlyOnly: boolean
@@ -21,8 +22,8 @@ const chipOn = 'bg-orange-500 text-white ring-orange-500'
 const chipOff = 'bg-surface text-stone-700 ring-stone-200 hover:bg-orange-50'
 
 export function FilterChips({
-  furColor,
-  onFurColorChange,
+  furColors,
+  onFurColorsChange,
   seenToday,
   onSeenTodayChange,
   friendlyOnly,
@@ -34,6 +35,9 @@ export function FilterChips({
   const [palette, setPalette] = useState<{ top: number; left: number } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const hasFur = furColors.length > 0
+  const toggleColor = (color: FurColor) =>
+    onFurColorsChange(furColors.includes(color) ? furColors.filter((c) => c !== color) : [...furColors, color])
 
   // แถบชิปเลื่อนแนวนอนได้ (overflow) → วางตารางสีแบบ fixed ไม่งั้นจะโดนตัดขอบ
   const togglePalette = () => {
@@ -70,25 +74,30 @@ export function FilterChips({
         aria-haspopup="dialog"
         aria-expanded={palette !== null}
         onClick={togglePalette}
-        className={`${chipBase} ${furColor ? chipOn : chipOff}`}
+        className={`${chipBase} ${hasFur ? chipOn : chipOff}`}
       >
-        {furColor ? (
-          <span
-            className="size-3.5 rounded-full ring-1 ring-white/60"
-            style={{ background: FUR_COLORS[furColor].bg }}
-            aria-hidden="true"
-          />
+        {hasFur ? (
+          // สีที่เลือกซ้อนกันไม่เกิน 3 วง
+          <span className="flex -space-x-1.5" aria-hidden="true">
+            {furColors.slice(0, 3).map((color) => (
+              <span key={color} className="size-3.5 rounded-full ring-1 ring-white/70" style={{ background: FUR_COLORS[color].bg }} />
+            ))}
+          </span>
         ) : (
           <Palette size={15} aria-hidden="true" />
         )}
-        {furColor ? t(FUR_COLORS[furColor].label) : t('สีขน')}
-        {furColor ? (
+        {furColors.length === 1
+          ? t(FUR_COLORS[furColors[0]].label)
+          : hasFur
+            ? t('{n} สี', { n: furColors.length })
+            : t('สีขน')}
+        {hasFur ? (
           <X
             size={14}
             aria-label={t('ล้างตัวกรองสีขน')}
             onClick={(e) => {
               e.stopPropagation()
-              onFurColorChange(null)
+              onFurColorsChange([])
               setPalette(null)
             }}
           />
@@ -132,18 +141,16 @@ export function FilterChips({
           style={{ top: palette.top, left: palette.left }}
           className="fixed z-40 w-[min(320px,calc(100vw-2rem))] origin-top-left animate-pop-in rounded-2xl bg-surface p-3 shadow-xl ring-1 ring-stone-200"
         >
+          <p className="mb-2 px-1 text-xs text-stone-500">{t('เลือกได้หลายสี')}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {(Object.keys(FUR_COLORS) as FurColor[]).map((color) => {
-              const active = furColor === color
+              const active = furColors.includes(color)
               return (
                 <button
                   key={color}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => {
-                    onFurColorChange(active ? null : color)
-                    setPalette(null)
-                  }}
+                  onClick={() => toggleColor(color)}
                   className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-xs transition ${
                     active
                       ? 'bg-orange-100 font-medium text-orange-800 ring-1 ring-orange-300'
@@ -161,6 +168,23 @@ export function FilterChips({
                 </button>
               )
             })}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-stone-100 pt-3">
+            <button
+              type="button"
+              disabled={!hasFur}
+              onClick={() => onFurColorsChange([])}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {t('ล้าง')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPalette(null)}
+              className="rounded-full bg-orange-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-orange-600"
+            >
+              {t('เสร็จ')}
+            </button>
           </div>
         </div>
       )}

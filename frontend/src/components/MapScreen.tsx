@@ -119,7 +119,8 @@ export function MapScreen({ mapId }: Props) {
     () => new URLSearchParams(window.location.search).get('cat'),
   )
   const [query, setQuery] = useState('')
-  const [furColor, setFurColor] = useState<FurColor | null>(null)
+  // ว่าง = ทุกสี
+  const [furColors, setFurColors] = useState<FurColor[]>([])
   const [seenToday, setSeenToday] = useState(false)
   const [friendlyOnly, setFriendlyOnly] = useState(false)
   const [needsHelp, setNeedsHelp] = useState(false)
@@ -162,13 +163,13 @@ export function MapScreen({ mapId }: Props) {
     () =>
       cats.filter(
         (cat) =>
-          (furColor === null || cat.furColor === furColor) &&
+          (furColors.length === 0 || furColors.includes(cat.furColor)) &&
           (!seenToday || seenWithin(cat, 24)) &&
           (!friendlyOnly || cat.isFriendly) &&
           (!needsHelp || cat.helpKinds.length > 0) &&
           matchesQuery(cat, query),
       ),
-    [cats, furColor, seenToday, friendlyOnly, needsHelp, query],
+    [cats, furColors, seenToday, friendlyOnly, needsHelp, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
   const placeSearch = usePlaceSearch(query)
@@ -318,7 +319,7 @@ export function MapScreen({ mapId }: Props) {
     setAdding(null)
     // ล้างตัวกรองให้เห็นหมุดใหม่แน่นอน
     setQuery('')
-    setFurColor(null)
+    setFurColors([])
     setSeenToday(false)
     setFriendlyOnly(false)
     setNeedsHelp(false)
@@ -542,8 +543,8 @@ export function MapScreen({ mapId }: Props) {
               </div>
               <div className="pointer-events-auto -mr-16 min-w-0 md:mr-0 md:pt-1.5">
                 <FilterChips
-                  furColor={furColor}
-                  onFurColorChange={setFurColor}
+                  furColors={furColors}
+                  onFurColorsChange={setFurColors}
                   seenToday={seenToday}
                   onSeenTodayChange={setSeenToday}
                   friendlyOnly={friendlyOnly}

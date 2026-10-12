@@ -16,6 +16,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-12-fur-filter',
+    date: '2026-10-12',
+    title: { th: 'กรองสีขนได้หลายสี', en: 'Filter by several fur colors' },
+    items: [
+      {
+        th: 'ตัวกรอง "สีขน" บนแผนที่เลือกได้หลายสีพร้อมกัน เช่น ส้ม + ส้มขาว + ลายสลิด',
+        en: 'The "Fur color" filter on the map now takes several colors at once, e.g. orange + orange & white + tabby',
+      },
+    ],
+  },
+  {
     id: '2026-10-12-pins',
     date: '2026-10-12',
     title: { th: 'ย้ายหมุดได้ และป้ายแดงน่าเชื่อถือขึ้น', en: 'Move pins, and more trustworthy help reports' },
