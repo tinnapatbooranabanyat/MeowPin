@@ -417,6 +417,8 @@ def update_cat(cat_id: UUID, body: CatUpdate, request: Request):
 class CatMove(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
+    # ย้ายตามที่คนอื่นเสนอ (cat_move_requests) — ปิดคำขอและแจ้งคนเสนอให้ด้วย
+    request_id: UUID | None = None
 
 
 @app.patch("/cats/{cat_id}/location")
@@ -427,6 +429,16 @@ def move_cat(cat_id: UUID, body: CatMove, request: Request):
     user_id = current_user_id(request)
     client = get_client()
     current = load_own_cat(client, cat_id, user_id, "name, owner_status, verification")
+    move_request = None
+    if body.request_id:
+        found = (
+            client.table("cat_move_requests").select("id, user_id")
+            .eq("id", str(body.request_id)).eq("cat_id", str(cat_id)).eq("status", "pending")
+            .limit(1).execute().data
+        )
+        if not found:
+            raise HTTPException(status_code=409, detail="คำขอนี้ถูกจัดการไปแล้ว")
+        move_request = found[0]
     pos = client.table("cats_public").select("lat, lng").eq("id", str(cat_id)).limit(1).execute().data
     moved = distance_m(pos[0]["lat"], pos[0]["lng"], body.lat, body.lng) if pos else float("inf")
 
@@ -444,6 +456,21 @@ def move_cat(cat_id: UUID, body: CatMove, request: Request):
         client, user_id, "cat_update", cat_id,
         {"cat_name": current.get("name"), "moved_m": round(moved) if pos else None},
     )
+    if move_request:
+        client.table("cat_move_requests").update(
+            {"status": "accepted", "decided_at": datetime.now(timezone.utc).isoformat(), "decided_by": user_id}
+        ).eq("id", move_request["id"]).execute()
+        if move_request["user_id"] != user_id:
+            actor = client.table("profiles").select("display_name").eq("id", user_id).limit(1).execute().data
+            client.table("notifications").insert({
+                "user_id": move_request["user_id"],
+                "kind": "move_accepted",
+                "cat_id": str(cat_id),
+                "data": {k: v for k, v in {
+                    "cat_name": current.get("name"),
+                    "actor_name": actor[0].get("display_name") if actor else None,
+                }.items() if v},
+            }).execute()
     return {"lat": lat, "lng": lng, "verification": verification}
 
 

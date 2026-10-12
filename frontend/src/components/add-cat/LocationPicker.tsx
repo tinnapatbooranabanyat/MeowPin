@@ -9,7 +9,8 @@ import { PawPin } from '../PawPin'
 
 interface Props {
   initialPosition: LatLng
-  verification: Verification
+  /** ไม่ส่ง = ไม่แสดงป้าย (เช่นตอนเสนอตำแหน่งให้หมุดของคนอื่น) */
+  verification?: Verification
   /** คำอธิบายใต้หัวข้อ (แปลมาแล้ว) */
   hint: string
   /** ตำแหน่งสำรองให้สลับไปมาได้ — เช่นหมุดเริ่มที่ตำแหน่งจากรูป แต่ผู้ใช้อยากใช้จุดที่กดค้าง */
@@ -71,11 +72,13 @@ export function LocationPicker({ initialPosition, verification, hint, alternativ
             <ArrowLeft size={20} />
           </button>
           <h2 className="font-display text-lg text-stone-900">{title ?? t('เจอแมวตรงไหน')}</h2>
-          <span
-            className={`ml-auto rounded-full px-2.5 py-1 text-xs font-medium ${VERIFICATION[shownVerification].className}`}
-          >
-            {t(VERIFICATION[shownVerification].label)}
-          </span>
+          {shownVerification && (
+            <span
+              className={`ml-auto rounded-full px-2.5 py-1 text-xs font-medium ${VERIFICATION[shownVerification].className}`}
+            >
+              {t(VERIFICATION[shownVerification].label)}
+            </span>
+          )}
         </div>
         <p className="mt-1 text-sm text-stone-600">{hint}</p>
         {alternative && (

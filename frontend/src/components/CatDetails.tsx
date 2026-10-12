@@ -1,4 +1,4 @@
-import { Bell, BellRing, CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Sparkles, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
+import { Bell, BellRing, CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, MapPinCheck, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
@@ -12,6 +12,7 @@ import { AiSummary } from './AiSummary'
 import { CatGallery } from './CatGallery'
 import { FeedingCard } from './FeedingCard'
 import { HelpSection } from './HelpSection'
+import { MoveRequests } from './MoveRequests'
 import { SightingTimes } from './SightingTimes'
 import { PawBurst } from './PawBurst'
 import { PhotoLightbox } from './PhotoLightbox'
@@ -46,7 +47,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
     onSuccess: (_, follow) => queryClient.setQueryData(['following', cat.id, userId], follow),
   })
   const isFollowing = following.data === true
-  const { editCat } = useMapActions()
+  const { editCat, suggestMove } = useMapActions()
   // คนปักหมุดแก้ไข/ลบหมุดตัวเองได้ เจ้าของแพลตฟอร์มทำได้ทุกหมุด
   const canManage = isAdmin || (userId !== null && userId === cat.createdBy)
   const { t, lang } = useI18n()
@@ -114,18 +115,18 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
           >
             {cat.catCheck === 'user' ? (
               <CircleHelp size={13} aria-hidden="true" />
-            ) : cat.catCheck === 'ai' ? (
-              <Sparkles size={13} aria-hidden="true" />
+            ) : cat.verification !== 'manual' ? (
+              <MapPinCheck size={13} aria-hidden="true" />
             ) : (
-              <ShieldCheck size={13} aria-hidden="true" />
+              <Eye size={13} aria-hidden="true" />
             )}
             {cat.catCheck === 'user'
               ? t('ยังไม่ยืนยันว่าเป็นแมว')
-              : cat.catCheck === 'admin'
-                ? t('ผู้ดูแลยืนยันว่าเป็นแมว')
-                : cat.catCheck === 'ai'
-                  ? t('AI ยืนยันว่าเป็นแมว')
-                  : t('แมวจริง {n}%', { n: Math.round(cat.catConfidence * 100) })}
+              : cat.verification === 'camera_gps'
+                ? t('ถ่ายรูปที่นี่จริง')
+                : cat.verification === 'exif_gps'
+                  ? t('ตำแหน่งจากรูปที่ถ่าย')
+                  : t('มีคนเจอน้องล่าสุด {when}', { when: timeAgo(cat.lastSeenAt, lang) })}
           </span>
           {photos.length > 1 && (
             <button
@@ -228,7 +229,18 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
             </div>
 
             <div className="flex flex-col gap-2.5 border-t border-stone-100 pt-4 text-sm text-stone-700">
-              <InfoRow icon={MapPin}>{cat.placeName || t('ไม่ระบุสถานที่')}</InfoRow>
+              <InfoRow icon={MapPin}>
+                {cat.placeName || t('ไม่ระบุสถานที่')}
+                {!canManage && (
+                  <button
+                    type="button"
+                    onClick={() => suggestMove(cat)}
+                    className="ml-1.5 text-xs font-medium text-sky-700 hover:underline"
+                  >
+                    {t('หมุดอยู่ผิดที่?')}
+                  </button>
+                )}
+              </InfoRow>
               <InfoRow icon={CalendarClock}>
                 {t('เจอล่าสุด {when} · เจอแล้ว {n} ครั้ง', { when: timeAgo(cat.lastSeenAt, lang), n: cat.sightings })}
               </InfoRow>
@@ -278,6 +290,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                 </div>
               </div>
             )}
+
+            {canManage && <MoveRequests cat={cat} />}
 
             <HelpSection cat={cat} />
 
@@ -338,8 +352,8 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                   : cat.catCheck === 'admin'
                     ? t('ผู้ดูแลตรวจแล้วว่าเป็นแมว')
                   : cat.catCheck === 'ai'
-                    ? t('AI ช่วยดูแล้วว่าเป็นแมว ({n}%)', { n: Math.round(cat.catConfidence * 100) })
-                    : t('ระบบตรวจพบแมว {n}%', { n: Math.round(cat.catConfidence * 100) })}
+                    ? t('AI ช่วยดูแล้วว่าเป็นแมว')
+                    : t('ระบบตรวจแล้วว่าเป็นแมว')}
               </AboutRow>
               <AboutRow icon={UserRound} label={t('ปักหมุดโดย')}>
                 {pinnedBy}

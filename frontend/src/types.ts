@@ -92,7 +92,7 @@ export interface ReviewReport {
   catName: string | null
 }
 
-export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check'
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted'
 
 export interface AppNotification {
   id: number
@@ -105,6 +105,16 @@ export interface AppNotification {
 
 /** เรื่องที่แจ้งว่าน้องต้องการความช่วยเหลือ */
 export type HelpKind = 'injured' | 'sick' | 'thin' | 'not_neutered' | 'other'
+
+/** ตำแหน่งใหม่ที่คนอื่นเสนอให้หมุด (รอคนปักหมุดตัดสิน) */
+export interface MoveRequest {
+  id: string
+  userId: string
+  position: LatLng
+  note: string
+  createdAt: string
+  requesterName: string | null
+}
 
 export interface HelpRequest {
   id: string
@@ -292,6 +302,7 @@ export type ActivityAction =
   | 'review_report'
   | 'help_confirm'
   | 'help_expire'
+  | 'move_request'
 
 export interface ActivityEntry {
   id: number

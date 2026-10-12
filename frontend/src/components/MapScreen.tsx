@@ -9,9 +9,9 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, fetchAdminCounts, moveCat, recordSighting, wakeBackend, type Bounds } from '../lib/api'
+import { deleteCat, fetchAdminCounts, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
 import { matchesQuery, seenWithin } from '../lib/cat'
-import type { Cat, FurColor, LatLng } from '../types'
+import type { Cat, FurColor, LatLng, MoveRequest } from '../types'
 import { AccountMenu } from './account/AccountMenu'
 import { ProfileDialog } from './account/ProfileDialog'
 import { UserProfileDialog } from './account/UserProfileDialog'
@@ -36,7 +36,7 @@ import { FilterChips } from './FilterChips'
 import { SearchBar } from './SearchBar'
 import { Toast } from './Toast'
 import { UserLocationMarker } from './UserLocationMarker'
-import { confirmAction } from '../lib/dialogs'
+import { confirmAction, promptText } from '../lib/dialogs'
 
 const DEFAULT_CENTER = { lat: 13.7595, lng: 100.4975 }
 // จำมุมกล้องไว้ในแท็บนี้ — โหลดหน้าใหม่ (เช่นเปลี่ยนภาษาแผนที่) แล้วกลับมาที่เดิม
@@ -131,7 +131,7 @@ export function MapScreen({ mapId }: Props) {
   const [placePin, setPlacePin] = useState<FoundPlace | null>(null)
   const [adding, setAdding] = useState<{ origin: LatLng; start: AddCatStart } | null>(null)
   // กำลังย้ายหมุด (เลือกตำแหน่งใหม่บนแผนที่)
-  const [moving, setMoving] = useState<Cat | null>(null)
+  const [moving, setMoving] = useState<{ cat: Cat; mode: 'move' | 'suggest'; start: LatLng; request?: MoveRequest } | null>(null)
   const [movingSaving, setMovingSaving] = useState(false)
   // ระหว่างปักหมุดใหม่/ย้ายหมุด ซ่อนปุ่มอื่นบนแผนที่
   const busy = adding !== null || moving !== null
@@ -238,13 +238,19 @@ export function MapScreen({ mapId }: Props) {
     !busy,
   )
 
-  const startMoving = (cat: Cat) => {
+  const startMoving = (cat: Cat, mode: 'move' | 'suggest' = 'move', request?: MoveRequest) => {
+    if (mode === 'suggest' && !requireLogin(t('เข้าสู่ระบบเพื่อเสนอตำแหน่งใหม่ของหมุด'))) return
     setDialog(null)
     setSelectedId(null)
     setDroppedPin(null)
     setPlacePin(null)
-    setMoving(cat)
+    setMoving({ cat, mode, start: request?.position ?? cat.position, request })
   }
+
+  const startMovingRef = useRef(startMoving)
+  useEffect(() => {
+    startMovingRef.current = startMoving
+  })
 
   const finishMoving = (cat: Cat) => {
     setMoving(null)
@@ -255,13 +261,33 @@ export function MapScreen({ mapId }: Props) {
 
   const saveMove = async (position: LatLng) => {
     if (!moving || movingSaving) return
+    const { cat, mode, request } = moving
+    let note = ''
+    if (mode === 'suggest') {
+      const text = await promptText({
+        title: t('ส่งตำแหน่งนี้ให้คนปักหมุด?'),
+        message: t('คนปักหมุดจะได้รับแจ้งเตือน แล้วเลือกว่าจะย้ายตามนี้ไหม'),
+        placeholder: t('บอกเหตุผลสั้นๆ เช่น น้องย้ายไปอยู่อีกฝั่งถนน (ไม่บังคับ)'),
+        maxLength: 200,
+        confirmLabel: t('ส่ง'),
+      })
+      if (text === null) return
+      note = text.trim()
+    }
     setMovingSaving(true)
     try {
-      const result = await moveCat(moving.id, position)
-      const moved = { ...moving, ...result }
+      if (mode === 'suggest') {
+        await requestMove(cat.id, position, note)
+        finishMoving(cat)
+        showToast(t('ส่งตำแหน่งให้คนปักหมุดแล้ว ขอบคุณที่ช่วยนะ'))
+        return
+      }
+      const result = await moveCat(cat.id, position, request?.id)
+      const moved = { ...cat, ...result }
       upsertCat(moved)
+      if (request) queryClient.invalidateQueries({ queryKey: ['moveRequests', cat.id] })
       finishMoving(moved)
-      showToast(t('ย้ายหมุด{name}แล้ว', { name: moving.name }))
+      showToast(t('ย้ายหมุด{name}แล้ว', { name: cat.name }))
     } catch (e) {
       setMovingSaving(false)
       showToast(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
@@ -428,6 +454,8 @@ export function MapScreen({ mapId }: Props) {
       openProfile: (id) => setDialog({ kind: 'userProfile', userId: id }),
       openCat: openCatById,
       editCat: (cat) => setDialog({ kind: 'editCat', cat }),
+      moveCat: (cat, request) => startMovingRef.current(cat, 'move', request),
+      suggestMove: (cat) => startMovingRef.current(cat, 'suggest'),
     }),
     [openCatById],
   )
@@ -606,19 +634,25 @@ export function MapScreen({ mapId }: Props) {
 
         {moving && (
           <LocationPicker
-            initialPosition={moving.position}
-            verification={moving.verification}
-            title={t('ย้ายหมุดน้อง{name}', { name: moving.name })}
-            hint={t(
-              moving.ownerStatus === 'owned'
-                ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — น้องมีเจ้าของ หมุดจะถูกขยับสุ่ม 50–100 ม. เพื่อไม่ให้ระบุบ้านได้'
-                : moving.verification !== 'manual'
-                  ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — ถ้าย้ายเกิน 50 ม. ป้ายยืนยันตำแหน่งจะหายไป'
-                  : 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่',
-            )}
-            confirmLabel={t('ย้ายมาที่นี่')}
+            initialPosition={moving.start}
+            verification={moving.mode === 'move' ? moving.cat.verification : undefined}
+            title={t(moving.mode === 'move' ? 'ย้ายหมุดน้อง{name}' : 'น้อง{name}อยู่ตรงไหน', { name: moving.cat.name })}
+            hint={
+              moving.mode === 'suggest'
+                ? t('เลื่อนแผนที่ให้หมุดอยู่ตรงจุดที่น้องอยู่จริง แล้วเราจะส่งให้คนปักหมุดตัดสินใจ')
+                : moving.request
+                  ? t('{name} เสนอตำแหน่งนี้ไว้ ขยับได้ถ้ายังไม่ตรง', { name: moving.request.requesterName ?? t('ผู้ใช้') })
+                  : t(
+                      moving.cat.ownerStatus === 'owned'
+                        ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — น้องมีเจ้าของ หมุดจะถูกขยับสุ่ม 50–100 ม. เพื่อไม่ให้ระบุบ้านได้'
+                        : moving.cat.verification !== 'manual'
+                          ? 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — ถ้าย้ายเกิน 50 ม. ป้ายยืนยันตำแหน่งจะหายไป'
+                          : 'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่',
+                    )
+            }
+            confirmLabel={t(moving.mode === 'move' ? 'ย้ายมาที่นี่' : 'เสนอตำแหน่งนี้')}
             busy={movingSaving}
-            onBack={() => finishMoving(moving)}
+            onBack={() => finishMoving(moving.cat)}
             onConfirm={saveMove}
           />
         )}
@@ -690,7 +724,7 @@ export function MapScreen({ mapId }: Props) {
             cat={dialog.cat}
             onClose={() => setDialog(null)}
             onDelete={removeCat}
-            onMove={startMoving}
+            onMove={(cat) => startMoving(cat)}
             onSaved={(cat) => {
               setDialog(null)
               showToast(t('บันทึกการแก้ไขหมุด{name}แล้ว', { name: cat.name }))

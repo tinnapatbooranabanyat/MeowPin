@@ -17,6 +17,7 @@ import type {
   HelpKind,
   HelpRequest,
   LeaderboardRow,
+  MoveRequest,
   FurColor,
   LatLng,
   Neutered,
@@ -332,13 +333,59 @@ export function updateCat(catId: string, values: CatFormValues): Promise<void> {
 }
 
 /** ย้ายหมุด — คืนตำแหน่งที่บันทึกจริง (น้องมีเจ้าของถูกเบลอ) และป้ายยืนยันตำแหน่งที่เหลือ */
-export async function moveCat(catId: string, position: LatLng): Promise<{ position: LatLng; verification: Verification }> {
+export async function moveCat(
+  catId: string,
+  position: LatLng,
+  requestId?: string,
+): Promise<{ position: LatLng; verification: Verification }> {
   const res = await callBackendJson<{ lat: number; lng: number; verification: Verification }>(
     'PATCH',
     `/cats/${catId}/location`,
-    position,
+    { ...position, request_id: requestId ?? null },
   )
   return { position: { lat: res.lat, lng: res.lng }, verification: res.verification }
+}
+
+interface MoveRequestRow {
+  id: string
+  user_id: string
+  lat: number
+  lng: number
+  note: string
+  created_at: string
+  profiles: { display_name: string } | null
+}
+
+/** ตำแหน่งที่คนอื่นเสนอ (เห็นเฉพาะคนปักหมุด ผู้ดูแล และคนเสนอเอง) */
+export async function fetchMoveRequests(catId: string): Promise<MoveRequest[]> {
+  const { data, error } = await db()
+    .from('cat_move_requests')
+    .select('id, user_id, lat, lng, note, created_at, profiles!cat_move_requests_user_id_fkey(display_name)')
+    .eq('cat_id', catId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data as unknown as MoveRequestRow[]).map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    position: { lat: r.lat, lng: r.lng },
+    note: r.note,
+    createdAt: r.created_at,
+    requesterName: r.profiles?.display_name ?? null,
+  }))
+}
+
+export async function requestMove(catId: string, position: LatLng, note: string): Promise<void> {
+  const { error } = await db().rpc('request_cat_move', { p_cat_id: catId, p_lat: position.lat, p_lng: position.lng, p_note: note })
+  if (error) {
+    if (error.message.includes('own_cat')) throw new ApiError('หมุดของคุณเอง ย้ายได้เลยที่ปุ่มแก้ไข', 400)
+    throw new ApiError('ส่งไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+}
+
+export async function rejectMove(requestId: string): Promise<void> {
+  const { error } = await db().rpc('reject_cat_move', { p_request_id: requestId })
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
 }
 
 /** admin: ตรวจแล้วว่าเป็นแมวจริง */

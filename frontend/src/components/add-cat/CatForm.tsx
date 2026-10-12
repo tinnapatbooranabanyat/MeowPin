@@ -38,7 +38,6 @@ export function CatForm({
   mode = 'create',
   initial,
   photoUrl,
-  catScore,
   catCheck,
   verification,
   notices,
@@ -101,7 +100,7 @@ export function CatForm({
           ) : (
             <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
               {catCheck === 'ai' ? <Sparkles size={13} aria-hidden="true" /> : <ShieldCheck size={13} aria-hidden="true" />}
-              {catCheck === 'ai' ? t('AI ยืนยันว่าเป็นแมว') : t('แมวจริง {n}%', { n: Math.round(catScore * 100) })}
+              {catCheck === 'ai' ? t('AI ยืนยันว่าเป็นแมว') : t('ระบบตรวจแล้วว่าเป็นแมว')}
             </span>
           )}
           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${VERIFICATION[verification].className}`}>

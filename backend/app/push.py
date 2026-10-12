@@ -52,6 +52,17 @@ def render(kind: str, data: dict, lang: str) -> tuple[str, str]:
             if th
             else ("Does this cat still need help?", f"Your report about {cat} has had no updates for 7 days. Tap to reply, or it will close in 7 days.")
         )
+    if kind == "move_request":
+        return (
+            ("มีคนแจ้งว่าหมุดอยู่ผิดที่ 📍", f"{actor} เสนอตำแหน่งใหม่ของ{cat} กดเพื่อดูแล้วเลือกว่าจะย้ายไหม")
+            if th
+            else ("Pin location suggestion 📍", f"{actor} suggested a new location for {cat}. Tap to review it.")
+        )
+    if kind == "move_accepted":
+        return (
+            ("ย้ายหมุดแล้ว 📍", f"{actor} ย้ายหมุด{cat}ตามที่คุณแจ้งแล้ว ขอบคุณนะ") if th
+            else ("Pin moved 📍", f"{actor} moved {cat} to the spot you suggested. Thanks!")
+        )
     if kind == "not_seen":
         days = data.get("days", 14)
         return (
