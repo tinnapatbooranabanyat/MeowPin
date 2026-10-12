@@ -1,6 +1,6 @@
 import { Map, useMap } from '@vis.gl/react-google-maps'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Hand, LocateFixed, X } from 'lucide-react'
+import { Footprints, Hand, LocateFixed, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { snapBounds, useCat, useCatsInView, useUpsertCat } from '../hooks/useCats'
@@ -24,6 +24,7 @@ import { CatPanel } from './CatPanel'
 import { CatReportDialog } from './CatReportDialog'
 import { EditCatDialog } from './EditCatDialog'
 import { LeaderboardDialog } from './LeaderboardDialog'
+import { NearbyCatsDialog } from './NearbyCatsDialog'
 import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
@@ -96,6 +97,7 @@ type Dialog =
   | { kind: 'editCat'; cat: Cat }
   | { kind: 'leaderboard' }
   | { kind: 'posts' }
+  | { kind: 'nearby' }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -461,6 +463,19 @@ export function MapScreen({ mapId }: Props) {
         {!adding && !sheetOpen && (
           <button
             type="button"
+            onClick={() => setDialog({ kind: 'nearby' })}
+            // แถบคำแนะนำ "กดค้าง…" แสดงอยู่ → ขยับขึ้นไม่ให้ทับกัน
+            className={`absolute right-4 z-20 flex h-10 items-center gap-1.5 rounded-full bg-surface px-3.5 text-sm font-medium text-stone-800 shadow-md ring-1 ring-stone-200 transition-[bottom] hover:bg-stone-50 md:right-16 ${
+              showHint ? 'bottom-[8rem] md:bottom-[5.25rem]' : 'bottom-[5.25rem]'
+            }`}
+          >
+            <Footprints size={17} className="text-orange-500" aria-hidden="true" />
+            {t('แมวใกล้ฉัน')}
+          </button>
+        )}
+        {!adding && !sheetOpen && (
+          <button
+            type="button"
             onClick={locateMe}
             className="absolute right-4 bottom-6 z-20 flex size-12 items-center justify-center rounded-full bg-surface text-sky-600 shadow-md ring-1 ring-stone-200 hover:bg-stone-50 md:right-16"
             aria-label={t('ไปที่ตำแหน่งของฉัน')}
@@ -542,6 +557,19 @@ export function MapScreen({ mapId }: Props) {
           />
         )}
         {dialog?.kind === 'posts' && bounds && <PostsDialog bounds={bounds} onClose={() => setDialog(null)} />}
+        {dialog?.kind === 'nearby' && (
+          <NearbyCatsDialog
+            userPosition={userPosition}
+            onPosition={setUserPosition}
+            onClose={() => setDialog(null)}
+            onOpenCat={(cat) => {
+              setDialog(null)
+              upsertCat(cat)
+              setSelectedId(cat.id)
+              focusCat(cat)
+            }}
+          />
+        )}
         {dialog?.kind === 'leaderboard' && bounds && (
           <LeaderboardDialog bounds={bounds} onClose={() => setDialog(null)} />
         )}

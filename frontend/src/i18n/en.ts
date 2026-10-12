@@ -682,4 +682,13 @@ export const EN: Record<string, string> = {
   'ตั้งชื่อให้น้อง': 'Give the cat a name',
   'ชื่อสถานที่หรือจุดสังเกต': 'Place name or landmark',
   'ชื่อที่จะแสดงในแอป': 'Name shown in the app',
+  'แมวใกล้ฉัน': 'Cats near me',
+  '{m} ม.': '{m} m',
+  '{km} กม.': '{km} km',
+  'กำลังหาตำแหน่งของคุณ…': 'Finding your location…',
+  'หาตำแหน่งของคุณไม่ได้ เปิดสิทธิ์เข้าถึงตำแหน่งให้เว็บนี้แล้วลองใหม่': "Couldn't get your location. Allow location access for this site and try again.",
+  'ยังไม่มีน้องแมวที่ปักหมุดไว้ในรัศมี 2 กม. ปักหมุดตัวแรกเลยไหม?': 'No cats pinned within 2 km yet. Want to pin the first one?',
+  '{n} ตัวในรัศมี 2 กม.': '{n} cats within 2 km',
+  'เจอล่าสุด {when}': 'last seen {when}',
+  '{n} นาที': '{n} min',
 }
