@@ -1,5 +1,5 @@
 import { Check, CircleHelp, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION } from '../../lib/cat'
 import { BreedPicker } from './BreedPicker'
 import type { CatCheck, CatTraits, FurColor, Neutered, OwnerStatus, Verification } from '../../types'
@@ -29,6 +29,8 @@ interface Props {
   submitting: boolean
   submitError: string | null
   onSubmit: (values: CatFormValues) => void
+  /** ช่องเพิ่มเติมก่อนปุ่มบันทึก (เช่นข้อควรระวังเรื่องอาหารตอนแก้หมุด) */
+  extraFields?: ReactNode
 }
 
 const inputClass =
@@ -45,6 +47,7 @@ export function CatForm({
   submitting,
   submitError,
   onSubmit,
+  extraFields,
 }: Props) {
   const { t } = useI18n()
   const [name, setName] = useState(initial?.name ?? '')
@@ -288,6 +291,7 @@ export function CatForm({
         )}
       </fieldset>
 
+      {extraFields}
       {submitError && (
         <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
           {submitError}

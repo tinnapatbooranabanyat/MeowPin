@@ -12,7 +12,9 @@ import type {
   CatSummary,
   CatTraits,
   DeviceSession,
+  Eaten,
   FeedingsToday,
+  FoodInfo,
   FoodKind,
   HelpKind,
   HelpRequest,
@@ -314,7 +316,7 @@ export function callBackendJson<T = void>(method: 'POST' | 'PATCH', path: string
 }
 
 /** แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) */
-export function updateCat(catId: string, values: CatFormValues): Promise<void> {
+export function updateCat(catId: string, values: CatFormValues, foodNotes?: string): Promise<void> {
   return callBackend<void>(
     'PATCH',
     `/cats/${catId}`,
@@ -330,6 +332,7 @@ export function updateCat(catId: string, values: CatFormValues): Promise<void> {
       is_clingy: values.isClingy,
       is_playful: values.isPlayful,
       neutered: values.neutered,
+      ...(foodNotes !== undefined ? { food_notes: foodNotes } : {}),
     }),
   )
 }
@@ -1186,6 +1189,27 @@ export async function recordFeeding(catId: string, food: FoodKind): Promise<void
     if (error.message.includes('login_required')) throw new ApiError('เข้าสู่ระบบก่อนนะ', 401)
     throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
   }
+}
+
+/** บอกว่าน้องกินแค่ไหน (ใช้กับการให้อาหารครั้งล่าสุดของเรา) */
+export async function setFeedingReaction(catId: string, eaten: Eaten): Promise<void> {
+  const { error } = await db().rpc('set_feeding_reaction', { p_cat_id: catId, p_eaten: eaten })
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+/** สรุปอาหาร + ข้อควรระวัง (null = ยังไม่ได้รัน migration 0025) */
+export async function fetchFoodInfo(catId: string): Promise<FoodInfo | null> {
+  const { data, error } = await db().rpc('cat_food_info', { p_cat_id: catId })
+  if (error || !data) return null
+  return data as FoodInfo
+}
+
+/** น้องตัวไหนในรายการนี้ได้กินแล้ววันนี้ */
+export async function fetchFedToday(catIds: string[]): Promise<Set<string>> {
+  if (!catIds.length) return new Set()
+  const { data, error } = await db().rpc('cat_ids_fed_today', { p_cat_ids: catIds.slice(0, 1000) })
+  if (error || !data) throw new ApiError('โหลดข้อมูลการให้อาหารไม่สำเร็จ', 500)
+  return new Set(data as string[])
 }
 
 // ═══════════════ ช่วงเวลาที่มักเจอ ═══════════════

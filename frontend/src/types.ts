@@ -53,6 +53,15 @@ export interface LeaderboardRow {
 
 export type FoodKind = 'dry' | 'wet' | 'treat' | 'other'
 
+/** น้องกินแค่ไหน ตอนให้อาหาร */
+export type Eaten = 'all' | 'some' | 'none'
+
+/** สรุปอาหารของน้อง (90 วันล่าสุด) + ข้อควรระวัง */
+export interface FoodInfo {
+  notes: string
+  foods: { food: FoodKind; total: number; all: number; some: number; none: number }[]
+}
+
 export interface FeedingsToday {
   feedings: number
   lastFedAt: string | null

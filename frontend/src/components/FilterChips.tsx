@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Clock, Heart, HeartPulse, Palette, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Heart, HeartPulse, Palette, Utensils, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../hooks/useI18n'
 import { FUR_COLORS } from '../lib/cat'
@@ -14,6 +14,8 @@ interface Props {
   onFriendlyOnlyChange: (value: boolean) => void
   needsHelp: boolean
   onNeedsHelpChange: (value: boolean) => void
+  notFedToday: boolean
+  onNotFedTodayChange: (value: boolean) => void
 }
 
 const chipBase =
@@ -30,6 +32,8 @@ export function FilterChips({
   onFriendlyOnlyChange,
   needsHelp,
   onNeedsHelpChange,
+  notFedToday,
+  onNotFedTodayChange,
 }: Props) {
   const { t } = useI18n()
   const [palette, setPalette] = useState<{ top: number; left: number } | null>(null)
@@ -131,6 +135,16 @@ export function FilterChips({
       >
         <HeartPulse size={15} aria-hidden="true" />
         {t('ต้องการความช่วยเหลือ')}
+      </button>
+      <button
+        type="button"
+        aria-pressed={notFedToday}
+        onClick={() => onNotFedTodayChange(!notFedToday)}
+        className={`${chipBase} ${notFedToday ? chipOn : chipOff}`}
+        title={t('น้องที่ยังไม่มีใครบันทึกว่าให้อาหารวันนี้ (ไม่รวมน้องมีเจ้าของ)')}
+      >
+        <Utensils size={15} aria-hidden="true" />
+        {t('ยังไม่ได้กินวันนี้')}
       </button>
 
       {palette && (

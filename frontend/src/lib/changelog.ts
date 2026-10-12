@@ -16,6 +16,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-food',
+    date: '2026-10-13',
+    title: { th: 'อาหารของน้อง', en: 'Feeding the cats' },
+    items: [
+      { th: 'ตัวกรอง "ยังไม่ได้กินวันนี้" บนแผนที่ ดูได้เลยว่าควรไปหาน้องตัวไหนก่อน', en: 'A "Not fed today" map filter shows which cats to visit first' },
+      {
+        th: 'บันทึกอาหารแล้วบอกได้ว่าน้องกินหมด กินนิดหน่อย หรือไม่กิน แล้วหน้าน้องจะสรุปว่าน้องชอบกินอะไร',
+        en: 'After logging a feeding, say how much the cat ate; the cat page then shows what they like',
+      },
+      { th: 'คนปักหมุดใส่ข้อควรระวังเรื่องอาหารได้ เช่น แพ้ไก่ ห้ามให้นม จะขึ้นเตือนคนที่มาให้อาหาร', en: 'Pinners can add food warnings (e.g. allergies), shown to anyone feeding the cat' },
+    ],
+  },
+  {
     id: '2026-10-13-help-nearby',
     date: '2026-10-13',
     title: { th: 'ช่วยน้องได้ไวขึ้น', en: 'Help cats faster' },

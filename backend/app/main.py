@@ -364,6 +364,8 @@ class CatUpdate(BaseModel):
     is_clingy: bool
     is_playful: bool
     neutered: Neutered
+    # ข้อควรระวังเรื่องอาหาร (แพ้/ห้ามให้) — ไม่ส่งมา = ไม่เปลี่ยน
+    food_notes: str | None = Field(None, max_length=200)
 
 
 @app.patch("/cats/{cat_id}")
@@ -394,13 +396,17 @@ def update_cat(cat_id: UUID, body: CatUpdate, request: Request):
         "is_playful": body.is_playful,
         "neutered": body.neutered,
     }
+    if body.food_notes is not None:
+        row["food_notes"] = body.food_notes.strip()
     try:
         client.table("cats").update(row).eq("id", str(cat_id)).execute()
     except APIError as e:
-        # ยังไม่ได้รัน migration 0009 (ไม่มีคอลัมน์สีพิมพ์เอง)
-        if "fur_color_custom" not in str(e):
+        # ยังไม่ได้รัน migration 0009 / 0025 (ไม่มีคอลัมน์สีพิมพ์เอง / ข้อควรระวังเรื่องอาหาร)
+        missing = [c for c in ("fur_color_custom", "food_notes") if c in str(e)]
+        if not missing:
             raise
-        row.pop("fur_color_custom")
+        for c in missing:
+            row.pop(c, None)
         client.table("cats").update(row).eq("id", str(cat_id)).execute()
     log_activity(client, user_id, "cat_update", cat_id, {"cat_name": name})
     return {"ok": True}

@@ -9,7 +9,7 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, fetchAdminCounts, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
+import { deleteCat, fetchAdminCounts, fetchFedToday, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
 import { matchesQuery, seenWithin } from '../lib/cat'
 import type { Cat, FurColor, LatLng, MoveRequest } from '../types'
 import { AccountMenu } from './account/AccountMenu'
@@ -124,6 +124,8 @@ export function MapScreen({ mapId }: Props) {
   const [seenToday, setSeenToday] = useState(false)
   const [friendlyOnly, setFriendlyOnly] = useState(false)
   const [needsHelp, setNeedsHelp] = useState(false)
+  // น้องที่ยังไม่มีใครบันทึกว่าให้อาหารวันนี้ (ไม่นับน้องมีเจ้าของ เจ้าของให้อยู่แล้ว)
+  const [notFedToday, setNotFedToday] = useState(false)
   const [userPosition, setUserPosition] = useState<LatLng | null>(null)
   // เปิดแอปใหม่ → ไปที่ตำแหน่งของเรา (ยกเว้นเปิดจากลิงก์น้องแมว หรือรีโหลดในแท็บเดิมที่จำมุมกล้องไว้แล้ว)
   const [startAtUser] = useState(() => !new URLSearchParams(window.location.search).get('cat') && readSavedCamera() === null)
@@ -159,6 +161,15 @@ export function MapScreen({ mapId }: Props) {
   const selectedQuery = useCat(selectedId, !selectedFromList)
   const selectedCat = selectedFromList ?? selectedQuery.data ?? null
 
+  const feedableIds = useMemo(() => cats.filter((c) => c.ownerStatus !== 'owned').map((c) => c.id), [cats])
+  const fedToday = useQuery({
+    queryKey: ['fedToday', feedableIds],
+    queryFn: () => fetchFedToday(feedableIds),
+    enabled: notFedToday,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  })
+
   const visibleCats = useMemo(
     () =>
       cats.filter(
@@ -167,9 +178,10 @@ export function MapScreen({ mapId }: Props) {
           (!seenToday || seenWithin(cat, 24)) &&
           (!friendlyOnly || cat.isFriendly) &&
           (!needsHelp || cat.helpKinds.length > 0) &&
+          (!notFedToday || (cat.ownerStatus !== 'owned' && !(fedToday.data?.has(cat.id) ?? false))) &&
           matchesQuery(cat, query),
       ),
-    [cats, furColors, seenToday, friendlyOnly, needsHelp, query],
+    [cats, furColors, seenToday, friendlyOnly, needsHelp, notFedToday, fedToday.data, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
   const placeSearch = usePlaceSearch(query)
@@ -323,6 +335,7 @@ export function MapScreen({ mapId }: Props) {
     setSeenToday(false)
     setFriendlyOnly(false)
     setNeedsHelp(false)
+    setNotFedToday(false)
     setSelectedId(cat.id)
     focusCat(cat)
     showToast(t('ปักหมุด{name}แล้ว', { name: cat.name }))
@@ -551,6 +564,8 @@ export function MapScreen({ mapId }: Props) {
                   onFriendlyOnlyChange={setFriendlyOnly}
                   needsHelp={needsHelp}
                   onNeedsHelpChange={setNeedsHelp}
+                  notFedToday={notFedToday}
+                  onNotFedTodayChange={setNotFedToday}
                 />
               </div>
             </div>
