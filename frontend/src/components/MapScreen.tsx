@@ -116,6 +116,8 @@ export function MapScreen({ mapId }: Props) {
   const [friendlyOnly, setFriendlyOnly] = useState(false)
   const [needsHelp, setNeedsHelp] = useState(false)
   const [userPosition, setUserPosition] = useState<LatLng | null>(null)
+  // เปิดแอปใหม่ → ไปที่ตำแหน่งของเรา (ยกเว้นเปิดจากลิงก์น้องแมว หรือรีโหลดในแท็บเดิมที่จำมุมกล้องไว้แล้ว)
+  const [startAtUser] = useState(() => !new URLSearchParams(window.location.search).get('cat') && readSavedCamera() === null)
   const [toast, setToast] = useState<string | null>(null)
   const [droppedPin, setDroppedPin] = useState<LatLng | null>(null)
   const [adding, setAdding] = useState<{ origin: LatLng; start: AddCatStart } | null>(null)
@@ -279,6 +281,23 @@ export function MapScreen({ mapId }: Props) {
       { enableHighAccuracy: true, timeout: 10_000 },
     )
   }
+
+  const startedAtUser = useRef(false)
+  useEffect(() => {
+    if (!map || !startAtUser || startedAtUser.current || !navigator.geolocation) return
+    startedAtUser.current = true
+    // ไม่อนุญาตตำแหน่งก็อยู่ที่จุดเริ่มต้นเดิมเงียบๆ (ไม่ต้องเตือน)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const position = { lat: coords.latitude, lng: coords.longitude }
+        setUserPosition(position)
+        map.panTo(position)
+        map.setZoom(16)
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
+    )
+  }, [map, startAtUser])
 
   /** คืน true ถ้าบันทึกสำเร็จ (ปุ่มจะเล่นเอฟเฟกต์อุ้งเท้า) */
   const markSighting = async (cat: Cat): Promise<boolean> => {

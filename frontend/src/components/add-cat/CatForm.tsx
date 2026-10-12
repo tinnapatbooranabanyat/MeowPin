@@ -124,7 +124,7 @@ export function CatForm({
             setName(e.target.value)
             setNameError(false)
           }}
-          placeholder={t('ส้มจี๊ด')}
+          placeholder={t('ตั้งชื่อให้น้อง')}
           maxLength={40}
           aria-invalid={nameError}
           className={`${inputClass} ${nameError ? 'border-red-400' : ''}`}
@@ -246,7 +246,7 @@ export function CatForm({
         <input
           value={placeName}
           onChange={(e) => setPlaceName(e.target.value)}
-          placeholder={t('หน้าเซเว่น ซอย 5')}
+          placeholder={t('ชื่อสถานที่หรือจุดสังเกต')}
           maxLength={80}
           className={inputClass}
         />

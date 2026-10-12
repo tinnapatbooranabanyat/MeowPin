@@ -679,4 +679,7 @@ export const EN: Record<string, string> = {
   'ระงับบัญชีนี้ (ผู้ดูแล)': 'Suspend this account (admin)',
   'ผู้ดูแลยืนยันว่าเป็นแมว': 'Admin confirmed it’s a cat',
   'ผู้ดูแลตรวจแล้วว่าเป็นแมว': 'Checked by an admin',
+  'ตั้งชื่อให้น้อง': 'Give the cat a name',
+  'ชื่อสถานที่หรือจุดสังเกต': 'Place name or landmark',
+  'ชื่อที่จะแสดงในแอป': 'Name shown in the app',
 }
