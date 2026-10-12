@@ -15,7 +15,7 @@ from PIL import Image, ImageOps
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
-from . import catcheck, push, summary
+from . import catcheck, photosearch, push, summary
 from .auth import current_user_id, is_admin, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -45,6 +45,7 @@ album_user_limiter = RateLimiter("album_user", 30, 3600, "อัปโหลด�
 summary_ip_limiter = RateLimiter("summary_ip", 60, 3600, "ขอสรุปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 check_user_limiter = RateLimiter("check_user", 40, 3600, "ตรวจรูปบ่อยเกินไป พักสักครู่แล้วลองใหม่")
 post_user_limiter = RateLimiter("post_user", 5, 86400, "ลงประกาศได้วันละ 5 ครั้ง พรุ่งนี้ลองใหม่นะ")
+photo_search_limiter = RateLimiter("photo_search", 10, 3600, "ค้นหาด้วยรูปได้ชั่วโมงละ 10 ครั้ง พักสักครู่แล้วลองใหม่")
 MAX_PHOTOS_PER_REVIEW = 4
 
 
@@ -744,3 +745,58 @@ class PushDispatch(BaseModel):
 def push_dispatch(body: PushDispatch):
     """ฐานข้อมูลเรียกตอนมีแจ้งเตือนใหม่ — ไม่ต้องใช้ key: ส่งได้แค่แจ้งเตือนที่ยังไม่ได้ส่งและอายุไม่เกิน 1 ชม. (ส่งซ้ำไม่ได้)"""
     return {"sent": push.dispatch(body.notification_id)}
+
+
+# ── ค้นหาน้องแมวด้วยรูป ──
+SEARCH_RADIUS_DEG = 0.03  # ~3 กม.
+MIN_MATCH_SCORE = 0.3
+
+
+@app.post("/cats/search-by-photo")
+def search_by_photo(
+    request: Request,
+    photo: UploadFile,
+    lat: Annotated[float, Form(ge=-90, le=90)],
+    lng: Annotated[float, Form(ge=-180, le=180)],
+):
+    """หาหมุดใกล้ๆ ที่น่าจะเป็นน้องในรูป (เช่น ตามหาแมวหาย) — ใช้ Gemini 2 ครั้ง จึงต้องล็อกอินและจำกัดจำนวน"""
+    user_id = current_user_id(request)
+    photo_search_limiter.check(user_id)
+    _data, image = read_photo(photo)
+    try:
+        is_cat, color = photosearch.describe(image)
+        if not is_cat:
+            raise HTTPException(status_code=422, detail="ไม่เจอแมวในรูปนี้ ลองใช้รูปที่เห็นน้องชัดๆ")
+        cats = (
+            get_client()
+            .rpc(
+                "cats_in_view",
+                {
+                    "min_lat": lat - SEARCH_RADIUS_DEG,
+                    "min_lng": lng - SEARCH_RADIUS_DEG,
+                    "max_lat": lat + SEARCH_RADIUS_DEG,
+                    "max_lng": lng + SEARCH_RADIUS_DEG,
+                },
+            )
+            .execute()
+            .data
+        )
+        picked = photosearch.candidates(cats or [], lat, lng, color)
+        matches = photosearch.compare(image, picked) if picked else []
+    except photosearch.SearchError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    return {
+        "furColor": color,
+        "checked": len(picked),
+        "matches": [
+            {
+                "catId": m.cat_id,
+                "score": round(m.score, 3),
+                "reason": m.reason_th,
+                "reasonEn": m.reason_en,
+                "distance": round(m.distance_m),
+            }
+            for m in matches
+            if m.score >= MIN_MATCH_SCORE
+        ],
+    }

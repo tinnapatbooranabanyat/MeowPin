@@ -25,6 +25,7 @@ import { CatReportDialog } from './CatReportDialog'
 import { EditCatDialog } from './EditCatDialog'
 import { LeaderboardDialog } from './LeaderboardDialog'
 import { NearbyCatsDialog } from './NearbyCatsDialog'
+import { PhotoSearchDialog } from './PhotoSearchDialog'
 import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
@@ -98,6 +99,7 @@ type Dialog =
   | { kind: 'leaderboard' }
   | { kind: 'posts' }
   | { kind: 'nearby' }
+  | { kind: 'photoSearch' }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -430,7 +432,13 @@ export function MapScreen({ mapId }: Props) {
             {/* เว้นที่ขวาบนให้ปุ่มโปรไฟล์ (48px + ระยะขอบ) */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-4 pr-20 md:flex-row md:items-start md:gap-3">
               <div className="pointer-events-auto md:w-[380px] md:shrink-0">
-                <SearchBar query={query} onQueryChange={setQuery} suggestions={suggestions} onSelect={selectCat} />
+                <SearchBar
+                  query={query}
+                  onQueryChange={setQuery}
+                  suggestions={suggestions}
+                  onSelect={selectCat}
+                  onPhotoSearch={() => requireLogin(t('เข้าสู่ระบบเพื่อค้นหาด้วยรูป')) && setDialog({ kind: 'photoSearch' })}
+                />
               </div>
               <div className="pointer-events-auto -mr-16 min-w-0 md:mr-0 md:pt-1.5">
                 <FilterChips
@@ -557,6 +565,19 @@ export function MapScreen({ mapId }: Props) {
           />
         )}
         {dialog?.kind === 'posts' && bounds && <PostsDialog bounds={bounds} onClose={() => setDialog(null)} />}
+        {dialog?.kind === 'photoSearch' && bounds && (
+          <PhotoSearchDialog
+            bounds={bounds}
+            userPosition={userPosition}
+            onClose={() => setDialog(null)}
+            onOpenCat={(cat) => {
+              setDialog(null)
+              upsertCat(cat)
+              setSelectedId(cat.id)
+              focusCat(cat)
+            }}
+          />
+        )}
         {dialog?.kind === 'nearby' && (
           <NearbyCatsDialog
             userPosition={userPosition}

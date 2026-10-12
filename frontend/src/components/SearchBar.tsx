@@ -1,4 +1,4 @@
-import { PawPrint, Search, X } from 'lucide-react'
+import { Camera, PawPrint, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Cat } from '../types'
 import { CatAvatar } from './CatAvatar'
@@ -9,9 +9,11 @@ interface Props {
   onQueryChange: (query: string) => void
   suggestions: Cat[]
   onSelect: (cat: Cat) => void
+  /** ค้นหาด้วยรูป */
+  onPhotoSearch: () => void
 }
 
-export function SearchBar({ query, onQueryChange, suggestions, onSelect }: Props) {
+export function SearchBar({ query, onQueryChange, suggestions, onSelect, onPhotoSearch }: Props) {
   const { t } = useI18n()
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -63,6 +65,15 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect }: Props
         ) : (
           <Search className="shrink-0 text-stone-400" size={20} aria-hidden="true" />
         )}
+        <button
+          type="button"
+          onClick={onPhotoSearch}
+          className="-mr-1.5 rounded-full p-1.5 text-orange-600 hover:bg-orange-50"
+          aria-label={t('ค้นหาด้วยรูป')}
+          title={t('ค้นหาด้วยรูป')}
+        >
+          <Camera size={20} />
+        </button>
       </div>
 
       {showSuggestions && (

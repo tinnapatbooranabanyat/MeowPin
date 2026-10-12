@@ -519,6 +519,22 @@ export async function fetchReviews(catId: string): Promise<Review[]> {
   }))
 }
 
+// ═══════════════ ค้นหาด้วยรูป ═══════════════
+export interface PhotoSearchResult {
+  furColor: FurColor
+  /** จำนวนหมุดที่ให้ AI เทียบ */
+  checked: number
+  matches: { catId: string; score: number; reason: string; reasonEn: string; distance: number }[]
+}
+
+export function searchByPhoto(photo: File, position: LatLng): Promise<PhotoSearchResult> {
+  const form = new FormData()
+  form.append('photo', photo)
+  form.append('lat', String(position.lat))
+  form.append('lng', String(position.lng))
+  return callBackend<PhotoSearchResult>('POST', '/cats/search-by-photo', form)
+}
+
 // ═══════════════ ถูกใจ / ตอบกลับ / รายงานรีวิว ═══════════════
 interface ReplyRow {
   id: string
