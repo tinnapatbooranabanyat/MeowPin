@@ -1,22 +1,20 @@
-import { Bell, BellRing, CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, Images, MapPin, MapPinCheck, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
+import { Bell, BellRing, CalendarClock, Cat as CatIcon, CircleHelp, Dna, Eye, Flag, Heart, Home, ImagePlus, Images, MapPin, MapPinCheck, Navigation, Palette, Pencil, Scissors, Share2, ShieldCheck, Trash2, UserRound, X, type LucideIcon } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
-import { useAddCatPhotos } from '../hooks/useAddCatPhotos'
 import { useCatPhotos } from '../hooks/useCatPhotos'
 import { useMapActions } from '../hooks/useMapActions'
 import { FUR_COLORS, NEUTERED, OWNER_STATUS, TRAITS, VERIFICATION, breedLabel, directionsUrl, furLabel, timeAgo } from '../lib/cat'
 import { fetchIsFollowing, setFollowing } from '../lib/api'
 import type { Cat } from '../types'
 import { AiSummary } from './AiSummary'
-import { AddPhotoTile, CatGallery } from './CatGallery'
 import { FeedingCard } from './FeedingCard'
 import { HelpSection } from './HelpSection'
 import { MoveRequests } from './MoveRequests'
 import { SightingTimes } from './SightingTimes'
 import { PawBurst } from './PawBurst'
-import { PhotoLightbox } from './PhotoLightbox'
+import { PhotoBrowser } from './PhotoBrowser'
 import { PawRating } from './reviews/PawRating'
 import { ReviewSection } from './reviews/ReviewSection'
 import { TranslatableText } from './TranslatableText'
@@ -55,10 +53,9 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
   const { openProfile } = useMapActions()
   const [tab, setTab] = useState<Tab>('overview')
   const [burst, setBurst] = useState(0)
-  const [lightbox, setLightbox] = useState<number | null>(null)
-  const [gallery, setGallery] = useState(false)
+  // หน้ารูปทั้งหมด: undefined = ปิด / null = เริ่มที่รายการรูป / ตัวเลข = เปิดรูปนั้น
+  const [browser, setBrowser] = useState<number | null | undefined>(undefined)
   const { photos } = useCatPhotos(cat)
-  const addPhotos = useAddCatPhotos(cat)
   const fur = FUR_COLORS[cat.furColor]
   const traits = TRAITS.filter((trait) => cat[trait.key])
   const breed = breedLabel(cat.breed, lang)
@@ -102,7 +99,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
           }`}
         >
           {cat.photoUrl ? (
-            <button type="button" onClick={() => setLightbox(0)} className="block size-full" aria-label={t('ดูรูปเต็ม')}>
+            <button type="button" onClick={() => setBrowser(0)} className="block size-full" aria-label={t('ดูรูปทั้งหมด')}>
               <img src={cat.photoUrl} alt={cat.name} className="size-full animate-fade-in object-cover" />
             </button>
           ) : (
@@ -130,16 +127,15 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
                   ? t('ตำแหน่งจากรูปที่ถ่าย')
                   : t('มีคนเจอน้องล่าสุด {when}', { when: timeAgo(cat.lastSeenAt, lang) })}
           </span>
-          {photos.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setGallery(true)}
-              className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition hover:bg-black/75 active:scale-95"
-            >
-              <Images size={13} aria-hidden="true" />
-              {t('รูปทั้งหมด ({n})', { n: photos.length })}
-            </button>
-          )}
+          {/* ดูรูปทั้งหมด / เพิ่มรูป (ไม่ต้องรีวิว) อยู่ในหน้ารูปทั้งหมด */}
+          <button
+            type="button"
+            onClick={() => setBrowser(photos.length > 1 ? null : 0)}
+            className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition hover:bg-black/75 active:scale-95"
+          >
+            {photos.length > 1 ? <Images size={13} aria-hidden="true" /> : <ImagePlus size={13} aria-hidden="true" />}
+            {photos.length > 1 ? t('รูปทั้งหมด ({n})', { n: photos.length }) : t('เพิ่มรูป')}
+          </button>
           {onClose && (
             <button
               type="button"
@@ -270,34 +266,28 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
               </div>
             )}
 
-            {/* รูปภาพ: เพิ่มรูปได้โดยไม่ต้องเขียนรีวิว */}
-            <div>
-              {addPhotos.input}
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-stone-800">{t('รูปภาพ')}</h3>
-                {photos.length > 1 && (
-                  <button type="button" onClick={() => setGallery(true)} className="text-xs font-medium text-orange-700 hover:underline">
+            {photos.length > 1 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-stone-800">{t('รูปภาพ')}</h3>
+                  <button type="button" onClick={() => setBrowser(null)} className="text-xs font-medium text-orange-700 hover:underline">
                     {t('ดูทั้งหมด ({n})', { n: photos.length })}
                   </button>
-                )}
-              </div>
-              <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
-                <AddPhotoTile onClick={addPhotos.pick} progress={addPhotos.progress} className="size-24 shrink-0" />
-                {photos.slice(0, 8).map((photo, i) => (
+                </div>
+                <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+                  {photos.slice(0, 8).map((photo, i) => (
                     <button
                       key={photo.id}
                       type="button"
-                      onClick={() => setLightbox(i)}
+                      onClick={() => setBrowser(i)}
                       className="size-24 shrink-0 overflow-hidden rounded-xl bg-stone-200 transition hover:opacity-90 active:scale-95"
                     >
                       <img src={photo.url} alt="" loading="lazy" className="size-full object-cover" />
                     </button>
                   ))}
+                </div>
               </div>
-              {addPhotos.message && (
-                <p className={`mt-2 text-xs ${addPhotos.message.tone === 'ok' ? 'text-emerald-700' : 'text-red-700'}`}>{addPhotos.message.text}</p>
-              )}
-            </div>
+            )}
 
             {canManage && <MoveRequests cat={cat} />}
 
@@ -381,10 +371,7 @@ export function CatDetails({ cat, onSighting, onShare, onDelete, onReport, onClo
         )}
       </div>
 
-      {lightbox !== null && (
-        <PhotoLightbox photos={photos} startIndex={lightbox} alt={cat.name} catId={cat.id} onClose={() => setLightbox(null)} />
-      )}
-      {gallery && <CatGallery cat={cat} photos={photos} onClose={() => setGallery(false)} />}
+      {browser !== undefined && <PhotoBrowser cat={cat} photos={photos} startIndex={browser} onClose={() => setBrowser(undefined)} />}
     </div>
   )
 }

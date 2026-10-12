@@ -16,11 +16,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    id: '2026-10-12-photos',
+    id: '2026-10-12-ui-fixes',
     date: '2026-10-12',
-    title: { th: 'เพิ่มรูปน้องได้โดยไม่ต้องรีวิว', en: 'Add cat photos without a review' },
+    title: { th: 'แก้หน้าตาเล็กน้อย', en: 'Small UI fixes' },
     items: [
-      { th: 'กด "เพิ่มรูป" ในหน้าน้องหรือในอัลบั้ม เพิ่มได้ทีละหลายรูป ไม่ต้องเขียนรีวิว', en: 'Tap "Add photo" on the cat page or in the album to add several photos, no review needed' },
+      { th: 'มือถือ: เมนูบัญชีไม่โดนการ์ดน้องแมวบังแล้ว', en: 'Mobile: the account menu no longer hides behind the cat card' },
+      { th: 'หน้า "มีอะไรใหม่" เลือกดูทีละวันได้ และแถบเลื่อนในหน้าต่างต่างๆ บางลง', en: 'The "What’s new" page can be filtered by date, and window scrollbars are slimmer' },
+    ],
+  },
+  {
+    id: '2026-10-12-photos-2',
+    date: '2026-10-12',
+    title: { th: 'หน้ารูปภาพใหม่ และเพิ่มรูปได้โดยไม่ต้องรีวิว', en: 'New photo browser, and add photos without a review' },
+    items: [
+      {
+        th: 'แตะรูปใหญ่ของน้องเพื่อเปิดหน้ารูปทั้งหมด มีรายการรูปและรูปใหญ่ให้เลื่อนดู',
+        en: 'Tap the big cat photo to open all photos, with a photo list and a large viewer',
+      },
+      { th: 'กด "เพิ่มรูปภาพ" ในหน้ารูปทั้งหมด เพิ่มได้ทีละหลายรูป ไม่ต้องเขียนรีวิว', en: 'Tap "Add photos" in the photo browser to add several photos, no review needed' },
       { th: 'กดหัวใจรูปที่ชอบได้ ตอนเปิดดูรูปเต็มจอ', en: 'Heart the photos you love in the full-screen view' },
       { th: 'รายงานรูปที่ไม่ใช่น้อง ไม่เหมาะสม หรือละเมิดความเป็นส่วนตัวได้', en: 'Report photos that show the wrong cat, are inappropriate or break privacy' },
       { th: 'ลบรูปที่ตัวเองอัปโหลดได้', en: 'Delete photos you uploaded' },

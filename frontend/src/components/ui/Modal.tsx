@@ -29,7 +29,7 @@ export function Modal({ title, onClose, children, wide = false, top = false }: P
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`max-h-[92%] w-full animate-sheet-up overflow-y-auto rounded-t-3xl bg-surface p-5 md:animate-pop-in pb-8 shadow-xl md:rounded-3xl md:pb-5 ${
+        className={`thin-scrollbar max-h-[92%] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-3xl bg-surface p-5 md:animate-pop-in pb-8 shadow-xl md:rounded-3xl md:pb-5 ${
           wide ? 'md:max-w-2xl' : 'md:max-w-md'
         }`}
       >

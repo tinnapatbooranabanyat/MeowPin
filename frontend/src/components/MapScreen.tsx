@@ -554,7 +554,8 @@ export function MapScreen({ mapId }: Props) {
                 />
               </div>
             </div>
-            <div className="absolute top-4 right-4 z-30">
+            {/* z-40: อยู่เหนือการ์ดน้องแมว (z-30) — กดเมนูตอนการ์ดเปิดอยู่จะไม่โดนบัง */}
+            <div className="absolute top-4 right-4 z-40">
               <AccountMenu
                 pendingReports={pendingReports}
                 onOpenMyProfile={() => userId && setDialog({ kind: 'userProfile', userId })}

@@ -127,7 +127,7 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose, catId }: Props
   )
 }
 
-function StopEvents({ children }: { children: ReactNode }) {
+export function StopEvents({ children }: { children: ReactNode }) {
   return (
     <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
       {children}
@@ -135,7 +135,7 @@ function StopEvents({ children }: { children: ReactNode }) {
   )
 }
 
-function PhotoActions({ catId, photo, onReport, onDeleted }: { catId: string; photo: CatPhoto; onReport: () => void; onDeleted: () => void }) {
+export function PhotoActions({ catId, photo, onReport, onDeleted }: { catId: string; photo: CatPhoto; onReport: () => void; onDeleted: () => void }) {
   const { t } = useI18n()
   const { userId, isAdmin, requireLogin } = useAuth()
   const queryClient = useQueryClient()

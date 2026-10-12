@@ -191,6 +191,26 @@ body {
   }
 }
 
+/* แถบเลื่อนบางๆ สีกลืนกับธีม (หน้าต่าง/รายการยาว) — ไม่เป็นแถบเทาหนาของเบราว์เซอร์ */
+@utility thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-300) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 16px;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--color-stone-300);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
 /* ผู้ใช้ตั้งค่าให้ลดการเคลื่อนไหว → ปิด animation ทั้งหมด */
 @media (prefers-reduced-motion: reduce) {
   *,

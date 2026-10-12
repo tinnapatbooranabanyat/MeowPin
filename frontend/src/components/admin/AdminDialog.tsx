@@ -8,12 +8,13 @@ import { photoUrl } from '../../lib/supabase'
 import type { BugReport, CatReport } from '../../types'
 import { Modal } from '../ui/Modal'
 import { ActivityLog } from './ActivityLog'
+import { AllCatsList } from './AllCatsList'
 import { PhotoReportsList } from './PhotoReportsList'
 import { ReviewReportsList } from './ReviewReportsList'
 import { UnverifiedCats } from './UnverifiedCats'
 import { confirmAction } from '../../lib/dialogs'
 
-type Tab = 'cats' | 'reviews' | 'photos' | 'bugs' | 'unverified' | 'activity'
+type Tab = 'all' | 'cats' | 'reviews' | 'photos' | 'bugs' | 'unverified' | 'activity'
 type Status = 'open' | 'resolved'
 
 const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: string }> = {
@@ -60,12 +61,15 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
         <button type="button" onClick={() => setTab('unverified')} className={tabClass(tab === 'unverified')}>
           {t('รอตรวจว่าเป็นแมว')}
         </button>
+        <button type="button" onClick={() => setTab('all')} className={tabClass(tab === 'all')}>
+          {t('หมุดทั้งหมด')}
+        </button>
         <button type="button" onClick={() => setTab('activity')} className={tabClass(tab === 'activity')}>
           {t('กิจกรรม')}
         </button>
       </div>
 
-      <div className={`mb-4 flex gap-2 ${tab === 'activity' || tab === 'unverified' ? 'hidden' : ''}`}>
+      <div className={`mb-4 flex gap-2 ${tab === 'activity' || tab === 'unverified' || tab === 'all' ? 'hidden' : ''}`}>
         {(['open', 'resolved'] as const).map((s) => (
           <button
             key={s}
@@ -87,6 +91,7 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
       {tab === 'bugs' && <BugReportsList status={status} />}
       {tab === 'unverified' && <UnverifiedCats onOpenCat={onOpenCat} />}
       {tab === 'activity' && <ActivityLog onOpenCat={onOpenCat} />}
+      {tab === 'all' && <AllCatsList onOpenCat={onOpenCat} />}
     </Modal>
   )
 }

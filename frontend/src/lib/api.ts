@@ -407,6 +407,37 @@ export async function fetchUnverifiedCats(): Promise<Cat[]> {
   return (data as CatRow[]).map(rowToCat)
 }
 
+/** สิ่งที่ต้องดูของหมุดแต่ละตัว (admin) */
+export interface CatIssues {
+  reports: number
+  photoReports: number
+  moveRequests: number
+}
+
+/** admin: หมุดทั้งหมดในระบบ + จำนวนรายงาน/คำขอที่ค้างของแต่ละหมุด */
+export async function fetchAllCatsForAdmin(): Promise<{ cats: Cat[]; issues: Record<string, CatIssues> }> {
+  const [cats, reports, photoReports, moves] = await Promise.all([
+    db().from('cats_public').select('*').order('last_seen_at', { ascending: false }).limit(5000),
+    db().from('cat_reports').select('cat_id').eq('status', 'open').limit(5000),
+    db().from('cat_photo_reports').select('cat_id').eq('status', 'open').limit(5000),
+    db().from('cat_move_requests').select('cat_id').eq('status', 'pending').limit(5000),
+  ])
+  if (cats.error || !cats.data) throw new ApiError('โหลดรายการหมุดไม่สำเร็จ', 500)
+  const issues: Record<string, CatIssues> = {}
+  const bump = (rows: { cat_id: string | null }[] | null, key: keyof CatIssues) => {
+    for (const r of rows ?? []) {
+      if (!r.cat_id) continue
+      issues[r.cat_id] ??= { reports: 0, photoReports: 0, moveRequests: 0 }
+      issues[r.cat_id][key]++
+    }
+  }
+  // ตารางที่ยังไม่ได้รัน migration → error → ข้ามไป
+  bump(reports.data, 'reports')
+  bump(photoReports.data, 'photoReports')
+  bump(moves.data, 'moveRequests')
+  return { cats: (cats.data as CatRow[]).map(rowToCat), issues }
+}
+
 /** admin: ระงับ/ยกเลิกการระงับบัญชี */
 export async function setUserBan(userId: string, banned: boolean, reason = ''): Promise<void> {
   const { error } = await db().rpc('set_user_ban', { p_user_id: userId, p_banned: banned, p_reason: reason })
