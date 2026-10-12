@@ -15,7 +15,7 @@ from PIL import Image, ImageOps
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
-from . import catcheck, summary
+from . import catcheck, push, summary
 from .auth import current_user_id, is_admin, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -99,11 +99,14 @@ def not_configured(_request: Request, exc: NotConfigured):
 
 @app.get("/health")
 def health():
+    # cron ปลุก server ทุก 10 นาที → ถือโอกาสส่งแจ้งเตือนที่ค้าง (เช่นตอน server หลับ)
+    push.dispatch_pending()
     return {
         "ok": True,
         "model": settings.model_path.exists(),
         "database": bool(settings.supabase_url and settings.supabase_secret_key),
         "ai_summary": bool(settings.gemini_api_key),
+        "push": push.enabled(),
     }
 
 
@@ -693,3 +696,51 @@ def verify_cat(cat_id: UUID, request: Request):
     client.table("cat_reports").update({"status": "resolved"}).eq("cat_id", str(cat_id)).eq("reason", "not_cat").eq("status", "open").execute()
     log_activity(client, admin_id, "cat_verify", cat_id, {"cat_name": rows[0]["name"]})
     return {"ok": True}
+
+
+# ── แจ้งเตือนเด้งบนมือถือ (Web Push) ──
+@app.get("/push/public-key")
+def push_public_key():
+    if not push.enabled():
+        raise HTTPException(status_code=404, detail="ยังไม่ได้ตั้งค่าการแจ้งเตือนบนมือถือ")
+    return {"key": settings.vapid_public_key}
+
+
+class PushSubscription(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000)
+    p256dh: str = Field(min_length=10, max_length=200)
+    auth: str = Field(min_length=4, max_length=100)
+    lang: Literal["th", "en"] = "th"
+
+
+@app.post("/push/subscribe")
+def push_subscribe(body: PushSubscription, request: Request):
+    user_id = current_user_id(request)
+    if not body.endpoint.startswith("https://"):
+        raise HTTPException(status_code=422, detail="ข้อมูลการแจ้งเตือนไม่ถูกต้อง")
+    get_client().table("push_subscriptions").upsert(
+        {"user_id": user_id, "endpoint": body.endpoint, "p256dh": body.p256dh, "auth": body.auth, "lang": body.lang},
+        on_conflict="endpoint",
+    ).execute()
+    return {"ok": True}
+
+
+class PushEndpoint(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000)
+
+
+@app.post("/push/unsubscribe")
+def push_unsubscribe(body: PushEndpoint, request: Request):
+    user_id = current_user_id(request)
+    get_client().table("push_subscriptions").delete().eq("endpoint", body.endpoint).eq("user_id", user_id).execute()
+    return {"ok": True}
+
+
+class PushDispatch(BaseModel):
+    notification_id: int
+
+
+@app.post("/push/dispatch")
+def push_dispatch(body: PushDispatch):
+    """ฐานข้อมูลเรียกตอนมีแจ้งเตือนใหม่ — ไม่ต้องใช้ key: ส่งได้แค่แจ้งเตือนที่ยังไม่ได้ส่งและอายุไม่เกิน 1 ชม. (ส่งซ้ำไม่ได้)"""
+    return {"sent": push.dispatch(body.notification_id)}

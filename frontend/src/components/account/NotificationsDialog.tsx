@@ -9,6 +9,7 @@ import { markNotificationsRead } from '../../lib/api'
 import { HELP_KINDS, timeAgo } from '../../lib/cat'
 import type { AppNotification, HelpKind } from '../../types'
 import { Modal } from '../ui/Modal'
+import { PushToggle } from './PushToggle'
 
 const ICONS = {
   new_review: { icon: PawPrint, tone: 'bg-amber-100 text-amber-700' },
@@ -61,6 +62,7 @@ export function NotificationsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title={t('การแจ้งเตือน')} onClose={onClose}>
+      <PushToggle />
       {isPending && <p className="py-8 text-center text-sm text-stone-500">{t('กำลังโหลด…')}</p>}
       {!isPending && items.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-stone-500">

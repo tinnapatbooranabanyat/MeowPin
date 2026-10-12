@@ -19,6 +19,10 @@ class Settings:
     gemini_api_key: str
     # แจ้ง error ไป Sentry (ว่าง = ปิด)
     sentry_dsn: str
+    # Web Push (แจ้งเตือนเด้งบนมือถือ) — ว่าง = ปิด
+    vapid_public_key: str
+    vapid_private_key: str
+    vapid_subject: str
     gemini_model: str
     photo_bucket: str = "cat-photos"
     # SSD-MobileNet ฝั่ง server ให้คะแนนต่างจาก COCO-SSD ในเบราว์เซอร์เล็กน้อย จึงใช้เกณฑ์ต่ำกว่า
@@ -43,5 +47,8 @@ settings = Settings(
     model_path=BACKEND_DIR / os.getenv("MODEL_PATH", "models/ssd_mobilenet_v1_12.onnx"),
     gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
     sentry_dsn=os.getenv("SENTRY_DSN", ""),
+    vapid_public_key=os.getenv("VAPID_PUBLIC_KEY", ""),
+    vapid_private_key=os.getenv("VAPID_PRIVATE_KEY", ""),
+    vapid_subject=os.getenv("VAPID_SUBJECT", "https://meowpin-th.vercel.app"),
     gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
 )

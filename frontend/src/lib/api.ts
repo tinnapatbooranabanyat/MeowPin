@@ -304,6 +304,11 @@ export function createCat(input: NewCatInput): Promise<Cat> {
   return callBackend<Cat>('POST', '/cats', form)
 }
 
+/** เรียก backend แบบส่ง JSON (ต้องล็อกอิน) */
+export function callBackendJson<T = void>(method: 'POST' | 'PATCH', path: string, body: unknown): Promise<T> {
+  return callBackend<T>(method, path, JSON.stringify(body))
+}
+
 /** แก้รายละเอียดหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม) */
 export function updateCat(catId: string, values: CatFormValues): Promise<void> {
   return callBackend<void>(

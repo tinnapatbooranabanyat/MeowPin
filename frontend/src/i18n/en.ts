@@ -720,4 +720,11 @@ export const EN: Record<string, string> = {
   'ตอบกลับรีวิวของ {cat}': 'replied to a review of {cat}',
   'รายงานรีวิวของ {cat}': 'reported a review of {cat}',
   '{actor} ตอบกลับรีวิวของคุณที่{cat}: “{body}”': '{actor} replied to your review of {cat}: “{body}”',
+  'บน iPhone/iPad ต้องกดปุ่มแชร์ → "เพิ่มไปยังหน้าจอโฮม" แล้วเปิด MeowPin จากหน้าจอหลักก่อน ถึงจะเปิดแจ้งเตือนได้': 'On iPhone/iPad, tap Share → "Add to Home Screen", then open MeowPin from your home screen to turn on notifications.',
+  'เบราว์เซอร์นี้ยังไม่รองรับแจ้งเตือนเด้ง ลองเปิดใน Chrome หรือติดตั้งแอปลงหน้าจอหลัก': "This browser doesn't support push notifications. Try Chrome, or install the app to your home screen.",
+  'คุณปิดการแจ้งเตือนของเว็บนี้ไว้ เปิดได้ที่การตั้งค่าเว็บไซต์ของเบราว์เซอร์': "Notifications are blocked for this site. You can allow them in your browser's site settings.",
+  'เปิดการแจ้งเตือนไม่สำเร็จ ลองใหม่อีกครั้ง': "Couldn't turn on notifications. Try again.",
+  'แจ้งเตือนเด้งบนเครื่องนี้': 'Push notifications on this device',
+  'รู้ทันทีแม้ไม่ได้เปิดแอป': "Get notified even when the app isn't open",
+  'ยังไม่ได้ตั้งค่าการแจ้งเตือนบนมือถือที่ server': "Push notifications aren't set up on the server yet",
 }

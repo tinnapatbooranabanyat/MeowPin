@@ -37,6 +37,8 @@ export default defineConfig({
         // ลิงก์แชร์ (/c/:id) และ Vercel Function ต้องไปถึง server จริง ไม่ใช่หน้าแอปในเครื่อง
         navigateFallbackDenylist: [/^\/api\//, /^\/c\//],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // รับแจ้งเตือนเด้ง (Web Push) — ดู public/push-sw.js
+        importScripts: ['push-sw.js'],
       },
     }),
   ],
