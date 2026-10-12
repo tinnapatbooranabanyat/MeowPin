@@ -325,7 +325,7 @@ export const EN: Record<string, string> = {
   'แมวจร': 'Stray',
   'ไม่มีเจ้าของ อยู่ตามที่สาธารณะ': 'No owner, lives in public spaces',
   'มีเจ้าของ': 'Has an owner',
-  'เบลอตำแหน่งบนแผนที่ 50–100 ม. เพื่อความเป็นส่วนตัวของเจ้าของ': 'The map location is blurred by 50–100 m to protect the owner’s privacy',
+  'มีคนเลี้ยงดู อาจมีบ้านอยู่แถวนั้น': 'Someone looks after this cat; their home may be nearby',
 
   // ── สนับสนุนทีมงาน ──
   'สนับสนุนทีมงาน': 'Support the team',
@@ -778,7 +778,6 @@ export const EN: Record<string, string> = {
   'ย้ายหมุดน้อง{name}': 'Move {name}',
   'ย้ายหมุด{name}แล้ว': 'Moved {name}',
   'ย้ายมาที่นี่': 'Move here',
-  'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — น้องมีเจ้าของ หมุดจะถูกขยับสุ่ม 50–100 ม. เพื่อไม่ให้ระบุบ้านได้': 'Drag the map so the pin sits on the new spot. This cat has an owner, so the pin is shifted randomly by 50–100 m to protect their home.',
   'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่ — ถ้าย้ายเกิน 50 ม. ป้ายยืนยันตำแหน่งจะหายไป': 'Drag the map so the pin sits on the new spot. Moving it more than 50 m removes the location-verified badge.',
   'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดใหม่': 'Drag the map so the pin sits on the new spot',
   'เรื่องที่ไม่มีใครยืนยันหรืออัปเดตนาน 14 วันจะปิดเอง': 'Reports with no confirmations or updates for 14 days close automatically',

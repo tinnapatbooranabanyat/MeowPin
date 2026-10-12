@@ -124,7 +124,7 @@ export const CAT_REPORT_REASONS: Record<CatReportReason, { label: string; hint: 
 
 export const OWNER_STATUS: Record<OwnerStatus, { label: string; hint: string; className: string }> = {
   stray: { label: 'แมวจร', hint: 'ไม่มีเจ้าของ อยู่ตามที่สาธารณะ', className: 'bg-amber-100 text-amber-800' },
-  owned: { label: 'มีเจ้าของ', hint: 'เบลอตำแหน่งบนแผนที่ 50–100 ม. เพื่อความเป็นส่วนตัวของเจ้าของ', className: 'bg-sky-100 text-sky-800' },
+  owned: { label: 'มีเจ้าของ', hint: 'มีคนเลี้ยงดู อาจมีบ้านอยู่แถวนั้น', className: 'bg-sky-100 text-sky-800' },
   unknown: { label: 'ไม่แน่ใจ', hint: '', className: '' },
 }
 

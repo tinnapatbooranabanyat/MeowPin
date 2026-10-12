@@ -139,7 +139,7 @@ export type Verification = 'camera_gps' | 'exif_gps' | 'manual'
 
 export type Neutered = 'yes' | 'no' | 'unknown'
 
-/** แมวจร / มีเจ้าของ (เบลอตำแหน่ง) / ไม่แน่ใจ */
+/** แมวจร / มีเจ้าของ / ไม่แน่ใจ */
 export type OwnerStatus = 'stray' | 'owned' | 'unknown'
 
 export interface LatLng {

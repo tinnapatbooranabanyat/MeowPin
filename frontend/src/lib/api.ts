@@ -332,7 +332,7 @@ export function updateCat(catId: string, values: CatFormValues): Promise<void> {
   )
 }
 
-/** ย้ายหมุด — คืนตำแหน่งที่บันทึกจริง (น้องมีเจ้าของถูกเบลอ) และป้ายยืนยันตำแหน่งที่เหลือ */
+/** ย้ายหมุด — คืนตำแหน่งที่บันทึกและป้ายยืนยันตำแหน่งที่เหลือ */
 export async function moveCat(
   catId: string,
   position: LatLng,

@@ -41,7 +41,7 @@ export function EditCatDialog({ cat, onClose, onSaved, onDelete, onMove }: Props
     setError(null)
     try {
       await updateCat(cat.id, values)
-      // เปลี่ยนเป็น "มีเจ้าของ" แล้วตำแหน่งถูกเบลอ — โหลดข้อมูลจริงจากฐานข้อมูลมาแสดง
+      // โหลดข้อมูลล่าสุดจากฐานข้อมูลมาแสดง
       const fresh = (await fetchCat(cat.id)) ?? { ...cat, ...values, furColorCustom: values.furColorCustom || null }
       upsertCat(fresh)
       onSaved(fresh)

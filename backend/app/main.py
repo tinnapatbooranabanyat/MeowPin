@@ -267,8 +267,6 @@ def create_cat(
     if has_owner:
         owner_status = "owned"
     has_owner = owner_status == "owned"
-    if has_owner:
-        lat, lng = blur(lat, lng)
 
     cat_id = uuid4()
     photo_path = f"{cat_id}.webp"
@@ -396,12 +394,6 @@ def update_cat(cat_id: UUID, body: CatUpdate, request: Request):
         "is_playful": body.is_playful,
         "neutered": body.neutered,
     }
-    # เพิ่งเปลี่ยนเป็น "มีเจ้าของ" → เบลอตำแหน่งเหมือนตอนปักหมุด ไม่ให้ระบุบ้านได้
-    if body.owner_status == "owned" and current.get("owner_status") != "owned":
-        pos = client.table("cats_public").select("lat, lng").eq("id", str(cat_id)).limit(1).execute().data
-        if pos:
-            lat, lng = blur(pos[0]["lat"], pos[0]["lng"])
-            row["location"] = f"SRID=4326;POINT({lng} {lat})"
     try:
         client.table("cats").update(row).eq("id", str(cat_id)).execute()
     except APIError as e:
@@ -424,8 +416,7 @@ class CatMove(BaseModel):
 @app.patch("/cats/{cat_id}/location")
 def move_cat(cat_id: UUID, body: CatMove, request: Request):
     """ย้ายหมุด (คนปักหมุดหรือเจ้าของแพลตฟอร์ม)
-    - ย้ายเกินระยะที่ขยับได้ → ป้าย "ยืนยันด้วย GPS/ข้อมูลในรูป" หายไป (กลายเป็นปักหมุดเอง)
-    - น้องมีเจ้าของ → เบลอตำแหน่งใหม่อีกครั้ง ไม่ให้ระบุบ้านได้"""
+    ย้ายเกินระยะที่ขยับได้ → ป้าย "ยืนยันด้วย GPS/ข้อมูลในรูป" หายไป (กลายเป็นปักหมุดเอง)"""
     user_id = current_user_id(request)
     client = get_client()
     current = load_own_cat(client, cat_id, user_id, "name, owner_status, verification")
@@ -446,8 +437,6 @@ def move_cat(cat_id: UUID, body: CatMove, request: Request):
     if moved > settings.max_adjust_m:
         verification = "manual"
     lat, lng = body.lat, body.lng
-    if current.get("owner_status") == "owned":
-        lat, lng = blur(lat, lng)
 
     client.table("cats").update(
         {"location": f"SRID=4326;POINT({lng} {lat})", "verification": verification}
