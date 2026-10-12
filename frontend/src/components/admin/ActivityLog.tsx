@@ -1,5 +1,5 @@
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
-import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, Hourglass, MapPinned, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
+import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, Hourglass, MapPinned, ImageOff, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -15,7 +15,7 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
   { key: 'sign_in', label: 'การเข้าสู่ระบบ', actions: ['sign_in'] },
   { key: 'cats', label: 'หมุด', actions: ['cat_create', 'cat_update', 'cat_delete', 'move_request'] },
   { key: 'reviews', label: 'รีวิว', actions: ['review_create', 'review_update', 'review_delete', 'review_reply'] },
-  { key: 'photos', label: 'รูป', actions: ['photo_add'] },
+  { key: 'photos', label: 'รูป', actions: ['photo_add', 'photo_report', 'photo_delete'] },
   { key: 'sightings', label: 'เจอน้อง', actions: ['sighting', 'feeding'] },
   { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report', 'review_report'] },
   { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_confirm', 'help_resolve', 'help_expire'] },
@@ -47,6 +47,8 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
   help_confirm: { icon: Eye, text: 'ยืนยันว่า {cat} ต้องการความช่วยเหลือ', tone: 'bg-red-100 text-red-700' },
+  photo_report: { icon: Flag, text: 'รายงานรูปของ {cat}', tone: 'bg-red-100 text-red-700' },
+  photo_delete: { icon: ImageOff, text: 'ลบรูปของ {cat}', tone: 'bg-stone-200 text-stone-700' },
   move_request: { icon: MapPinned, text: 'เสนอตำแหน่งใหม่ของหมุด {cat}', tone: 'bg-sky-100 text-sky-700' },
   help_expire: { icon: Hourglass, text: 'เรื่องที่แจ้งไว้ของ {cat} ปิดเองเพราะไม่มีความเคลื่อนไหว', tone: 'bg-stone-200 text-stone-700' },
 }

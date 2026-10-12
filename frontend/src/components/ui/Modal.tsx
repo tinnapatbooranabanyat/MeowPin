@@ -8,11 +8,13 @@ interface Props {
   children: ReactNode
   /** กว้างขึ้นสำหรับหน้าที่มีรายการยาว เช่นรายงานของ admin */
   wide?: boolean
+  /** อยู่เหนือทุกอย่าง (เช่นหน้าต่างให้เข้าสู่ระบบ ที่อาจเด้งขึ้นตอนดูรูปเต็มจอ) */
+  top?: boolean
 }
 
 // บนมือถือเป็นแผ่นเลื่อนขึ้นจากด้านล่าง บนจอใหญ่เป็นกล่องกลางจอ
 // pointer-events-auto: ตอนการ์ดแมว (vaul) เปิดอยู่ body ถูกตั้ง pointer-events: none — ไม่ใส่แล้วแตะ/เลื่อนในหน้าต่างไม่ได้
-export function Modal({ title, onClose, children, wide = false }: Props) {
+export function Modal({ title, onClose, children, wide = false, top = false }: Props) {
   const { t } = useI18n()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -21,7 +23,7 @@ export function Modal({ title, onClose, children, wide = false }: Props) {
   }, [onClose])
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
+    <div className={`pointer-events-auto fixed inset-0 ${top ? 'z-[70]' : 'z-50'} flex animate-fade-in items-end justify-center bg-black/40 md:items-center`} onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"

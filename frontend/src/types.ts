@@ -92,6 +92,23 @@ export interface ReviewReport {
   catName: string | null
 }
 
+export type PhotoReportReason = 'not_this_cat' | 'not_cat' | 'inappropriate' | 'privacy' | 'other'
+
+/** รูปที่ถูกรายงาน (ผู้ดูแลเห็น) — photoRef = id รูปในอัลบั้ม หรือ 'main' = รูปหลักของหมุด */
+export interface PhotoReport {
+  id: string
+  catId: string
+  photoRef: string
+  reason: PhotoReportReason
+  details: string
+  createdAt: string
+  reporterName: string | null
+  catName: string | null
+  /** null = รูปถูกลบไปแล้ว */
+  photoUrl: string | null
+  uploaderName: string | null
+}
+
 export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted'
 
 export interface AppNotification {
@@ -303,6 +320,8 @@ export type ActivityAction =
   | 'help_confirm'
   | 'help_expire'
   | 'move_request'
+  | 'photo_report'
+  | 'photo_delete'
 
 export interface ActivityEntry {
   id: number

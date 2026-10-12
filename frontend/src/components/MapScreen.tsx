@@ -152,7 +152,7 @@ export function MapScreen({ mapId }: Props) {
     enabled: isAdmin,
     refetchInterval: 60_000,
   })
-  const pendingReports = (adminCounts.data?.catReports ?? 0) + (adminCounts.data?.bugReports ?? 0)
+  const pendingReports = (adminCounts.data?.catReports ?? 0) + (adminCounts.data?.bugReports ?? 0) + (adminCounts.data?.photoReports ?? 0)
 
   // แมวที่เลือกอาจอยู่นอกกรอบแผนที่ (เช่นเปิดจากลิงก์แชร์) → โหลดแยกรายตัว
   const selectedFromList = cats.find((c) => c.id === selectedId)

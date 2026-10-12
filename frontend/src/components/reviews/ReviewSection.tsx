@@ -175,7 +175,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
         ))}
       </ul>
       {lightbox !== null && (
-        <PhotoLightbox photos={photos} startIndex={lightbox} alt={cat.name} onClose={() => setLightbox(null)} />
+        <PhotoLightbox photos={photos} startIndex={lightbox} alt={cat.name} catId={cat.id} onClose={() => setLightbox(null)} />
       )}
     </section>
   )

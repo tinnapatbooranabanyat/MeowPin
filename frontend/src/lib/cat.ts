@@ -1,5 +1,5 @@
 import { getLang, translate, type Lang } from '../i18n'
-import type { Cat, CatReportReason, CatTraits, FurColor, HelpKind, Neutered, OwnerStatus, Verification } from '../types'
+import type { Cat, CatReportReason, CatTraits, FurColor, HelpKind, Neutered, OwnerStatus, PhotoReportReason, Verification } from '../types'
 
 // สองสี: ครึ่งบนสีหลัก ครึ่งล่างสีขาว
 const half = (top: string, bottom: string) => `linear-gradient(160deg, ${top} 0 52%, ${bottom} 52% 100%)`
@@ -111,6 +111,14 @@ export const NEUTERED: Record<Neutered, { label: string; short: string; classNam
   yes: { label: 'ทำหมันแล้ว', short: 'ทำหมันแล้ว', className: 'bg-teal-100 text-teal-800' },
   no: { label: 'ยังไม่ทำหมัน', short: 'ยังไม่ทำหมัน', className: 'bg-amber-100 text-amber-800' },
   unknown: { label: 'ไม่แน่ใจ', short: 'ไม่แน่ใจเรื่องทำหมัน', className: 'bg-stone-200 text-stone-700' },
+}
+
+export const PHOTO_REPORT_REASONS: Record<PhotoReportReason, string> = {
+  not_this_cat: 'ไม่ใช่น้องตัวนี้',
+  not_cat: 'ไม่ใช่รูปแมว',
+  inappropriate: 'รูปไม่เหมาะสม',
+  privacy: 'ละเมิดความเป็นส่วนตัว (เห็นหน้าคน บ้านเลขที่ ทะเบียนรถ)',
+  other: 'อื่นๆ',
 }
 
 export const CAT_REPORT_REASONS: Record<CatReportReason, { label: string; hint: string }> = {

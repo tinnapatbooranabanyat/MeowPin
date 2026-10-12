@@ -214,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
       {loginReason && (
         <Modal
+          top
           title={t('เข้าสู่ระบบก่อนนะ')}
           onClose={() => {
             setLoginReason(null)

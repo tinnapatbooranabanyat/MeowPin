@@ -18,6 +18,8 @@ import type {
   HelpRequest,
   LeaderboardRow,
   MoveRequest,
+  PhotoReport,
+  PhotoReportReason,
   FurColor,
   LatLng,
   Neutered,
@@ -763,6 +765,93 @@ export function uploadCatPhoto(
   return callBackend<{ id: string }>('POST', `/cats/${catId}/photos`, form)
 }
 
+/** ลบรูปในอัลบั้ม (คนอัปโหลดหรือผู้ดูแล) — ผ่าน backend เพื่อลบไฟล์ใน storage ด้วย */
+export function deleteCatPhoto(catId: string, photoId: string): Promise<void> {
+  return callBackend<void>('DELETE', `/cats/${catId}/photos/${photoId}`)
+}
+
+/** รหัสรูปสำหรับหัวใจ/รายงาน: รูปหลักของหมุด = 'main' */
+export const photoRef = (photo: CatPhoto) => (photo.id === 'main' ? 'main' : photo.id)
+
+export interface PhotoLike {
+  ref: string
+  userId: string
+}
+
+export async function fetchPhotoLikes(catId: string): Promise<PhotoLike[]> {
+  const { data, error } = await db().from('cat_photo_likes').select('photo_ref, user_id').eq('cat_id', catId).limit(5000)
+  // ยังไม่ได้รัน migration 0023
+  if (error || !data) return []
+  return data.map((r) => ({ ref: r.photo_ref as string, userId: r.user_id as string }))
+}
+
+export async function setPhotoLike(catId: string, ref: string, like: boolean): Promise<void> {
+  const { error } = like
+    ? await db().from('cat_photo_likes').insert({ cat_id: catId, photo_ref: ref })
+    : await db().from('cat_photo_likes').delete().eq('cat_id', catId).eq('photo_ref', ref)
+  // กดซ้ำ (มีอยู่แล้ว) ถือว่าสำเร็จ
+  if (error && error.code !== '23505') throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export async function reportPhoto(catId: string, ref: string, reason: PhotoReportReason, details: string): Promise<void> {
+  const { error } = await db().from('cat_photo_reports').insert({ cat_id: catId, photo_ref: ref, reason, details })
+  if (error) {
+    if (error.code === '23505') throw new ApiError('คุณรายงานรูปนี้ไปแล้ว ผู้ดูแลกำลังตรวจสอบ', 409)
+    throw new ApiError('ส่งรายงานไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+}
+
+interface PhotoReportRow {
+  id: string
+  cat_id: string
+  photo_ref: string
+  reason: PhotoReportReason
+  details: string
+  created_at: string
+  profiles: { display_name: string } | null
+  cats: { name: string; photo_path: string | null; profiles: { display_name: string } | null } | null
+}
+
+export async function fetchPhotoReports(status: 'open' | 'resolved'): Promise<PhotoReport[]> {
+  const { data, error } = await db()
+    .from('cat_photo_reports')
+    .select('id, cat_id, photo_ref, reason, details, created_at, profiles!cat_photo_reports_user_id_fkey(display_name), cats(name, photo_path, profiles!cats_created_by_fkey(display_name))')
+    .eq('status', status)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error || !data) return []
+  const rows = data as unknown as PhotoReportRow[]
+  const albumIds = [...new Set(rows.map((r) => r.photo_ref).filter((ref) => ref !== 'main'))]
+  const album = new Map<string, { path: string; uploader: string | null }>()
+  if (albumIds.length) {
+    const { data: photos } = await db().from('cat_photos').select('id, photo_path, profiles(display_name)').in('id', albumIds)
+    for (const p of (photos ?? []) as unknown as { id: string; photo_path: string; profiles: { display_name: string } | null }[]) {
+      album.set(p.id, { path: p.photo_path, uploader: p.profiles?.display_name ?? null })
+    }
+  }
+  return rows.map((r) => {
+    const main = r.photo_ref === 'main'
+    const photo = main ? null : album.get(r.photo_ref)
+    return {
+      id: r.id,
+      catId: r.cat_id,
+      photoRef: r.photo_ref,
+      reason: r.reason,
+      details: r.details,
+      createdAt: r.created_at,
+      reporterName: r.profiles?.display_name ?? null,
+      catName: r.cats?.name ?? null,
+      photoUrl: (main ? photoUrl(r.cats?.photo_path ?? null) : photo ? photoUrl(photo.path) : null) ?? null,
+      uploaderName: main ? (r.cats?.profiles?.display_name ?? null) : (photo?.uploader ?? null),
+    }
+  })
+}
+
+export async function setPhotoReportStatus(ids: string[], status: 'open' | 'resolved'): Promise<void> {
+  const { error } = await db().from('cat_photo_reports').update({ status }).in('id', ids)
+  if (error) throw new ApiError('อัปเดตรายงานไม่สำเร็จ', 500)
+}
+
 export async function deleteReview(reviewId: string): Promise<void> {
   const { error } = await db().from('reviews').delete().eq('id', reviewId)
   if (error) throw new ApiError('ลบรีวิวไม่สำเร็จ', 500)
@@ -894,15 +983,16 @@ export async function setCatReportsStatus(catId: string, status: 'open' | 'resol
 export interface AdminCounts {
   catReports: number
   bugReports: number
+  photoReports: number
 }
 
 export async function fetchAdminCounts(): Promise<AdminCounts> {
-  const count = async (table: 'cat_reports' | 'bug_reports') => {
+  const count = async (table: 'cat_reports' | 'bug_reports' | 'cat_photo_reports') => {
     const { count: n } = await db().from(table).select('id', { count: 'exact', head: true }).eq('status', 'open')
     return n ?? 0
   }
-  const [catReports, bugReports] = await Promise.all([count('cat_reports'), count('bug_reports')])
-  return { catReports, bugReports }
+  const [catReports, bugReports, photoReports] = await Promise.all([count('cat_reports'), count('bug_reports'), count('cat_photo_reports')])
+  return { catReports, bugReports, photoReports }
 }
 
 // ═══════════════ ติดตามน้อง + การแจ้งเตือน ═══════════════

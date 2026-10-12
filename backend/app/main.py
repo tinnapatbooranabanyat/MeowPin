@@ -532,6 +532,24 @@ def add_cat_photo(
     return {"id": row["id"], "photoUrl": public_photo_url(photo_path), "reviewId": row["review_id"]}
 
 
+@app.delete("/cats/{cat_id}/photos/{photo_id}", status_code=204)
+def delete_cat_photo(cat_id: UUID, photo_id: UUID, request: Request):
+    """ลบรูปในอัลบั้ม (คนอัปโหลดหรือผู้ดูแล) — ลบไฟล์ใน storage ด้วย (หัวใจ/รายงานของรูปถูกล้างด้วย trigger)"""
+    user_id = current_user_id(request)
+    client = get_client()
+    rows = (
+        client.table("cat_photos").select("user_id, photo_path")
+        .eq("id", str(photo_id)).eq("cat_id", str(cat_id)).limit(1).execute().data
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="ไม่พบรูปนี้")
+    if rows[0].get("user_id") != user_id and not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="ลบได้เฉพาะรูปที่คุณอัปโหลดเอง")
+    client.table("cat_photos").delete().eq("id", str(photo_id)).execute()
+    client.storage.from_(settings.photo_bucket).remove([rows[0]["photo_path"]])
+    log_activity(client, user_id, "photo_delete", cat_id, {})
+
+
 def log_activity(client, user_id: str, action: str, cat_id: UUID | None, detail: dict) -> None:
     """บันทึกกิจกรรมที่ trigger ในฐานข้อมูลไม่รู้ว่าใครทำ (เช่น admin ลบหมุดผ่าน backend) — พลาดก็ไม่เป็นไร"""
     try:

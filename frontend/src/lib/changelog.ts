@@ -16,6 +16,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-12-photos',
+    date: '2026-10-12',
+    title: { th: 'เพิ่มรูปน้องได้โดยไม่ต้องรีวิว', en: 'Add cat photos without a review' },
+    items: [
+      { th: 'กด "เพิ่มรูป" ในหน้าน้องหรือในอัลบั้ม เพิ่มได้ทีละหลายรูป ไม่ต้องเขียนรีวิว', en: 'Tap "Add photo" on the cat page or in the album to add several photos, no review needed' },
+      { th: 'กดหัวใจรูปที่ชอบได้ ตอนเปิดดูรูปเต็มจอ', en: 'Heart the photos you love in the full-screen view' },
+      { th: 'รายงานรูปที่ไม่ใช่น้อง ไม่เหมาะสม หรือละเมิดความเป็นส่วนตัวได้', en: 'Report photos that show the wrong cat, are inappropriate or break privacy' },
+      { th: 'ลบรูปที่ตัวเองอัปโหลดได้', en: 'Delete photos you uploaded' },
+    ],
+  },
+  {
     id: '2026-10-12-fur-filter',
     date: '2026-10-12',
     title: { th: 'กรองสีขนได้หลายสี', en: 'Filter by several fur colors' },

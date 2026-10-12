@@ -8,11 +8,12 @@ import { photoUrl } from '../../lib/supabase'
 import type { BugReport, CatReport } from '../../types'
 import { Modal } from '../ui/Modal'
 import { ActivityLog } from './ActivityLog'
+import { PhotoReportsList } from './PhotoReportsList'
 import { ReviewReportsList } from './ReviewReportsList'
 import { UnverifiedCats } from './UnverifiedCats'
 import { confirmAction } from '../../lib/dialogs'
 
-type Tab = 'cats' | 'reviews' | 'bugs' | 'unverified' | 'activity'
+type Tab = 'cats' | 'reviews' | 'photos' | 'bugs' | 'unverified' | 'activity'
 type Status = 'open' | 'resolved'
 
 const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: string }> = {
@@ -22,7 +23,7 @@ const BUG_CATEGORY: Record<BugReport['category'], { label: string; className: st
 }
 
 interface Props {
-  counts: { catReports: number; bugReports: number } | undefined
+  counts: { catReports: number; bugReports: number; photoReports: number } | undefined
   onClose: () => void
   onOpenCat: (catId: string) => void
 }
@@ -47,6 +48,10 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
         </button>
         <button type="button" onClick={() => setTab('reviews')} className={tabClass(tab === 'reviews')}>
           {t('รีวิวที่ถูกรายงาน')}
+        </button>
+        <button type="button" onClick={() => setTab('photos')} className={tabClass(tab === 'photos')}>
+          {t('รูปที่ถูกรายงาน')}
+          {!!counts?.photoReports && <Badge n={counts.photoReports} />}
         </button>
         <button type="button" onClick={() => setTab('bugs')} className={tabClass(tab === 'bugs')}>
           {t('ปัญหา / ไอเดีย')}
@@ -78,6 +83,7 @@ export function AdminDialog({ counts, onClose, onOpenCat }: Props) {
 
       {tab === 'cats' && <CatReportsList status={status} onOpenCat={onOpenCat} />}
       {tab === 'reviews' && <ReviewReportsList status={status} onOpenCat={onOpenCat} />}
+      {tab === 'photos' && <PhotoReportsList status={status} onOpenCat={onOpenCat} />}
       {tab === 'bugs' && <BugReportsList status={status} />}
       {tab === 'unverified' && <UnverifiedCats onOpenCat={onOpenCat} />}
       {tab === 'activity' && <ActivityLog onOpenCat={onOpenCat} />}
