@@ -1256,6 +1256,58 @@ export async function resolveHelp(catId: string, note = ''): Promise<void> {
   }
 }
 
+// ═══════════════ ช่วยน้องต่อหลังแจ้ง ═══════════════
+export interface HelpAlertArea {
+  position: LatLng
+  radiusM: number
+  updatedAt: string
+}
+
+/** พื้นที่รับแจ้งเตือนน้องต้องการความช่วยเหลือของฉัน (null = ยังไม่เปิด / ยังไม่ได้รัน migration 0024) */
+export async function fetchHelpAlertArea(): Promise<HelpAlertArea | null> {
+  const { data, error } = await db().rpc('my_help_alert_area')
+  const row = !error && Array.isArray(data) ? (data[0] as { lat: number; lng: number; radius_m: number; updated_at: string } | undefined) : undefined
+  return row ? { position: { lat: row.lat, lng: row.lng }, radiusM: row.radius_m, updatedAt: row.updated_at } : null
+}
+
+export async function setHelpAlertArea(position: LatLng, radiusM: number): Promise<void> {
+  const { error } = await db().rpc('set_help_alert_area', { p_lat: position.lat, p_lng: position.lng, p_radius_m: radiusM })
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export async function clearHelpAlertArea(userId: string): Promise<void> {
+  const { error } = await db().from('help_alert_areas').delete().eq('user_id', userId)
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+export interface HelpResponder {
+  userId: string
+  name: string | null
+  createdAt: string
+}
+
+/** คนที่กด "ฉันกำลังไปช่วย" น้องตัวนี้ */
+export async function fetchHelpResponders(catId: string): Promise<HelpResponder[]> {
+  const { data, error } = await db()
+    .from('cat_help_responders')
+    .select('user_id, created_at, profiles!cat_help_responders_user_id_fkey(display_name)')
+    .eq('cat_id', catId)
+    .order('created_at', { ascending: true })
+  if (error || !data) return []
+  return (data as unknown as { user_id: string; created_at: string; profiles: { display_name: string } | null }[]).map((r) => ({
+    userId: r.user_id,
+    name: r.profiles?.display_name ?? null,
+    createdAt: r.created_at,
+  }))
+}
+
+export async function setHelpResponding(catId: string, userId: string, on: boolean): Promise<void> {
+  const { error } = on
+    ? await db().from('cat_help_responders').insert({ cat_id: catId })
+    : await db().from('cat_help_responders').delete().eq('cat_id', catId).eq('user_id', userId)
+  if (error && error.code !== '23505') throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
 /** "ฉันก็เห็น" — คืน true ถ้าอยู่ใกล้หมุดตอนกด */
 export async function confirmHelp(requestId: string, fix: GpsFix | null): Promise<boolean> {
   const { data, error } = await db().rpc('confirm_cat_help', { p_request_id: requestId, ...gpsArgs(fix) })

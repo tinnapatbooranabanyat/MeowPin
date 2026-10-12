@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { BellOff, BellRing, CheckCircle2, MapPinned, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
+import { BellOff, BellRing, CheckCircle2, Footprints, MapPinned, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
 import { useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -9,6 +9,7 @@ import { markNotificationsRead } from '../../lib/api'
 import { HELP_KINDS, timeAgo } from '../../lib/cat'
 import type { AppNotification, HelpKind } from '../../types'
 import { Modal } from '../ui/Modal'
+import { HelpAreaToggle } from './HelpAreaToggle'
 import { PushToggle } from './PushToggle'
 
 const ICONS = {
@@ -19,6 +20,8 @@ const ICONS = {
   review_reply: { icon: MessageCircle, tone: 'bg-sky-100 text-sky-700' },
   help_check: { icon: BellRing, tone: 'bg-amber-100 text-amber-700' },
   move_request: { icon: MapPinned, tone: 'bg-sky-100 text-sky-700' },
+  help_nearby: { icon: HeartPulse, tone: 'bg-red-100 text-red-700' },
+  help_on_way: { icon: Footprints, tone: 'bg-emerald-100 text-emerald-700' },
   move_accepted: { icon: MapPinned, tone: 'bg-emerald-100 text-emerald-700' },
 }
 
@@ -42,6 +45,19 @@ function useNotificationText() {
         return t('{actor} ตอบกลับรีวิวของคุณที่{cat}: “{body}”', { actor, cat, body: n.data.body ?? '' })
       case 'help_check':
         return t('{cat} ยังต้องการความช่วยเหลือไหม? เรื่องที่คุณแจ้งไว้ไม่มีความเคลื่อนไหวมา 7 วัน กดเพื่อตอบ ไม่อย่างนั้นจะปิดเองใน 7 วัน', { cat })
+      case 'help_nearby':
+        return n.data.distance_m !== undefined
+          ? t('{cat} ต้องการความช่วยเหลือ ({kind}) ห่างไปประมาณ {m} ม. ถ้าสะดวกช่วยแวะไปดูหน่อยนะ', {
+              cat,
+              kind: t(HELP_KINDS[n.data.help_kind as HelpKind]?.label ?? 'อื่นๆ'),
+              m: n.data.distance_m,
+            })
+          : t('{cat} ต้องการความช่วยเหลือ ({kind}) แถวนี้ ถ้าสะดวกช่วยแวะไปดูหน่อยนะ', {
+              cat,
+              kind: t(HELP_KINDS[n.data.help_kind as HelpKind]?.label ?? 'อื่นๆ'),
+            })
+      case 'help_on_way':
+        return t('{actor} กำลังไปช่วย{cat}ที่คุณแจ้งไว้', { actor, cat })
       case 'move_request':
         return t('{actor} เสนอตำแหน่งใหม่ของหมุด{cat} กดเพื่อดูแล้วเลือกว่าจะย้ายไหม', { actor, cat })
       case 'move_accepted':
@@ -72,6 +88,7 @@ export function NotificationsDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={t('การแจ้งเตือน')} onClose={onClose}>
       <PushToggle />
+      <HelpAreaToggle />
       {isPending && <p className="py-8 text-center text-sm text-stone-500">{t('กำลังโหลด…')}</p>}
       {!isPending && items.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-stone-500">

@@ -109,13 +109,13 @@ export interface PhotoReport {
   uploaderName: string | null
 }
 
-export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted'
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted' | 'help_nearby' | 'help_on_way'
 
 export interface AppNotification {
   id: number
   kind: NotificationKind
   catId: string | null
-  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number; body?: string }
+  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number; body?: string; distance_m?: number }
   createdAt: string
   readAt: string | null
 }
@@ -322,6 +322,7 @@ export type ActivityAction =
   | 'move_request'
   | 'photo_report'
   | 'photo_delete'
+  | 'help_respond'
 
 export interface ActivityEntry {
   id: number

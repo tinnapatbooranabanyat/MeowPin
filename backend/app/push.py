@@ -52,6 +52,21 @@ def render(kind: str, data: dict, lang: str) -> tuple[str, str]:
             if th
             else ("Does this cat still need help?", f"Your report about {cat} has had no updates for 7 days. Tap to reply, or it will close in 7 days.")
         )
+    if kind == "help_nearby":
+        label = HELP_KINDS.get(data.get("help_kind", ""), HELP_KINDS["other"])
+        m = data.get("distance_m")
+        th_far = f" ห่างไปประมาณ {m} ม." if m is not None else ""
+        en_far = f" about {m} m away" if m is not None else ""
+        return (
+            ("มีน้องต้องการความช่วยเหลือแถวนี้ 🚑", f"{cat} ({label[0]}){th_far} ถ้าสะดวกช่วยแวะไปดูหน่อยนะ")
+            if th
+            else ("A cat near you needs help 🚑", f"{cat} is {label[1]}{en_far}. If you can, please check on them.")
+        )
+    if kind == "help_on_way":
+        return (
+            ("มีคนกำลังไปช่วยน้องแล้ว 🏃", f"{actor} กำลังไปช่วย{cat}ที่คุณแจ้งไว้") if th
+            else ("Someone is on the way 🏃", f"{actor} is on the way to help {cat}")
+        )
     if kind == "move_request":
         return (
             ("มีคนแจ้งว่าหมุดอยู่ผิดที่ 📍", f"{actor} เสนอตำแหน่งใหม่ของ{cat} กดเพื่อดูแล้วเลือกว่าจะย้ายไหม")

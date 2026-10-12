@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BellRing, CheckCircle2, Eye, HeartPulse, LoaderCircle, MapPin } from 'lucide-react'
+import { BellRing, CheckCircle2, Eye, Footprints, HeartPulse, LoaderCircle, MapPin, Navigation } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
-import { confirmHelp, fetchHelpRequests, renewHelp, requestHelp, resolveHelp, unconfirmHelp } from '../lib/api'
-import { HELP_KINDS, timeAgo } from '../lib/cat'
+import { confirmHelp, fetchHelpRequests, fetchHelpResponders, renewHelp, requestHelp, resolveHelp, setHelpResponding, unconfirmHelp } from '../lib/api'
+import { directionsUrl, HELP_KINDS, timeAgo } from '../lib/cat'
 import { distanceMeters, getCurrentPosition, type GpsFix } from '../lib/geo'
 import type { Cat, HelpKind, HelpRequest } from '../types'
 import { Modal } from './ui/Modal'
@@ -53,6 +53,7 @@ export function HelpSection({ cat }: { cat: Cat }) {
               ))}
             </ul>
           )}
+          <HelpResponders cat={cat} />
           {canResolve && (
             <button
               type="button"
@@ -288,5 +289,68 @@ function HelpRequestItem({ cat, request: r, onChange }: { cat: Cat; request: Hel
         </div>
       )}
     </li>
+  )
+}
+
+/** "ฉันกำลังไปช่วย" — บอกคนอื่นว่ามีคนรับเรื่องแล้ว ไม่ต้องไปซ้ำ (คนที่แจ้งไว้ได้แจ้งเตือน) */
+function HelpResponders({ cat }: { cat: Cat }) {
+  const { t, lang } = useI18n()
+  const { userId, requireLogin } = useAuth()
+  const queryClient = useQueryClient()
+  const key = ['helpResponders', cat.id]
+  const responders = useQuery({ queryKey: key, queryFn: () => fetchHelpResponders(cat.id) })
+  const list = responders.data ?? []
+  const going = userId !== null && list.some((r) => r.userId === userId)
+  const toggle = useMutation({
+    mutationFn: () => setHelpResponding(cat.id, userId!, !going),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+  })
+
+  return (
+    <div className="mt-3 rounded-xl bg-surface px-3 py-2.5 ring-1 ring-red-100">
+      <p className="flex items-start gap-1.5 text-sm text-stone-700">
+        <Footprints size={15} className="mt-0.5 shrink-0 text-red-600" aria-hidden="true" />
+        {list.length ? (
+          <span>
+            <span className="font-medium text-stone-900">{t('กำลังไปช่วย:')}</span>{' '}
+            {list.map((r, i) => (
+              <span key={r.userId}>
+                {i > 0 && ', '}
+                {r.userId === userId ? t('คุณ') : (r.name ?? t('ผู้ใช้'))}
+                <span className="text-xs text-stone-500"> ({timeAgo(r.createdAt, lang)})</span>
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="text-stone-500">{t('ยังไม่มีใครบอกว่ากำลังไปช่วย')}</span>
+        )}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          disabled={toggle.isPending}
+          aria-pressed={going}
+          onClick={() => requireLogin(t('เข้าสู่ระบบเพื่อบอกว่ากำลังไปช่วยน้อง')) && toggle.mutate()}
+          className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 transition disabled:opacity-60 ${
+            going ? 'bg-surface text-stone-700 ring-stone-300 hover:bg-stone-100' : 'bg-red-600 text-white ring-red-600 hover:bg-red-700'
+          }`}
+        >
+          {toggle.isPending ? <LoaderCircle size={15} className="animate-spin" aria-hidden="true" /> : <Footprints size={15} aria-hidden="true" />}
+          {t(going ? 'ยกเลิก ไปไม่ได้แล้ว' : 'ฉันกำลังไปช่วย')}
+        </button>
+        {going && (
+          <a
+            href={directionsUrl(cat)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-sky-700 ring-1 ring-sky-200 hover:bg-sky-50"
+          >
+            <Navigation size={15} aria-hidden="true" />
+            {t('นำทางไปหาน้อง')}
+          </a>
+        )}
+      </div>
+      {toggle.error && <p className="mt-1.5 text-xs text-red-700">{t(toggle.error.message)}</p>}
+    </div>
   )
 }

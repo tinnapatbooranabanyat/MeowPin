@@ -16,6 +16,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-help-nearby',
+    date: '2026-10-13',
+    title: { th: 'ช่วยน้องได้ไวขึ้น', en: 'Help cats faster' },
+    items: [
+      {
+        th: 'เปิด "น้องต้องการความช่วยเหลือใกล้ฉัน" ในหน้าการแจ้งเตือน แล้วจะได้แจ้งเตือนเมื่อมีน้องแถวนั้นต้องการความช่วยเหลือ',
+        en: 'Turn on "Cats needing help near me" in Notifications to hear when a cat near you needs help',
+      },
+      {
+        th: 'ปุ่ม "ฉันกำลังไปช่วย" บอกคนอื่นว่ามีคนรับเรื่องแล้ว คนที่แจ้งไว้จะได้แจ้งเตือน',
+        en: '"I’m on my way" tells others someone is going, and lets the reporter know',
+      },
+    ],
+  },
+  {
     id: '2026-10-12-ui-fixes',
     date: '2026-10-12',
     title: { th: 'แก้หน้าตาเล็กน้อย', en: 'Small UI fixes' },
