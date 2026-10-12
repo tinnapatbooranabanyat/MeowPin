@@ -29,6 +29,8 @@ import { PhotoSearchDialog } from './PhotoSearchDialog'
 import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
+import { PlaceMarker } from './PlaceMarker'
+import { usePlaceSearch, type FoundPlace, type PlaceSuggestion } from '../hooks/usePlaceSearch'
 import { FilterChips } from './FilterChips'
 import { SearchBar } from './SearchBar'
 import { Toast } from './Toast'
@@ -125,6 +127,7 @@ export function MapScreen({ mapId }: Props) {
   const [startAtUser] = useState(() => !new URLSearchParams(window.location.search).get('cat') && readSavedCamera() === null)
   const [toast, setToast] = useState<string | null>(null)
   const [droppedPin, setDroppedPin] = useState<LatLng | null>(null)
+  const [placePin, setPlacePin] = useState<FoundPlace | null>(null)
   const [adding, setAdding] = useState<{ origin: LatLng; start: AddCatStart } | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
   const [hintDismissed, setHintDismissed] = useState(readHintDismissed)
@@ -162,6 +165,25 @@ export function MapScreen({ mapId }: Props) {
     [cats, furColor, seenToday, friendlyOnly, needsHelp, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
+  const placeSearch = usePlaceSearch(query)
+
+  // เลือกสถานที่ → ล้างคำค้น (ให้เห็นแมวทุกตัวแถวนั้น) แล้วซูมไปที่นั่น
+  const selectPlace = async (suggestion: PlaceSuggestion) => {
+    const place = await placeSearch.resolve(suggestion)
+    if (!place || !map) return
+    setQuery('')
+    setSelectedId(null)
+    setDroppedPin(null)
+    setPlacePin(place)
+    if (place.viewport) map.fitBounds(place.viewport)
+    else map.panTo(place.position)
+    // สถานที่เล็กๆ (ร้าน/ตึก) viewport แคบมาก → ไม่ซูมเกิน 18 / สถานที่ใหญ่ (จังหวัด) ก็ไม่ไกลกว่า 12 จะได้เห็นหมุดแมว
+    google.maps.event.addListenerOnce(map, 'idle', () => {
+      const zoom = map.getZoom() ?? 16
+      if (zoom > 18) map.setZoom(18)
+      else if (zoom < 12) map.setZoom(12)
+    })
+  }
 
   // ปลุก server ตั้งแต่เปิดแผนที่ และทุกครั้งที่กลับมาที่แท็บ — พอจะปักหมุดจริง server จะได้ตื่นแล้ว
   useEffect(() => {
@@ -413,11 +435,22 @@ export function MapScreen({ mapId }: Props) {
             if (adding || consumeClick()) return
             setSelectedId(null)
             setDroppedPin(null)
+            setPlacePin(null)
           }}
           onIdle={(e) => updateCamera(e.map)}
         >
           <CatMarkers cats={visibleCats} selectedId={selectedId} onSelect={selectCat} />
           {userPosition && <UserLocationMarker position={userPosition} />}
+          {placePin && !adding && (
+            <PlaceMarker
+              position={placePin.position}
+              name={placePin.name}
+              onClick={() => {
+                setSelectedId(null)
+                setDroppedPin(placePin.position)
+              }}
+            />
+          )}
           {droppedPin && !adding && (
             <DroppedPin
               position={droppedPin}
@@ -438,6 +471,8 @@ export function MapScreen({ mapId }: Props) {
                   onQueryChange={setQuery}
                   suggestions={suggestions}
                   onSelect={selectCat}
+                  places={placeSearch.places}
+                  onSelectPlace={selectPlace}
                   onPhotoSearch={() => requireLogin(t('เข้าสู่ระบบเพื่อค้นหาด้วยรูป')) && setDialog({ kind: 'photoSearch' })}
                 />
               </div>

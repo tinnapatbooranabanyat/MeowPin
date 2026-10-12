@@ -1,5 +1,6 @@
-import { Camera, PawPrint, Search, X } from 'lucide-react'
+import { Camera, MapPin, PawPrint, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import type { PlaceSuggestion } from '../hooks/usePlaceSearch'
 import type { Cat } from '../types'
 import { CatAvatar } from './CatAvatar'
 import { useI18n } from '../hooks/useI18n'
@@ -9,11 +10,14 @@ interface Props {
   onQueryChange: (query: string) => void
   suggestions: Cat[]
   onSelect: (cat: Cat) => void
+  /** สถานที่จริงใน Google Maps */
+  places: PlaceSuggestion[]
+  onSelectPlace: (place: PlaceSuggestion) => void
   /** ค้นหาด้วยรูป */
   onPhotoSearch: () => void
 }
 
-export function SearchBar({ query, onQueryChange, suggestions, onSelect, onPhotoSearch }: Props) {
+export function SearchBar({ query, onQueryChange, suggestions, onSelect, places, onSelectPlace, onPhotoSearch }: Props) {
   const { t } = useI18n()
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -44,8 +48,9 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect, onPhoto
           onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') e.currentTarget.blur()
-            if (e.key === 'Enter' && suggestions[0]) {
-              onSelect(suggestions[0])
+            if (e.key === 'Enter' && (suggestions[0] || places[0])) {
+              if (suggestions[0]) onSelect(suggestions[0])
+              else onSelectPlace(places[0])
               e.currentTarget.blur()
             }
           }}
@@ -78,7 +83,7 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect, onPhoto
 
       {showSuggestions && (
         <ul className="absolute inset-x-0 top-14 origin-top animate-pop-in max-h-80 overflow-auto rounded-2xl bg-surface py-2 shadow-lg ring-1 ring-stone-200">
-          {suggestions.length === 0 && (
+          {suggestions.length === 0 && places.length === 0 && (
             <li className="px-4 py-3 text-sm text-stone-500">{t('ไม่เจอแมวที่ตรงกับ “{q}”', { q: query })}</li>
           )}
           {suggestions.map((cat) => (
@@ -97,6 +102,32 @@ export function SearchBar({ query, onQueryChange, suggestions, onSelect, onPhoto
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-medium text-stone-800">{cat.name}</span>
                   <span className="block truncate text-xs text-stone-500">{cat.placeName || t('ไม่ระบุสถานที่')}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+          {places.length > 0 && (
+            <li className="px-4 pt-2 pb-1 text-xs font-medium text-stone-500" aria-hidden="true">
+              {t('สถานที่')}
+            </li>
+          )}
+          {places.map((place) => (
+            <li key={place.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onSelectPlace(place)
+                  setFocused(false)
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-orange-50"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600">
+                  <MapPin size={18} aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[15px] text-stone-800">{place.main}</span>
+                  {place.secondary && <span className="block truncate text-xs text-stone-500">{place.secondary}</span>}
                 </span>
               </button>
             </li>

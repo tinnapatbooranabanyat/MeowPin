@@ -747,6 +747,7 @@ export const EN: Record<string, string> = {
   'จะออกจากระบบทุกเครื่องและเขียนข้อมูลอะไรไม่ได้อีก': "They'll be signed out everywhere and won't be able to post anything.",
   'ระงับบัญชี': 'Suspend',
   'ตกลง': 'OK',
+  'สถานที่': 'Places',
   'เรื่องที่ไม่มีใครยืนยันหรืออัปเดตนาน 14 วันจะปิดเอง': 'Reports with no confirmations or updates for 14 days close automatically',
   'กำลังเช็กว่าคุณอยู่ใกล้น้องไหม…': 'Checking whether you are near the cat…',
   'คุณอยู่ใกล้น้อง เรื่องนี้จะขึ้นป้าย "แจ้งจากจุดที่เจอน้อง" ให้คนอื่นเชื่อถือมากขึ้น': 'You are near the cat, so this report will be marked "Reported on the spot", which makes it more trustworthy',
