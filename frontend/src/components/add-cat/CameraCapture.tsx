@@ -54,7 +54,7 @@ export function CameraCapture({ gps, onCapture, onFallback, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+    <div className="pointer-events-auto fixed inset-0 z-50 flex flex-col bg-black text-white">
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
         <button
           type="button"

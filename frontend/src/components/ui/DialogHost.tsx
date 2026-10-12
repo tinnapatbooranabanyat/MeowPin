@@ -35,7 +35,7 @@ function DialogView() {
   const Icon = danger ? AlertTriangle : CircleHelp
 
   return (
-    <div className="fixed inset-0 z-[90] flex animate-fade-in items-center justify-center bg-black/45 p-4" onClick={cancel}>
+    <div className="pointer-events-auto fixed inset-0 z-[90] flex animate-fade-in items-center justify-center bg-black/45 p-4" onClick={cancel}>
       <div
         role="alertdialog"
         aria-modal="true"

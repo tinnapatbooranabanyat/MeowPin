@@ -37,7 +37,7 @@ export function TermsDialog(props: Props) {
   const date = new Date(TERMS_UPDATED).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'long' })
 
   return (
-    <div className="fixed inset-0 z-[60] flex animate-fade-in items-end justify-center bg-black/50 md:items-center" onClick={onClose}>
+    <div className="pointer-events-auto fixed inset-0 z-[60] flex animate-fade-in items-end justify-center bg-black/50 md:items-center" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"

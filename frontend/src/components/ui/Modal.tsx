@@ -11,6 +11,7 @@ interface Props {
 }
 
 // บนมือถือเป็นแผ่นเลื่อนขึ้นจากด้านล่าง บนจอใหญ่เป็นกล่องกลางจอ
+// pointer-events-auto: ตอนการ์ดแมว (vaul) เปิดอยู่ body ถูกตั้ง pointer-events: none — ไม่ใส่แล้วแตะ/เลื่อนในหน้าต่างไม่ได้
 export function Modal({ title, onClose, children, wide = false }: Props) {
   const { t } = useI18n()
   useEffect(() => {
@@ -20,7 +21,7 @@ export function Modal({ title, onClose, children, wide = false }: Props) {
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
+    <div className="pointer-events-auto fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"

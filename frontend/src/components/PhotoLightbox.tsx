@@ -71,7 +71,7 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose }: Props) {
           go(dx < 0 ? 1 : -1)
         }
       }}
-      className="fixed inset-0 z-[60] flex animate-fade-in flex-col items-center justify-center bg-black/90 p-4"
+      className="pointer-events-auto fixed inset-0 z-[60] flex animate-fade-in flex-col items-center justify-center bg-black/90 p-4"
     >
       <img
         key={photo.id}
