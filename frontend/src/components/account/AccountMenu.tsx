@@ -1,9 +1,10 @@
-import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Megaphone, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sun, Trophy, UserRound } from 'lucide-react'
+import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Megaphone, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sparkles, Sun, Trophy, UserRound } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useTheme, type ThemePref } from '../../hooks/useTheme'
+import { useWhatsNew } from '../../hooks/useWhatsNew'
 import { skipActiveTransition } from '../../lib/viewTransition'
 import type { Lang } from '../../i18n'
 import { UserAvatar } from './UserAvatar'
@@ -12,6 +13,7 @@ import { UserAvatar } from './UserAvatar'
 const AboutDialog = lazy(() => import('./AboutDialog').then((m) => ({ default: m.AboutDialog })))
 const DevicesDialog = lazy(() => import('./DevicesDialog').then((m) => ({ default: m.DevicesDialog })))
 const NotificationsDialog = lazy(() => import('./NotificationsDialog').then((m) => ({ default: m.NotificationsDialog })))
+const WhatsNewDialog = lazy(() => import('./WhatsNewDialog').then((m) => ({ default: m.WhatsNewDialog })))
 
 interface Props {
   /** จำนวนรายงานที่ยังค้าง (เฉพาะ admin) — โชว์จุดแดงบนรูปโปรไฟล์ */
@@ -46,6 +48,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { unread } = useNotifications()
+  const whatsNew = useWhatsNew()
+  // เปิดอยู่ = id ล่าสุดที่เคยเห็นก่อนเปิด (ใช้ติดป้าย "ใหม่") / undefined = ปิด
+  const [whatsNewFrom, setWhatsNewFrom] = useState<string | null | undefined>(undefined)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -112,6 +117,12 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           >
             {unread > 9 ? '9+' : unread}
           </span>
+        )}
+        {whatsNew.hasNew && (
+          <span
+            className="absolute -right-0.5 -bottom-0.5 flex size-3.5 items-center justify-center rounded-full bg-orange-500 ring-2 ring-surface"
+            aria-label={t('มีอัปเดตใหม่')}
+          />
         )}
         {isAdmin && pendingReports > 0 && (
           <span className="absolute top-0 right-0 flex size-3" aria-hidden="true">
@@ -199,6 +210,20 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
           </MenuSection>
 
           <MenuSection title={t('ช่วยเหลือ')}>
+            <MenuItem
+              icon={<Sparkles size={18} className="text-orange-500" />}
+              onClick={pick(() => {
+                setWhatsNewFrom(whatsNew.seen)
+                whatsNew.markSeen()
+              })}
+            >
+              <span className="flex flex-1 items-center justify-between">
+                {t('มีอะไรใหม่')}
+                {whatsNew.hasNew && (
+                  <span className="rounded-full bg-orange-500 px-1.5 text-xs leading-5 font-medium text-white">{t('ใหม่')}</span>
+                )}
+              </span>
+            </MenuItem>
             <MenuItem icon={<Bug size={18} />} onClick={pick(onReportBug)}>
               {t('รายงานปัญหา / เสนอไอเดีย')}
             </MenuItem>
@@ -261,6 +286,11 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
       {devicesOpen && session && (
         <Suspense fallback={null}>
           <DevicesDialog onClose={() => setDevicesOpen(false)} />
+        </Suspense>
+      )}
+      {whatsNewFrom !== undefined && (
+        <Suspense fallback={null}>
+          <WhatsNewDialog unseenId={whatsNewFrom} onClose={() => setWhatsNewFrom(undefined)} />
         </Suspense>
       )}
       {aboutOpen && (

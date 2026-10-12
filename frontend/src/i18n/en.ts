@@ -748,6 +748,8 @@ export const EN: Record<string, string> = {
   'ระงับบัญชี': 'Suspend',
   'ตกลง': 'OK',
   'สถานที่': 'Places',
+  'มีอะไรใหม่': "What's new",
+  'มีอัปเดตใหม่': 'New update',
   'ทุกวัน': 'All dates',
   'ล้างวันที่': 'Clear dates',
   'วันนี้': 'Today',
