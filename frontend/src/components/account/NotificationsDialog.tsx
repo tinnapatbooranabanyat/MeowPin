@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { BellOff, CheckCircle2, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
+import { BellOff, BellRing, CheckCircle2, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
 import { useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -17,6 +17,7 @@ const ICONS = {
   help_resolved: { icon: CheckCircle2, tone: 'bg-emerald-100 text-emerald-700' },
   not_seen: { icon: EyeOff, tone: 'bg-stone-200 text-stone-700' },
   review_reply: { icon: MessageCircle, tone: 'bg-sky-100 text-sky-700' },
+  help_check: { icon: BellRing, tone: 'bg-amber-100 text-amber-700' },
 }
 
 function useNotificationText() {
@@ -37,6 +38,8 @@ function useNotificationText() {
         return t('{cat} ได้รับความช่วยเหลือแล้ว', { cat })
       case 'review_reply':
         return t('{actor} ตอบกลับรีวิวของคุณที่{cat}: “{body}”', { actor, cat, body: n.data.body ?? '' })
+      case 'help_check':
+        return t('{cat} ยังต้องการความช่วยเหลือไหม? เรื่องที่คุณแจ้งไว้ไม่มีความเคลื่อนไหวมา 7 วัน กดเพื่อตอบ ไม่อย่างนั้นจะปิดเองใน 7 วัน', { cat })
       case 'not_seen':
         return t('ไม่มีใครเจอ{cat} มา {days} วันแล้ว ถ้าผ่านไปแถวนั้นช่วยดูน้องหน่อยนะ', { cat, days: n.data.days ?? 14 })
     }

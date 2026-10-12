@@ -34,6 +34,7 @@ import type {
   Verification,
 } from '../types'
 import type { CatFormValues } from '../components/add-cat/CatForm'
+import type { GpsFix } from './geo'
 import { photoUrl, storageUrl, supabase } from './supabase'
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
@@ -1026,17 +1027,21 @@ interface HelpRow {
   note: string
   created_at: string
   user_id: string
+  near_cat?: boolean
+  reminded_at?: string | null
+  cat_help_confirmations?: { user_id: string; near_cat: boolean }[]
   profiles: { display_name: string } | null
 }
 
+const HELP_SELECT = 'id, kind, note, created_at, user_id, profiles!cat_help_requests_user_id_fkey(display_name)'
+
 /** เรื่องที่ยังไม่มีใครปิดของน้องตัวนี้ */
 export async function fetchHelpRequests(catId: string): Promise<HelpRequest[]> {
-  const { data, error } = await db()
-    .from('cat_help_requests')
-    .select('id, kind, note, created_at, user_id, profiles!cat_help_requests_user_id_fkey(display_name)')
-    .eq('cat_id', catId)
-    .is('resolved_at', null)
-    .order('created_at', { ascending: false })
+  const query = (select: string) =>
+    db().from('cat_help_requests').select(select).eq('cat_id', catId).is('resolved_at', null).order('created_at', { ascending: false })
+  let { data, error } = await query(`${HELP_SELECT}, near_cat, reminded_at, cat_help_confirmations(user_id, near_cat)`)
+  // ยังไม่ได้รัน migration 0021 → ใช้แบบเดิม
+  if (error) ({ data, error } = await query(HELP_SELECT))
   if (error) return []
   return (data as unknown as HelpRow[]).map((r) => ({
     id: r.id,
@@ -1045,11 +1050,20 @@ export async function fetchHelpRequests(catId: string): Promise<HelpRequest[]> {
     createdAt: r.created_at,
     userId: r.user_id,
     reporterName: r.profiles?.display_name ?? null,
+    nearCat: r.near_cat ?? false,
+    confirmations: (r.cat_help_confirmations ?? []).map((c) => ({ userId: c.user_id, nearCat: c.near_cat })),
+    remindedAt: r.reminded_at ?? null,
   }))
 }
 
-export async function requestHelp(catId: string, kind: HelpKind, note: string): Promise<void> {
-  const { error } = await db().from('cat_help_requests').insert({ cat_id: catId, kind, note })
+const gpsArgs = (fix: GpsFix | null) =>
+  fix ? { p_lat: fix.position.lat, p_lng: fix.position.lng, p_accuracy: fix.accuracy } : {}
+
+/** แจ้งเรื่อง — ส่งพิกัดไปให้ฐานข้อมูลเช็กว่าอยู่ใกล้หมุดไหม (ไม่ได้เก็บพิกัดไว้) */
+export async function requestHelp(catId: string, kind: HelpKind, note: string, fix: GpsFix | null = null): Promise<void> {
+  let { error } = await db().rpc('request_cat_help', { p_cat_id: catId, p_kind: kind, p_note: note, ...gpsArgs(fix) })
+  // ยังไม่ได้รัน migration 0021
+  if (error?.code === 'PGRST202') ({ error } = await db().from('cat_help_requests').insert({ cat_id: catId, kind, note }))
   if (error) {
     if (error.code === '23505') throw new ApiError('คุณแจ้งเรื่องนี้ของน้องไปแล้ว รอคนมาช่วยก่อนนะ', 409)
     throw new ApiError('แจ้งไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
@@ -1062,6 +1076,28 @@ export async function resolveHelp(catId: string, note = ''): Promise<void> {
     if (error.message.includes('not_allowed')) throw new ApiError('ปิดเรื่องได้เฉพาะคนแจ้ง คนปักหมุด หรือผู้ดูแล', 403)
     throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
   }
+}
+
+/** "ฉันก็เห็น" — คืน true ถ้าอยู่ใกล้หมุดตอนกด */
+export async function confirmHelp(requestId: string, fix: GpsFix | null): Promise<boolean> {
+  const { data, error } = await db().rpc('confirm_cat_help', { p_request_id: requestId, ...gpsArgs(fix) })
+  if (error) {
+    if (error.message.includes('request_closed')) throw new ApiError('เรื่องนี้ปิดไปแล้ว', 409)
+    if (error.message.includes('own_request')) throw new ApiError('ยืนยันเรื่องที่ตัวเองแจ้งไม่ได้', 400)
+    throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+  }
+  return Boolean(data)
+}
+
+export async function unconfirmHelp(requestId: string, userId: string): Promise<void> {
+  const { error } = await db().from('cat_help_confirmations').delete().eq('request_id', requestId).eq('user_id', userId)
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
+}
+
+/** คนแจ้งตอบว่าน้องยังต้องการความช่วยเหลืออยู่ */
+export async function renewHelp(requestId: string): Promise<void> {
+  const { error } = await db().rpc('renew_cat_help', { p_request_id: requestId })
+  if (error) throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
 }
 
 // ═══════════════ อุปกรณ์ที่เข้าสู่ระบบ ═══════════════

@@ -92,7 +92,7 @@ export interface ReviewReport {
   catName: string | null
 }
 
-export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply'
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check'
 
 export interface AppNotification {
   id: number
@@ -113,6 +113,12 @@ export interface HelpRequest {
   createdAt: string
   userId: string
   reporterName: string | null
+  /** ตอนแจ้ง GPS ของคนแจ้งอยู่ใกล้หมุด */
+  nearCat: boolean
+  /** คนอื่นที่กด "ฉันก็เห็น" */
+  confirmations: { userId: string; nearCat: boolean }[]
+  /** ระบบถามคนแจ้งแล้วว่ายังต้องการความช่วยเหลือไหม (ไม่มีความเคลื่อนไหว 7 วัน) */
+  remindedAt: string | null
 }
 
 /** ตรวจว่าเป็นแมวด้วยวิธีไหน: โมเดลในเครื่องมั่นใจ / AI (Gemini) ยืนยัน / ผู้ปักหมุดยืนยันเอง (รอ admin ตรวจ) */
@@ -284,6 +290,8 @@ export type ActivityAction =
   | 'cat_verify'
   | 'review_reply'
   | 'review_report'
+  | 'help_confirm'
+  | 'help_expire'
 
 export interface ActivityEntry {
   id: number

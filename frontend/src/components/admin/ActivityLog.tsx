@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
+import { Ban, Bug, CheckCircle2, Eye, Flag, HeartPulse, Hourglass, ImagePlus, LogIn, MapPinPlus, MapPinX, Megaphone, MessageCircle, PawPrint, Pencil, ShieldCheck, Trash2, UserCheck, Utensils, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '../../hooks/useI18n'
 import { ACTIVITY_PAGE_SIZE, fetchActivity } from '../../lib/api'
@@ -16,7 +16,7 @@ const FILTERS: { key: string; label: string; actions: ActivityAction[] | null }[
   { key: 'photos', label: 'รูป', actions: ['photo_add'] },
   { key: 'sightings', label: 'เจอน้อง', actions: ['sighting', 'feeding'] },
   { key: 'reports', label: 'การรายงาน', actions: ['bug_report', 'cat_report', 'review_report'] },
-  { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_resolve'] },
+  { key: 'help', label: 'ต้องการความช่วยเหลือ', actions: ['help_request', 'help_confirm', 'help_resolve', 'help_expire'] },
   { key: 'posts', label: 'ประกาศ', actions: ['post_create', 'post_resolve', 'post_delete'] },
 ]
 
@@ -44,6 +44,8 @@ const ACTIONS: Record<ActivityAction, { icon: LucideIcon; text: string; tone: st
   review_report: { icon: Flag, text: 'รายงานรีวิวของ {cat}', tone: 'bg-red-100 text-red-700' },
   feeding: { icon: Utensils, text: 'ให้อาหาร {cat}', tone: 'bg-orange-100 text-orange-700' },
   help_resolve: { icon: CheckCircle2, text: 'ปิดเรื่องความช่วยเหลือของ {cat}', tone: 'bg-emerald-100 text-emerald-700' },
+  help_confirm: { icon: Eye, text: 'ยืนยันว่า {cat} ต้องการความช่วยเหลือ', tone: 'bg-red-100 text-red-700' },
+  help_expire: { icon: Hourglass, text: 'เรื่องที่แจ้งไว้ของ {cat} ปิดเองเพราะไม่มีความเคลื่อนไหว', tone: 'bg-stone-200 text-stone-700' },
 }
 
 const FOOD_LABELS: Record<string, string> = { dry: 'อาหารเม็ด', wet: 'อาหารเปียก', treat: 'ขนม', other: 'อื่นๆ' }

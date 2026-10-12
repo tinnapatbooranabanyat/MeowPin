@@ -46,6 +46,12 @@ def render(kind: str, data: dict, lang: str) -> tuple[str, str]:
         )
     if kind == "help_resolved":
         return ("ช่วยน้องแล้ว 💚", f"{cat} ได้รับความช่วยเหลือแล้ว") if th else ("Cat helped 💚", f"{cat} has been helped")
+    if kind == "help_check":
+        return (
+            ("น้องยังต้องการความช่วยเหลือไหม?", f"เรื่องที่คุณแจ้งไว้ของ{cat}ไม่มีความเคลื่อนไหวมา 7 วัน กดเพื่อตอบ ไม่อย่างนั้นจะปิดเองใน 7 วัน")
+            if th
+            else ("Does this cat still need help?", f"Your report about {cat} has had no updates for 7 days. Tap to reply, or it will close in 7 days.")
+        )
     if kind == "not_seen":
         days = data.get("days", 14)
         return (
