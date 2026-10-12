@@ -499,10 +499,12 @@ interface ReviewRow {
   profiles: { display_name: string; avatar_url: string | null; avatar_path?: string | null } | null
 }
 
+// ตารางที่เชื่อมทั้งรีวิวและผู้ใช้ (เช่น review_likes) ทำให้ "profiles" มีได้หลายทาง — ต้องระบุ FK ให้ชัด
+// ไม่งั้น Supabase ตอบ error PGRST201 แล้วรีวิวโหลดไม่ขึ้นทั้งหน้า
 export async function fetchReviews(catId: string): Promise<Review[]> {
   const { data, error } = await db()
     .from('reviews')
-    .select('id, cat_id, user_id, paws, recommend, comment, created_at, profiles(*)')
+    .select('id, cat_id, user_id, paws, recommend, comment, created_at, profiles!reviews_user_id_fkey(*)')
     .eq('cat_id', catId)
     .order('created_at', { ascending: false })
     .limit(50)
@@ -614,7 +616,7 @@ interface ReviewReportRow {
 export async function fetchReviewReports(status: 'open' | 'resolved'): Promise<ReviewReport[]> {
   const { data, error } = await db()
     .from('review_reports')
-    .select('id, review_id, reason, details, created_at, profiles(display_name), reviews(comment, paws, cat_id, profiles(display_name), cats(name))')
+    .select('id, review_id, reason, details, created_at, profiles!review_reports_user_id_fkey(display_name), reviews(comment, paws, cat_id, profiles!reviews_user_id_fkey(display_name), cats(name))')
     .eq('status', status)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -1031,7 +1033,7 @@ interface HelpRow {
 export async function fetchHelpRequests(catId: string): Promise<HelpRequest[]> {
   const { data, error } = await db()
     .from('cat_help_requests')
-    .select('id, kind, note, created_at, user_id, profiles(display_name)')
+    .select('id, kind, note, created_at, user_id, profiles!cat_help_requests_user_id_fkey(display_name)')
     .eq('cat_id', catId)
     .is('resolved_at', null)
     .order('created_at', { ascending: false })
