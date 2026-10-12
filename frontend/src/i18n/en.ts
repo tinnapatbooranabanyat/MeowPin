@@ -738,4 +738,13 @@ export const EN: Record<string, string> = {
   'ค้นหาด้วยรูปได้ชั่วโมงละ 10 ครั้ง พักสักครู่แล้วลองใหม่': 'You can search by photo 10 times an hour. Please try again later.',
   'ค้นหาด้วยรูปไม่สำเร็จ ลองใหม่ภายหลัง': 'Photo search failed. Please try again later.',
   'ไม่เจอแมวในรูปนี้ ลองใช้รูปที่เห็นน้องชัดๆ': 'No cat found in this photo. Try one where the cat is clearly visible.',
+  'ลบหมุด "{name}" ถาวร?': 'Permanently delete the pin "{name}"?',
+  'รีวิวและประวัติการเจอจะหายไปด้วย': 'Its reviews and sightings will be deleted too.',
+  'ปิดเรื่องทั้งหมดของน้อง{name}?': 'Close all help requests for {name}?',
+  'เช่น พาไปหาหมอแล้ว หรือหายดีแล้ว': 'e.g. taken to a vet, or recovered',
+  'ปิดเรื่อง': 'Close',
+  'ระงับบัญชี {name}?': 'Suspend {name}?',
+  'จะออกจากระบบทุกเครื่องและเขียนข้อมูลอะไรไม่ได้อีก': "They'll be signed out everywhere and won't be able to post anything.",
+  'ระงับบัญชี': 'Suspend',
+  'ตกลง': 'OK',
 }

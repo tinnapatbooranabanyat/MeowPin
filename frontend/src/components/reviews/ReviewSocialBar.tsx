@@ -9,6 +9,7 @@ import type { Review, ReviewReportReason, ReviewSocial } from '../../types'
 import { UserAvatar } from '../account/UserAvatar'
 import { TranslatableText } from '../TranslatableText'
 import { Modal } from '../ui/Modal'
+import { confirmAction } from '../../lib/dialogs'
 
 const REASONS: { value: ReviewReportReason; label: string }[] = [
   { value: 'spam', label: 'สแปม / โฆษณา' },
@@ -90,7 +91,9 @@ export function ReviewSocialBar({ review, social, catId }: { review: Review; soc
                   {(r.userId === userId || isAdmin) && (
                     <button
                       type="button"
-                      onClick={() => window.confirm(t('ลบความเห็นนี้?')) && removeReply.mutate(r.id)}
+                      onClick={async () =>
+                        (await confirmAction({ title: t('ลบความเห็นนี้?'), confirmLabel: t('ลบ'), tone: 'danger' })) && removeReply.mutate(r.id)
+                      }
                       className="ml-1 inline-flex align-middle text-stone-400 hover:text-red-600"
                       aria-label={t('ลบความเห็น')}
                     >

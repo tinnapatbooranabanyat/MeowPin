@@ -7,6 +7,7 @@ import { fetchHelpRequests, requestHelp, resolveHelp } from '../lib/api'
 import { HELP_KINDS, timeAgo } from '../lib/cat'
 import type { Cat, HelpKind } from '../types'
 import { Modal } from './ui/Modal'
+import { confirmAction } from '../lib/dialogs'
 
 /** น้องต้องการความช่วยเหลือ: ป้ายแดง + เรื่องที่แจ้งไว้ + ปุ่มแจ้ง/ปิดเรื่อง */
 export function HelpSection({ cat }: { cat: Cat }) {
@@ -62,10 +63,13 @@ export function HelpSection({ cat }: { cat: Cat }) {
             <button
               type="button"
               disabled={resolve.isPending}
-              onClick={() => {
-                if (window.confirm(t('ปิดเรื่องทั้งหมดของน้อง{name}? (เช่น พาไปหาหมอแล้ว หรือหายดีแล้ว)', { name: cat.name }))) {
-                  resolve.mutate()
-                }
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: t('ปิดเรื่องทั้งหมดของน้อง{name}?', { name: cat.name }),
+                  message: t('เช่น พาไปหาหมอแล้ว หรือหายดีแล้ว'),
+                  confirmLabel: t('ปิดเรื่อง'),
+                })
+                if (ok) resolve.mutate()
               }}
               className="mt-3 flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-1.5 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 disabled:opacity-60"
             >

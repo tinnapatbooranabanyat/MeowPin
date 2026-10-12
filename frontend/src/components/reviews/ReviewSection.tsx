@@ -14,6 +14,7 @@ import { ReviewSocialBar } from './ReviewSocialBar'
 import { useI18n } from '../../hooks/useI18n'
 import { useCatPhotos } from '../../hooks/useCatPhotos'
 import { useMapActions } from '../../hooks/useMapActions'
+import { confirmAction } from '../../lib/dialogs'
 
 export function ReviewSection({ cat }: { cat: Cat }) {
   const { t, lang } = useI18n()
@@ -46,7 +47,7 @@ export function ReviewSection({ cat }: { cat: Cat }) {
   }
 
   const remove = async (review: Review) => {
-    if (!window.confirm(t('ลบรีวิวนี้?'))) return
+    if (!(await confirmAction({ title: t('ลบรีวิวนี้?'), confirmLabel: t('ลบรีวิว'), tone: 'danger' }))) return
     await deleteReview(review.id)
     refresh()
   }

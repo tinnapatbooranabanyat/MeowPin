@@ -4,6 +4,7 @@ import { useI18n } from '../../hooks/useI18n'
 import { deleteCat, fetchUnverifiedCats, verifyCat } from '../../lib/api'
 import { furLabel, timeAgo } from '../../lib/cat'
 import { CatAvatar } from '../CatAvatar'
+import { confirmAction } from '../../lib/dialogs'
 
 /** หมุดที่ระบบไม่แน่ใจว่าเป็นแมว แต่ผู้ใช้ยืนยันเอง — admin ตรวจแล้วยืนยันหรือลบ */
 export function UnverifiedCats({ onOpenCat }: { onOpenCat: (catId: string) => void }) {
@@ -44,7 +45,7 @@ export function UnverifiedCats({ onOpenCat }: { onOpenCat: (catId: string) => vo
               <button
                 type="button"
                 disabled={remove.isPending}
-                onClick={() => window.confirm(t('ลบหมุด "{name}" ถาวร? รีวิวและประวัติการเจอจะหายไปด้วย', { name: cat.name })) && remove.mutate(cat.id)}
+                onClick={async () => (await confirmAction({ title: t('ลบหมุด "{name}" ถาวร?', { name: cat.name }), message: t('รีวิวและประวัติการเจอจะหายไปด้วย'), confirmLabel: t('ลบหมุด'), tone: 'danger' })) && remove.mutate(cat.id)}
                 className="flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-60"
               >
                 <Trash2 size={14} aria-hidden="true" />

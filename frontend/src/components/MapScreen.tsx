@@ -33,6 +33,7 @@ import { FilterChips } from './FilterChips'
 import { SearchBar } from './SearchBar'
 import { Toast } from './Toast'
 import { UserLocationMarker } from './UserLocationMarker'
+import { confirmAction } from '../lib/dialogs'
 
 const DEFAULT_CENTER = { lat: 13.7595, lng: 100.4975 }
 // จำมุมกล้องไว้ในแท็บนี้ — โหลดหน้าใหม่ (เช่นเปลี่ยนภาษาแผนที่) แล้วกลับมาที่เดิม
@@ -318,7 +319,7 @@ export function MapScreen({ mapId }: Props) {
   }
 
   const removeCat = async (cat: Cat) => {
-    if (!window.confirm(t('ลบหมุด "{name}" ถาวร? รีวิวและประวัติการเจอจะหายไปด้วย', { name: cat.name }))) return
+    if (!(await confirmAction({ title: t('ลบหมุด "{name}" ถาวร?', { name: cat.name }), message: t('รีวิวและประวัติการเจอจะหายไปด้วย'), confirmLabel: t('ลบหมุด'), tone: 'danger' }))) return
     try {
       await deleteCat(cat.id)
       setSelectedId(null)

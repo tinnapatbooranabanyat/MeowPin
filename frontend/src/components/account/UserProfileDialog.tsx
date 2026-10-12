@@ -11,6 +11,7 @@ import { PawRating } from '../reviews/PawRating'
 import { Modal } from '../ui/Modal'
 import { BadgeList } from './BadgeList'
 import { UserAvatar } from './UserAvatar'
+import { promptText } from '../../lib/dialogs'
 
 type Tab = 'reviews' | 'cats'
 
@@ -26,8 +27,7 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
   const { userId: me, isAdmin } = useAuth()
   const queryClient = useQueryClient()
   const ban = useMutation({
-    mutationFn: (banned: boolean) =>
-      setUserBan(userId, banned, banned ? (window.prompt(t('เหตุผลที่ระงับ (ไม่บังคับ)')) ?? '') : ''),
+    mutationFn: ({ banned, reason }: { banned: boolean; reason: string }) => setUserBan(userId, banned, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['userProfile', userId] }),
   })
   const { openCat } = useMapActions()
@@ -101,11 +101,17 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
             <button
               type="button"
               disabled={ban.isPending}
-              onClick={() => {
+              onClick={async () => {
                 const banned = !profile.data!.bannedAt
-                if (!banned || window.confirm(t('ระงับบัญชี {name}? จะออกจากระบบทุกเครื่องและเขียนข้อมูลอะไรไม่ได้อีก', { name: profile.data!.displayName }))) {
-                  ban.mutate(banned)
-                }
+                if (!banned) return ban.mutate({ banned: false, reason: '' })
+                const reason = await promptText({
+                  title: t('ระงับบัญชี {name}?', { name: profile.data!.displayName }),
+                  message: t('จะออกจากระบบทุกเครื่องและเขียนข้อมูลอะไรไม่ได้อีก'),
+                  placeholder: t('เหตุผลที่ระงับ (ไม่บังคับ)'),
+                  confirmLabel: t('ระงับบัญชี'),
+                  tone: 'danger',
+                })
+                if (reason !== null) ban.mutate({ banned: true, reason })
               }}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 disabled:opacity-60 ${
                 profile.data.bannedAt

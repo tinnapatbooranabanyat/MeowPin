@@ -3,6 +3,7 @@ import { CheckCircle2, ExternalLink, Trash2 } from 'lucide-react'
 import { useI18n } from '../../hooks/useI18n'
 import { deleteReview, fetchReviewReports, setReviewReportStatus } from '../../lib/api'
 import { timeAgo } from '../../lib/cat'
+import { confirmAction } from '../../lib/dialogs'
 
 const REASON_LABEL: Record<string, string> = {
   spam: 'สแปม / โฆษณา',
@@ -58,7 +59,9 @@ export function ReviewReportsList({ status, onOpenCat }: { status: 'open' | 'res
               <button
                 type="button"
                 disabled={remove.isPending}
-                onClick={() => window.confirm(t('ลบรีวิวนี้?')) && remove.mutate(first.reviewId)}
+                onClick={async () =>
+                  (await confirmAction({ title: t('ลบรีวิวนี้?'), confirmLabel: t('ลบรีวิว'), tone: 'danger' })) && remove.mutate(first.reviewId)
+                }
                 className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
               >
                 <Trash2 size={14} aria-hidden="true" />

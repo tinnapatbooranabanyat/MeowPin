@@ -10,6 +10,7 @@ import { distanceMeters, getCurrentPosition } from '../lib/geo'
 import type { CatPost, FurColor, LatLng, PostKind } from '../types'
 import { CatAvatar } from './CatAvatar'
 import { Modal } from './ui/Modal'
+import { confirmAction } from '../lib/dialogs'
 
 const MATCH_RADIUS_M = 1000
 
@@ -191,7 +192,7 @@ function PostCard({ post, onClose }: { post: CatPost; onClose: () => void }) {
           <button
             type="button"
             disabled={resolve.isPending}
-            onClick={() => window.confirm(t('ปิดประกาศนี้?')) && resolve.mutate()}
+            onClick={async () => (await confirmAction({ title: t('ปิดประกาศนี้?'), confirmLabel: t('ปิดประกาศ') })) && resolve.mutate()}
             className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 disabled:opacity-60"
           >
             <Check size={15} aria-hidden="true" />
@@ -200,7 +201,9 @@ function PostCard({ post, onClose }: { post: CatPost; onClose: () => void }) {
           <button
             type="button"
             disabled={remove.isPending}
-            onClick={() => window.confirm(t('ลบประกาศนี้ถาวร?')) && remove.mutate()}
+            onClick={async () =>
+              (await confirmAction({ title: t('ลบประกาศนี้ถาวร?'), confirmLabel: t('ลบ'), tone: 'danger' })) && remove.mutate()
+            }
             className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-60"
           >
             <Trash2 size={15} aria-hidden="true" />

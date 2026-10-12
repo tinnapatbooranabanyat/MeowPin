@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal'
 import { ActivityLog } from './ActivityLog'
 import { ReviewReportsList } from './ReviewReportsList'
 import { UnverifiedCats } from './UnverifiedCats'
+import { confirmAction } from '../../lib/dialogs'
 
 type Tab = 'cats' | 'reviews' | 'bugs' | 'unverified' | 'activity'
 type Status = 'open' | 'resolved'
@@ -190,8 +191,8 @@ function CatReportsList({ status, onOpenCat }: { status: Status; onOpenCat: (cat
               {first.cat && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(t('ลบหมุด "{name}" ถาวร? รีวิวและประวัติการเจอจะหายไปด้วย', { name: first.cat!.name })))
+                  onClick={async () => {
+                    if (await confirmAction({ title: t('ลบหมุด "{name}" ถาวร?', { name: first.cat!.name }), message: t('รีวิวและประวัติการเจอจะหายไปด้วย'), confirmLabel: t('ลบหมุด'), tone: 'danger' }))
                       remove.mutate(first.catId)
                   }}
                   disabled={remove.isPending}

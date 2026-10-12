@@ -5,6 +5,7 @@ import { ServerWakingBanner } from './components/ServerWakingBanner'
 import { UpdatePrompt } from './components/UpdatePrompt'
 import { getLang } from './i18n'
 import { useI18n } from './hooks/useI18n'
+import { DialogHost } from './components/ui/DialogHost'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 // DEMO_MAP_ID ใช้ทดสอบได้ไปก่อน แล้วค่อยเปลี่ยนเป็น Map ID ของเราเองเพื่อแต่งสีแผนที่
@@ -33,6 +34,7 @@ function App() {
       <MapScreen mapId={MAP_ID} />
       <ServerWakingBanner />
       <UpdatePrompt />
+      <DialogHost />
     </APIProvider>
   )
 }
