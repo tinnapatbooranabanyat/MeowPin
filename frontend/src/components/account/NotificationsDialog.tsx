@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { BellOff, BellRing, CheckCircle2, Footprints, MapPinned, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
+import { BellOff, BellRing, CheckCircle2, Footprints, MapPinned, Trophy, EyeOff, HeartPulse, MessageCircle, PawPrint } from 'lucide-react'
 import { useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -7,6 +7,7 @@ import { useMapActions } from '../../hooks/useMapActions'
 import { useNotifications } from '../../hooks/useNotifications'
 import { markNotificationsRead } from '../../lib/api'
 import { HELP_KINDS, timeAgo } from '../../lib/cat'
+import { categoryOf } from '../../lib/leaderboard'
 import type { AppNotification, HelpKind } from '../../types'
 import { Modal } from '../ui/Modal'
 import { HelpAreaToggle } from './HelpAreaToggle'
@@ -22,11 +23,12 @@ const ICONS = {
   move_request: { icon: MapPinned, tone: 'bg-sky-100 text-sky-700' },
   help_nearby: { icon: HeartPulse, tone: 'bg-red-100 text-red-700' },
   help_on_way: { icon: Footprints, tone: 'bg-emerald-100 text-emerald-700' },
+  weekly_champion: { icon: Trophy, tone: 'bg-amber-100 text-amber-700' },
   move_accepted: { icon: MapPinned, tone: 'bg-emerald-100 text-emerald-700' },
 }
 
 function useNotificationText() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   return (n: AppNotification) => {
     const cat = n.data.cat_name ?? t('น้องแมว')
     const actor = n.data.actor_name ?? t('มีคน')
@@ -56,6 +58,13 @@ function useNotificationText() {
               cat,
               kind: t(HELP_KINDS[n.data.help_kind as HelpKind]?.label ?? 'อื่นๆ'),
             })
+      case 'weekly_champion':
+        return t('คุณเป็นแชมป์{category} {zone} สัปดาห์ที่แล้ว ได้ {score} {unit}', {
+          category: t(categoryOf(n.data.category ?? '').label),
+          zone: (lang === 'en' ? n.data.zone_en : n.data.zone_th) ?? t('ทั้งประเทศ'),
+          score: n.data.score ?? 0,
+          unit: t(categoryOf(n.data.category ?? '').unit),
+        })
       case 'help_on_way':
         return t('{actor} กำลังไปช่วย{cat}ที่คุณแจ้งไว้', { actor, cat })
       case 'move_request':

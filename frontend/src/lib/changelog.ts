@@ -16,6 +16,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-leaderboards',
+    date: '2026-10-13',
+    title: { th: 'อันดับหลายหมวด และแชมป์ประจำสัปดาห์', en: 'More rankings and weekly champions' },
+    items: [
+      { th: 'ดูอันดับตามโซนหรือทั้งประเทศ เลือกได้ทั้ง สัปดาห์นี้ / เดือนนี้ / ตลอดกาล', en: 'Rankings by zone or for all of Thailand: this week, this month or all time' },
+      { th: 'แยกหมวด: แต้มรวม นักสะสม นักสำรวจ ใจดี ฮีโร่ ช่างภาพ', en: 'Categories: Overall, Collector, Explorer, Kind heart, Hero, Photographer' },
+      {
+        th: 'ทุกวันจันทร์ประกาศแชมป์ของสัปดาห์ที่แล้ว ได้ป้ายแชมป์ในโปรไฟล์และแจ้งเตือน',
+        en: 'Every Monday last week’s champions are announced, with a profile title and a notification',
+      },
+      { th: 'เจอน้องครบทุกตัวในโซนได้ป้าย "เจอครบ" ในโปรไฟล์', en: 'Find every cat in a zone to earn a "Completed" title' },
+    ],
+  },
+  {
     id: '2026-10-13-share-card',
     date: '2026-10-13',
     title: { th: 'แชร์ลง IG story ได้', en: 'Share to your story' },

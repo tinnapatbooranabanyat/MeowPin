@@ -5,6 +5,7 @@ import type {
   BugReport,
   Cat,
   CatPhoto,
+  ChampionTitle,
   CollectionStats,
   CatPost,
   CatReport,
@@ -19,7 +20,6 @@ import type {
   FoodKind,
   HelpKind,
   HelpRequest,
-  LeaderboardRow,
   ZoneBoard,
   ZoneInfo,
   ZoneProgress,
@@ -44,6 +44,7 @@ import type {
 } from '../types'
 import type { CatFormValues } from '../components/add-cat/CatForm'
 import type { GpsFix } from './geo'
+import type { BoardCategory, BoardPeriod } from './leaderboard'
 import { photoUrl, storageUrl, supabase } from './supabase'
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
@@ -1200,19 +1201,6 @@ export async function fetchUserStats(userId: string): Promise<UserStats | null> 
   return (data as UserStats[])[0] ?? null
 }
 
-export async function fetchAreaLeaderboard(bounds: Bounds): Promise<LeaderboardRow[]> {
-  const { data, error } = await db().rpc('area_leaderboard', {
-    min_lat: bounds.minLat,
-    min_lng: bounds.minLng,
-    max_lat: bounds.maxLat,
-    max_lng: bounds.maxLng,
-  })
-  if (error || !data) return []
-  return (data as { user_id: string; display_name: string; avatar_url: string | null; avatar_path: string | null; points: number }[]).map(
-    (r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), points: r.points }),
-  )
-}
-
 // ═══════════════ สมุดสะสม + โซน ═══════════════
 interface ZoneRow {
   zone_key: string
@@ -1277,6 +1265,54 @@ export async function fetchZoneBoard(zoneKey: string): Promise<ZoneBoard | null>
     mine: raw.mine,
     top: raw.top.map((r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), collected: r.collected })),
   }
+}
+
+// ═══════════════ อันดับหลายหมวด + แชมป์ประจำสัปดาห์ ═══════════════
+export interface BoardRow {
+  userId: string
+  name: string
+  avatarUrl: string | null
+  score: number
+}
+
+type BoardDbRow = { user_id: string; display_name: string; avatar_url: string | null; avatar_path: string | null; score: number }
+
+/** zoneKey = null คือทั้งประเทศ / null = ยังไม่ได้รัน migration 0028 */
+export async function fetchLeaderboard(category: BoardCategory, period: BoardPeriod, zoneKey: string | null): Promise<BoardRow[] | null> {
+  const { data, error } = await db().rpc('leaderboard', { p_category: category, p_period: period, p_zone_key: zoneKey ?? '' })
+  if (error || !data) return null
+  return (data as BoardDbRow[]).map((r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), score: r.score }))
+}
+
+/** แชมป์ของสัปดาห์ที่แล้ว (หมวด + โซนนี้) */
+export async function fetchChampion(weekStart: string, category: BoardCategory, zoneKey: string | null): Promise<BoardRow | null> {
+  const { data, error } = await db()
+    .from('weekly_champions')
+    .select('user_id, score, profiles!weekly_champions_user_id_fkey(display_name, avatar_url, avatar_path)')
+    .eq('week_start', weekStart)
+    .eq('category', category)
+    .eq('zone_key', zoneKey ?? '')
+    .maybeSingle()
+  if (error || !data) return null
+  const row = data as unknown as { user_id: string; score: number; profiles: { display_name: string; avatar_url: string | null; avatar_path: string | null } | null }
+  return {
+    userId: row.user_id,
+    name: row.profiles?.display_name ?? '',
+    avatarUrl: row.profiles ? effectiveAvatar(row.profiles) : null,
+    score: row.score,
+  }
+}
+
+export async function fetchChampionTitles(userId: string): Promise<ChampionTitle[]> {
+  const { data, error } = await db().rpc('user_champion_titles', { p_user_id: userId })
+  if (error || !data) return []
+  return (data as { week_start: string; category: string; score: number; zone_th: string | null; zone_en: string | null }[]).map((r) => ({
+    weekStart: r.week_start,
+    category: r.category,
+    score: r.score,
+    zoneTh: r.zone_th,
+    zoneEn: r.zone_en,
+  }))
 }
 
 // ═══════════════ บันทึกการให้อาหาร ═══════════════

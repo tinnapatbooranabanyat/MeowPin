@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { BookOpenCheck, Crown, Share2 } from 'lucide-react'
+import { BadgeCheck, BookOpenCheck, Crown, Share2, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
-import { fetchCollectionStats, fetchMyCollectedCats, fetchMyZoneProgress } from '../../lib/api'
+import { fetchChampionTitles, fetchCollectionStats, fetchMyCollectedCats, fetchMyZoneProgress } from '../../lib/api'
+import { categoryOf } from '../../lib/leaderboard'
 import { drawCollectionCard } from '../../lib/shareCard'
 import { provinceLabel, zoneLabel } from '../../lib/zones'
 import { ShareCardDialog } from '../ShareCardDialog'
@@ -15,7 +16,9 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
   const stats = useQuery({ queryKey: ['collection', userId], queryFn: () => fetchCollectionStats(userId) })
   const zones = useQuery({ queryKey: ['myZones', userId], queryFn: fetchMyZoneProgress, enabled: isMe })
   const cats = useQuery({ queryKey: ['myCollected', userId], queryFn: fetchMyCollectedCats, enabled: isMe })
+  const titles = useQuery({ queryKey: ['championTitles', userId], queryFn: () => fetchChampionTitles(userId) })
   const { profile } = useAuth()
+  const weekFmt = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short' })
   const [sharing, setSharing] = useState(false)
 
   // ยังไม่ได้รัน migration 0026
@@ -56,12 +59,38 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
         ))}
       </div>
 
-      {s.mayor.length > 0 && (
+      {(s.mayor.length > 0 || (s.completed_zones?.length ?? 0) > 0 || (titles.data?.length ?? 0) > 0) && (
         <ul className="mt-2 flex flex-wrap gap-1.5">
           {s.mayor.map((z) => (
-            <li key={z.key} className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+            <li key={`m-${z.key}`} className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
               <Crown size={12} aria-hidden="true" />
               {t('เจ้าถิ่น{zone}', { zone: lang === 'en' ? z.en : z.th })}
+            </li>
+          ))}
+          {/* แชมป์ประจำสัปดาห์ (ล่าสุดก่อน) */}
+          {(titles.data ?? []).map((w) => (
+            <li
+              key={`w-${w.weekStart}-${w.category}-${w.zoneTh ?? ''}`}
+              className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-medium text-orange-800 ring-1 ring-orange-200"
+              title={t('สัปดาห์ที่เริ่ม {date} · {score} {unit}', {
+                date: weekFmt.format(new Date(`${w.weekStart}T12:00:00`)),
+                score: w.score,
+                unit: t(categoryOf(w.category).unit),
+              })}
+            >
+              <Trophy size={12} aria-hidden="true" />
+              {t('แชมป์{category} {zone} · {date}', {
+                category: t(categoryOf(w.category).label),
+                zone: (lang === 'en' ? w.zoneEn : w.zoneTh) ?? t('ทั้งประเทศ'),
+                date: weekFmt.format(new Date(`${w.weekStart}T12:00:00`)),
+              })}
+            </li>
+          ))}
+          {/* เหรียญเจอครบโซน */}
+          {(s.completed_zones ?? []).map((z) => (
+            <li key={`c-${z.key}`} className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+              <BadgeCheck size={12} aria-hidden="true" />
+              {t('เจอครบ{zone}', { zone: lang === 'en' ? z.en : z.th })}
             </li>
           ))}
         </ul>

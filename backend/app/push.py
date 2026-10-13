@@ -67,6 +67,21 @@ def render(kind: str, data: dict, lang: str) -> tuple[str, str]:
             ("มีคนกำลังไปช่วยน้องแล้ว 🏃", f"{actor} กำลังไปช่วย{cat}ที่คุณแจ้งไว้") if th
             else ("Someone is on the way 🏃", f"{actor} is on the way to help {cat}")
         )
+    if kind == "weekly_champion":
+        labels = {
+            "total": ("แต้มรวม", "overall points"),
+            "collector": ("นักสะสม", "collector"),
+            "explorer": ("นักสำรวจ", "explorer"),
+            "kind": ("ใจดี", "kind heart"),
+            "hero": ("ฮีโร่", "hero"),
+            "photographer": ("ช่างภาพ", "photographer"),
+        }
+        label = labels.get(data.get("category", ""), labels["total"])
+        zone = data.get("zone_th" if th else "zone_en") or ("ทั้งประเทศ" if th else "Thailand")
+        return (
+            ("แชมป์ประจำสัปดาห์! 🏆", f"คุณเป็นแชมป์{label[0]} {zone} สัปดาห์ที่แล้ว") if th
+            else ("Weekly champion! 🏆", f"You were last week's {label[1]} champion in {zone}")
+        )
     if kind == "move_request":
         return (
             ("มีคนแจ้งว่าหมุดอยู่ผิดที่ 📍", f"{actor} เสนอตำแหน่งใหม่ของ{cat} กดเพื่อดูแล้วเลือกว่าจะย้ายไหม")

@@ -58,7 +58,19 @@ export interface CollectionStats {
   cats: number
   zones: number
   completed: number
+  /** โซนที่เจอครบทุกตัว (ไม่มีถ้ายังไม่ได้รัน migration 0028) */
+  completed_zones?: { key: string; th: string; en: string }[]
   mayor: { key: string; th: string; en: string }[]
+}
+
+/** แชมป์ประจำสัปดาห์ที่เคยได้ */
+export interface ChampionTitle {
+  weekStart: string
+  category: string
+  score: number
+  /** null = ทั้งประเทศ */
+  zoneTh: string | null
+  zoneEn: string | null
 }
 
 export interface ZoneProgress extends ZoneInfo {
@@ -71,13 +83,6 @@ export interface ZoneBoard {
   /** null = ยังไม่ได้ล็อกอิน หรือยังไม่เจอน้องในโซนนี้ */
   mine: number | null
   top: { userId: string; name: string; avatarUrl: string | null; collected: number }[]
-}
-
-export interface LeaderboardRow {
-  userId: string
-  name: string
-  avatarUrl: string | null
-  points: number
 }
 
 export type FoodKind = 'dry' | 'wet' | 'treat' | 'other'
@@ -147,13 +152,13 @@ export interface PhotoReport {
   uploaderName: string | null
 }
 
-export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted' | 'help_nearby' | 'help_on_way'
+export type NotificationKind = 'new_review' | 'help_request' | 'help_resolved' | 'not_seen' | 'review_reply' | 'help_check' | 'move_request' | 'move_accepted' | 'help_nearby' | 'help_on_way' | 'weekly_champion'
 
 export interface AppNotification {
   id: number
   kind: NotificationKind
   catId: string | null
-  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number; body?: string; distance_m?: number }
+  data: { cat_name?: string; actor_name?: string; paws?: number; help_kind?: string; days?: number; body?: string; distance_m?: number; category?: string; score?: number; zone_th?: string; zone_en?: string }
   createdAt: string
   readAt: string | null
 }
