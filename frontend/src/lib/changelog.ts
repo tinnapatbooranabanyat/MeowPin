@@ -16,6 +16,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-sheet-scroll',
+    date: '2026-10-13',
+    title: { th: 'เลื่อนดูข้อมูลน้องบนมือถือได้ลื่นขึ้น', en: 'Smoother scrolling on phones' },
+    items: [
+      {
+        th: 'ขยายการ์ดน้องเต็มจอแล้ว ปัดเลื่อนอ่านได้เลยโดยการ์ดไม่เลื่อนตาม ย่อหรือขยายได้ที่ขีดด้านบน',
+        en: 'Once the cat card is full screen, swiping just scrolls; drag or tap the bar at the top to shrink or expand it',
+      },
+      { th: 'กดแท็บ รีวิว หรือ เกี่ยวกับ แล้วการ์ดจะขยายเต็มจอให้เอง', en: 'Tapping Reviews or About expands the card automatically' },
+    ],
+  },
+  {
     id: '2026-10-13-food',
     date: '2026-10-13',
     title: { th: 'อาหารของน้อง', en: 'Feeding the cats' },
