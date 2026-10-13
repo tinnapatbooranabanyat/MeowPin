@@ -1,6 +1,6 @@
 import { Map, useMap } from '@vis.gl/react-google-maps'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Footprints, Hand, Link2, LocateFixed, X } from 'lucide-react'
+import { Check, Footprints, Hand, Link2, LocateFixed, Target, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { snapBounds, useCat, useCatsInView, useUpsertCat } from '../hooks/useCats'
@@ -33,6 +33,10 @@ import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { PlaceMarker } from './PlaceMarker'
 import { ShareCardDialog } from './ShareCardDialog'
+import { MissionsCard } from './MissionsCard'
+import { Modal } from './ui/Modal'
+import { useMissions, useRefreshMissions } from '../hooks/useMissions'
+import { missionOf } from '../lib/missions'
 import { LocationPicker } from './add-cat/LocationPicker'
 import { usePlaceSearch, type FoundPlace, type PlaceSuggestion } from '../hooks/usePlaceSearch'
 import { FilterChips } from './FilterChips'
@@ -108,6 +112,7 @@ type Dialog =
   | { kind: 'nearby' }
   | { kind: 'photoSearch' }
   | { kind: 'shareCat'; cat: Cat }
+  | { kind: 'missions' }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -150,6 +155,10 @@ export function MapScreen({ mapId }: Props) {
   const toastTimer = useRef<number | undefined>(undefined)
   // เปลี่ยนธีมแล้ว Google Maps ต้องสร้างแผนที่ใหม่ — จำมุมกล้องไว้ไม่ให้เด้งกลับจุดเริ่มต้น
   const [camera, setCamera] = useState(() => readSavedCamera() ?? { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM })
+
+  const missions = useMissions()
+  const refreshMissions = useRefreshMissions()
+  const missionsDone = useRef<{ week: string; done: Set<string> } | null>(null)
 
   const catsQuery = useCatsInView(bounds)
   const cats = useMemo(() => catsQuery.data ?? [], [catsQuery.data])
@@ -235,6 +244,23 @@ export function MapScreen({ mapId }: Props) {
     window.clearTimeout(toastTimer.current)
     toastTimer.current = window.setTimeout(() => setToast(null), 2500)
   }, [])
+
+  // ภารกิจที่เพิ่งทำสำเร็จ → เด้งข้อความแสดงความยินดี (เทียบกับรอบก่อนในสัปดาห์เดียวกัน)
+  useEffect(() => {
+    const data = missions.data
+    if (!data) return
+    const done = new Set(data.missions.filter((m) => m.done).map((m) => m.key))
+    const prev = missionsDone.current
+    missionsDone.current = { week: data.weekStart, done }
+    if (!prev || prev.week !== data.weekStart) return
+    const fresh = data.missions.find((m) => m.done && !prev.done.has(m.key))
+    if (!fresh) return
+    showToast(
+      data.allDone
+        ? t('ทำครบทุกภารกิจแล้ว ได้เหรียญประจำสัปดาห์!')
+        : t('ภารกิจสำเร็จ: {name}', { name: t(missionOf(fresh.key).label, { n: fresh.goal }) }),
+    )
+  }, [missions.data, showToast, t])
 
   const focusCat = useCallback(
     (cat: Cat) => {
@@ -342,6 +368,7 @@ export function MapScreen({ mapId }: Props) {
     setSelectedId(cat.id)
     focusCat(updated)
     showToast(t('บันทึกแล้วว่าคุณเจอ{name}', { name: cat.name }))
+    refreshMissions()
   }
 
   const handleCatAdded = (cat: Cat) => {
@@ -359,6 +386,7 @@ export function MapScreen({ mapId }: Props) {
     setSelectedId(cat.id)
     focusCat(cat)
     showToast(t('ปักหมุด{name}แล้ว', { name: cat.name }))
+    refreshMissions()
   }
 
   // เปิดลิงก์แชร์ ?cat=xxx แล้วซูมไปที่แมวตัวนั้น
@@ -431,6 +459,7 @@ export function MapScreen({ mapId }: Props) {
       const result = await recordSighting(cat.id, fix)
       upsertCat({ ...cat, sightings: result.sightings, lastSeenAt: result.lastSeenAt })
       showToast(t('บันทึกแล้วว่าคุณเจอ{name}', { name: cat.name }))
+      refreshMissions()
       return true
     } catch (e) {
       showToast(errorText(e, t, lang))
@@ -611,7 +640,6 @@ export function MapScreen({ mapId }: Props) {
               <AccountMenu
                 pendingReports={pendingReports}
                 onOpenMyProfile={() => userId && setDialog({ kind: 'userProfile', userId })}
-                onEditProfile={() => setDialog({ kind: 'profile' })}
                 onReportBug={() => setDialog({ kind: 'bugReport' })}
                 onOpenAdmin={() => setDialog({ kind: 'admin' })}
                 onSupport={() => setDialog({ kind: 'support' })}
@@ -622,6 +650,20 @@ export function MapScreen({ mapId }: Props) {
           </>
         )}
 
+        {!busy && !sheetOpen && missions.data && (
+          <button
+            type="button"
+            onClick={() => setDialog({ kind: 'missions' })}
+            className={`absolute right-4 z-20 flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium shadow-md ring-1 transition-[bottom] md:right-16 ${
+              missions.data.allDone ? 'bg-emerald-500 text-white ring-emerald-500 hover:bg-emerald-600' : 'bg-surface text-stone-800 ring-stone-200 hover:bg-stone-50'
+            } ${showHint ? 'bottom-[11rem] md:bottom-[8.25rem]' : 'bottom-[8.25rem]'}`}
+          >
+            {missions.data.allDone ? <Check size={17} aria-hidden="true" /> : <Target size={17} className="text-orange-500" aria-hidden="true" />}
+            {missions.data.allDone
+              ? t('ภารกิจครบแล้ว')
+              : t('ภารกิจ {done}/{total}', { done: missions.data.missions.filter((m) => m.done).length, total: missions.data.missions.length })}
+          </button>
+        )}
         {!busy && !sheetOpen && (
           <button
             type="button"
@@ -767,6 +809,11 @@ export function MapScreen({ mapId }: Props) {
               focusCat(cat)
             }}
           />
+        )}
+        {dialog?.kind === 'missions' && (
+          <Modal title={t('ภารกิจสัปดาห์นี้')} onClose={() => setDialog(null)}>
+            <MissionsCard hideTitle />
+          </Modal>
         )}
         {dialog?.kind === 'shareCat' && (
           <ShareCardDialog

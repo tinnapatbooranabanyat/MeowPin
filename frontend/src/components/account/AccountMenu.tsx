@@ -1,4 +1,4 @@
-import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Megaphone, Monitor, MonitorSmartphone, Moon, Pencil, ScrollText, Sparkles, Sun, Trophy, UserRound } from 'lucide-react'
+import { Bell, Bug, HeartHandshake, IdCard, Inbox, Info, Languages, LogIn, LogOut, Megaphone, Monitor, Moon, ScrollText, Sparkles, Sun, Trophy, UserRound } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
@@ -11,7 +11,6 @@ import { UserAvatar } from './UserAvatar'
 
 // โลโก้ทั้งหมดอยู่ในไฟล์นี้ — โหลดเฉพาะตอนเปิดดู
 const AboutDialog = lazy(() => import('./AboutDialog').then((m) => ({ default: m.AboutDialog })))
-const DevicesDialog = lazy(() => import('./DevicesDialog').then((m) => ({ default: m.DevicesDialog })))
 const NotificationsDialog = lazy(() => import('./NotificationsDialog').then((m) => ({ default: m.NotificationsDialog })))
 const WhatsNewDialog = lazy(() => import('./WhatsNewDialog').then((m) => ({ default: m.WhatsNewDialog })))
 
@@ -19,7 +18,6 @@ interface Props {
   /** จำนวนรายงานที่ยังค้าง (เฉพาะ admin) — โชว์จุดแดงบนรูปโปรไฟล์ */
   pendingReports: number
   onOpenMyProfile: () => void
-  onEditProfile: () => void
   onReportBug: () => void
   onOpenAdmin: () => void
   onSupport: () => void
@@ -39,13 +37,12 @@ const LANGS: { value: Lang; label: string }[] = [
 ]
 
 // ปุ่มโปรไฟล์ลอยมุมขวาบน แบบ Google Maps
-export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, onReportBug, onOpenAdmin, onSupport, onOpenLeaderboard, onOpenPosts }: Props) {
+export function AccountMenu({ pendingReports, onOpenMyProfile, onReportBug, onOpenAdmin, onSupport, onOpenLeaderboard, onOpenPosts }: Props) {
   const { session, profile, email, isAdmin, loading, signInWithGoogle, signOut, openTerms } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { pref, setThemePref } = useTheme()
   const [open, setOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
-  const [devicesOpen, setDevicesOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { unread } = useNotifications()
   const whatsNew = useWhatsNew()
@@ -167,14 +164,9 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
                   )}
                 </span>
               </MenuItem>
+              {/* แก้ไขโปรไฟล์ / อุปกรณ์ที่เข้าสู่ระบบ อยู่ในหน้าโปรไฟล์ */}
               <MenuItem icon={<IdCard size={18} />} onClick={pick(onOpenMyProfile)}>
-                {t('โปรไฟล์และประวัติรีวิว')}
-              </MenuItem>
-              <MenuItem icon={<Pencil size={18} />} onClick={pick(onEditProfile)}>
-                {t('แก้ไขโปรไฟล์')}
-              </MenuItem>
-              <MenuItem icon={<MonitorSmartphone size={18} />} onClick={pick(() => setDevicesOpen(true))}>
-                {t('อุปกรณ์ที่เข้าสู่ระบบ')}
+                {t('โปรไฟล์ของฉัน')}
               </MenuItem>
             </MenuSection>
           ) : (
@@ -281,11 +273,6 @@ export function AccountMenu({ pendingReports, onOpenMyProfile, onEditProfile, on
       {notificationsOpen && session && (
         <Suspense fallback={null}>
           <NotificationsDialog onClose={() => setNotificationsOpen(false)} />
-        </Suspense>
-      )}
-      {devicesOpen && session && (
-        <Suspense fallback={null}>
-          <DevicesDialog onClose={() => setDevicesOpen(false)} />
         </Suspense>
       )}
       {whatsNewFrom !== undefined && (

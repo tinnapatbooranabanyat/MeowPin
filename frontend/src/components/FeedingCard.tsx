@@ -3,6 +3,7 @@ import { LoaderCircle, TriangleAlert, Utensils } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { useRefreshMissions } from '../hooks/useMissions'
 import { errorText, fetchFeedingsToday, fetchFoodInfo, recordFeeding, setFeedingReaction } from '../lib/api'
 import { getCurrentPosition } from '../lib/geo'
 import type { Cat, Eaten, FoodInfo, FoodKind } from '../types'
@@ -37,6 +38,7 @@ export function FeedingCard({ cat }: { cat: Cat }) {
   const { t, lang } = useI18n()
   const { userId, requireLogin } = useAuth()
   const queryClient = useQueryClient()
+  const refreshMissions = useRefreshMissions()
   const [picked, setPicked] = useState<FoodKind | null>(null)
   // เพิ่งบันทึก → ถามต่อว่าน้องกินแค่ไหน
   const [asking, setAsking] = useState(false)
@@ -54,6 +56,7 @@ export function FeedingCard({ cat }: { cat: Cat }) {
       setAsking(true)
       setThanks(false)
       for (const key of [['feedings', cat.id], ['foodInfo', cat.id], ['fedToday']]) queryClient.invalidateQueries({ queryKey: key })
+      refreshMissions()
     },
   })
   const react = useMutation({

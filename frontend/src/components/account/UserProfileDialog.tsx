@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, CalendarDays, MapPin, PawPrint, Pencil, ThumbsDown, ThumbsUp, UserCheck } from 'lucide-react'
-import { useState } from 'react'
+import { Ban, CalendarDays, MapPin, MonitorSmartphone, PawPrint, Pencil, ThumbsDown, ThumbsUp, UserCheck } from 'lucide-react'
+import { lazy, Suspense, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { useMapActions } from '../../hooks/useMapActions'
@@ -11,9 +11,10 @@ import { PawRating } from '../reviews/PawRating'
 import { Modal } from '../ui/Modal'
 import { BadgeList } from './BadgeList'
 import { CollectionSection } from './CollectionSection'
-import { MissionsCard } from '../MissionsCard'
 import { UserAvatar } from './UserAvatar'
 import { promptText } from '../../lib/dialogs'
+
+const DevicesDialog = lazy(() => import('./DevicesDialog').then((m) => ({ default: m.DevicesDialog })))
 
 type Tab = 'reviews' | 'cats'
 
@@ -34,6 +35,7 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
   })
   const { openCat } = useMapActions()
   const [tab, setTab] = useState<Tab>('reviews')
+  const [devicesOpen, setDevicesOpen] = useState(false)
   const isMe = me === userId
 
   const profile = useQuery({ queryKey: ['userProfile', userId, 'profile'], queryFn: () => fetchProfile(userId) })
@@ -128,8 +130,6 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
           </div>
         )}
 
-        {isMe && <MissionsCard />}
-
         <CollectionSection userId={userId} isMe={isMe} onOpenCat={goToCat} />
 
         <BadgeList userId={userId} isMe={isMe} />
@@ -215,7 +215,24 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
             ))}
           </ul>
         )}
+
+        {/* ความปลอดภัยของบัญชี (ย้ายมาจากเมนู) */}
+        {isMe && (
+          <button
+            type="button"
+            onClick={() => setDevicesOpen(true)}
+            className="flex items-center justify-center gap-1.5 rounded-full py-2 text-sm text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50"
+          >
+            <MonitorSmartphone size={15} aria-hidden="true" />
+            {t('อุปกรณ์ที่เข้าสู่ระบบ')}
+          </button>
+        )}
       </div>
+      {devicesOpen && (
+        <Suspense fallback={null}>
+          <DevicesDialog onClose={() => setDevicesOpen(false)} />
+        </Suspense>
+      )}
     </Modal>
   )
 }

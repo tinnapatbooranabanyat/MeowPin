@@ -1,18 +1,17 @@
-import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronRight, Flame, PartyPopper, Target } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useMapActions } from '../hooks/useMapActions'
-import { fetchMyMissions } from '../lib/api'
+import { useMissions } from '../hooks/useMissions'
 import { bangkokWeek } from '../lib/leaderboard'
 import { missionOf } from '../lib/missions'
 
 /** ภารกิจสัปดาห์นี้ (เหมือนกันทุกคน) — กดภารกิจแล้วเปิดตัวกรองบนแผนที่ที่ช่วยหาน้อง */
-export function MissionsCard() {
+export function MissionsCard({ hideTitle = false }: { hideTitle?: boolean }) {
   const { t } = useI18n()
   const { userId, requireLogin } = useAuth()
   const { applyFilter } = useMapActions()
-  const missions = useQuery({ queryKey: ['missions', userId], queryFn: fetchMyMissions, staleTime: 30_000 })
+  const missions = useMissions()
   const data = missions.data
   // ยังไม่ได้รัน migration 0029
   if (!data) return null
@@ -21,10 +20,14 @@ export function MissionsCard() {
   return (
     <section className="mb-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 px-4 py-3 ring-1 ring-orange-200">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 font-medium text-stone-900">
-          <Target size={17} className="text-orange-600" aria-hidden="true" />
-          {t('ภารกิจสัปดาห์นี้')}
-        </h3>
+        {hideTitle ? (
+          <span />
+        ) : (
+          <h3 className="flex items-center gap-1.5 font-medium text-stone-900">
+            <Target size={17} className="text-orange-600" aria-hidden="true" />
+            {t('ภารกิจสัปดาห์นี้')}
+          </h3>
+        )}
         <span className="text-xs text-stone-500">{t('เหลืออีก {n} วัน', { n: bangkokWeek().daysLeft })}</span>
       </div>
 

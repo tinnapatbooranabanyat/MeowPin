@@ -23,7 +23,8 @@ export function HelpSection({ cat }: { cat: Cat }) {
     enabled: cat.helpKinds.length > 0,
   })
   const refresh = () => {
-    for (const key of [['catHelp', cat.id], ['cats'], ['cat', cat.id]]) queryClient.invalidateQueries({ queryKey: key })
+    // ['missions']: ยืนยันเรื่องขอความช่วยเหลือนับเป็นภารกิจได้
+    for (const key of [['catHelp', cat.id], ['cats'], ['cat', cat.id], ['missions']]) queryClient.invalidateQueries({ queryKey: key })
   }
   const resolve = useMutation({ mutationFn: () => resolveHelp(cat.id), onSuccess: refresh })
 

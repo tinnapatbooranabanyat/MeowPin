@@ -16,6 +16,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-missions-button',
+    date: '2026-10-13',
+    title: { th: 'ภารกิจอยู่บนแผนที่แล้ว', en: 'Missions on the map' },
+    items: [
+      { th: 'ปุ่ม "ภารกิจ" บนแผนที่ บอกว่าทำไปแล้วกี่ภารกิจ ทำสำเร็จแล้วมีข้อความเด้งบอกทันที', en: 'A "Missions" button on the map shows your progress, and you get a pop-up when you finish one' },
+      { th: 'เมนูบัญชีสั้นลง: แก้ไขโปรไฟล์และอุปกรณ์ที่เข้าสู่ระบบย้ายไปอยู่ในหน้าโปรไฟล์', en: 'Shorter account menu: edit profile and signed-in devices now live on your profile page' },
+      { th: 'หน้ารูปของน้องมีพื้นหลังโปร่งแสง เห็นแผนที่ด้านหลัง', en: 'The cat photo viewer now has a see-through background' },
+    ],
+  },
+  {
     id: '2026-10-13-missions',
     date: '2026-10-13',
     title: { th: 'ภารกิจประจำสัปดาห์', en: 'Weekly missions' },

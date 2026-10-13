@@ -58,7 +58,8 @@ export function PhotoBrowser({ cat, photos, startIndex, onClose }: Props) {
   const viewer = photo && (
     <div
       // min-w-0 + overflow-hidden: รูปใหญ่มาก (กว้างหลายพันพิกเซล) ต้องไม่ดันพื้นที่ให้กว้างเกินจอ (Safari)
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden bg-black p-4"
+      // พื้นหลังโปร่งแสง เห็นแผนที่ด้านหลังจางๆ
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden bg-black/55 p-4 backdrop-blur-sm"
       // ปัดซ้าย-ขวาเพื่อเปลี่ยนรูป (มือถือ)
       onPointerDown={(e) => (swipeStart.current = e.clientX)}
       onPointerUp={(e) => {
@@ -105,7 +106,7 @@ export function PhotoBrowser({ cat, photos, startIndex, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={t('รูปทั้งหมดของ {name} ({n})', { name: cat.name, n: photos.length })}
-      className="pointer-events-auto fixed inset-0 z-[60] flex animate-fade-in bg-black"
+      className="pointer-events-auto fixed inset-0 z-[60] flex animate-fade-in"
     >
       {add.input}
 

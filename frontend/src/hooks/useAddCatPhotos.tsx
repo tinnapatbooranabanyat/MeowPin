@@ -8,6 +8,7 @@ import { compressPhoto } from '../lib/photo'
 import type { Cat } from '../types'
 import { useAuth } from './useAuth'
 import { useI18n } from './useI18n'
+import { useRefreshMissions } from './useMissions'
 
 const MAX_FILES = 6
 
@@ -16,6 +17,7 @@ export function useAddCatPhotos(cat: Cat) {
   const { t, lang } = useI18n()
   const { requireLogin } = useAuth()
   const queryClient = useQueryClient()
+  const refreshMissions = useRefreshMissions()
   const inputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
@@ -62,7 +64,10 @@ export function useAddCatPhotos(cat: Cat) {
       setProgress({ done: i + 1, total: files.length })
     }
     setProgress(null)
-    if (added) queryClient.invalidateQueries({ queryKey: ['catPhotos', cat.id] })
+    if (added) {
+      queryClient.invalidateQueries({ queryKey: ['catPhotos', cat.id] })
+      refreshMissions()
+    }
     if (lastError) setMessage({ tone: 'error', text: lastError })
     else if (added) setMessage({ tone: 'ok', text: t('เพิ่มรูปแล้ว {n} รูป ขอบคุณที่แชร์นะ', { n: added }) })
   }
