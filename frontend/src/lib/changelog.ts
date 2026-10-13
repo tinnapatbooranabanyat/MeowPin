@@ -16,6 +16,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-swipe-close',
+    date: '2026-10-13',
+    title: { th: 'ปัดลงเพื่อปิดการ์ดน้อง', en: 'Swipe down to close the cat card' },
+    items: [
+      {
+        th: 'ตอนการ์ดเปิดเต็มจอ เลื่อนขึ้นไปบนสุดแล้วปัดลงเพื่อย่อการ์ด ปัดลงยาวๆ เพื่อปิด ไม่ต้องจับที่ขีดด้านบน',
+        en: 'With the card full screen, scroll to the top and swipe down to shrink it, or swipe further to close it. No need to grab the bar.',
+      },
+    ],
+  },
+  {
     id: '2026-10-13-onsite',
     date: '2026-10-13',
     title: { th: '"เจอ" ต้องอยู่ที่น้องจริง', en: '"Found" means you were really there' },

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { Drawer } from 'vaul'
 import type { Cat } from '../types'
 import { CatDetails } from './CatDetails'
@@ -15,8 +15,11 @@ interface Props {
 
 // ความสูงแรกพอเห็นรูป + ชื่อ + คะแนน ลากขึ้นดูเต็ม
 const SNAP_POINTS = ['400px', 1] as const
+// ตอนเต็มจอ ปัดลงจากบนสุดของเนื้อหา: เกินเท่านี้ = ย่อ / เกินเท่านี้ = ปิดการ์ด (พิกเซล)
+const PULL_COLLAPSE = 70
+const PULL_CLOSE = 200
 
-// bottom sheet บนมือถือ: ลากขึ้นดูเต็ม ลากลงเพื่อปิด แผนที่ด้านหลังยังใช้งานได้
+// bottom sheet บนมือถือ: ลากขึ้นดูเต็ม ลากลงเพื่อปิด (ตอนเต็มจอ ปัดลงจากบนสุดของเนื้อหาได้เลย) แผนที่ด้านหลังยังใช้งานได้
 export function CatSheet({ cat, onClose, onSighting, onShare, onDelete, onReport }: Props) {
   const { t } = useI18n()
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0])
@@ -28,6 +31,39 @@ export function CatSheet({ cat, onClose, onSighting, onShare, onDelete, onReport
   useEffect(() => {
     if (!full) scrollRef.current?.scrollTo({ top: 0 })
   }, [full])
+
+  // ปัดลงเพื่อย่อ/ปิด (ตอนเต็มจอ เลื่อนอยู่บนสุดแล้ว) — ขยับเนื้อหาตามนิ้วให้รู้ว่ากำลังจะย่อ
+  const pull = useRef<{ startY: number; dy: number } | null>(null)
+  const setPullOffset = (dy: number, animate = false) => {
+    const el = scrollRef.current
+    if (!el) return
+    el.style.transition = animate ? 'transform 0.25s ease' : 'none'
+    el.style.transform = dy ? `translateY(${dy * 0.5}px)` : ''
+  }
+  const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    // เริ่มปัดตอนที่เนื้อหาอยู่บนสุดเท่านั้น (ไม่งั้นเป็นการเลื่อนอ่านปกติ)
+    pull.current = full && (scrollRef.current?.scrollTop ?? 0) <= 0 ? { startY: e.touches[0].clientY, dy: 0 } : null
+  }
+  const onTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    const p = pull.current
+    if (!p) return
+    const dy = e.touches[0].clientY - p.startY
+    // ปัดขึ้น หรือเนื้อหาเลื่อนไปแล้ว → เป็นการอ่านต่อ เลิกนับ
+    if (dy < 0 || (scrollRef.current?.scrollTop ?? 0) > 0) {
+      pull.current = null
+      setPullOffset(0, true)
+      return
+    }
+    p.dy = dy
+    setPullOffset(dy)
+  }
+  const onTouchEnd = () => {
+    const dy = pull.current?.dy ?? 0
+    pull.current = null
+    setPullOffset(0, true)
+    if (dy > PULL_CLOSE) onClose()
+    else if (dy > PULL_COLLAPSE) setSnap(SNAP_POINTS[0])
+  }
 
   // เปลี่ยนตัวใหม่ → อัปเดตระหว่าง render และกลับไปที่ความสูงเริ่มต้น
   if (cat && cat !== shown) {
@@ -66,6 +102,10 @@ export function CatSheet({ cat, onClose, onSighting, onShare, onDelete, onReport
             onClickCapture={(e) => {
               if (!full && (e.target as HTMLElement).closest('[role="tab"]')) setSnap(SNAP_POINTS[1])
             }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchEnd}
           >
             {shown && (
               <CatDetails
