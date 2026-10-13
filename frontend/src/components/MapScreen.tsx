@@ -9,8 +9,9 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, fetchAdminCounts, fetchFedToday, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
+import { deleteCat, errorText, fetchAdminCounts, fetchFedToday, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
 import { matchesQuery, seenWithin } from '../lib/cat'
+import { getCurrentPosition } from '../lib/geo'
 import type { Cat, FurColor, LatLng, MoveRequest } from '../types'
 import { AccountMenu } from './account/AccountMenu'
 import { ProfileDialog } from './account/ProfileDialog'
@@ -110,7 +111,7 @@ export function MapScreen({ mapId }: Props) {
   const map = useMap()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const { requireLogin, isAdmin, userId } = useAuth()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { resolved: theme } = useTheme()
   const queryClient = useQueryClient()
 
@@ -406,12 +407,14 @@ export function MapScreen({ mapId }: Props) {
   const markSighting = async (cat: Cat): Promise<boolean> => {
     if (!requireLogin(t('เข้าสู่ระบบเพื่อบันทึกว่าคุณเจอ{name}', { name: cat.name }))) return false
     try {
-      const result = await recordSighting(cat.id)
+      // ต้องอยู่ใกล้น้อง — ฐานข้อมูลเช็กระยะเอง
+      const fix = await getCurrentPosition(10_000)
+      const result = await recordSighting(cat.id, fix)
       upsertCat({ ...cat, sightings: result.sightings, lastSeenAt: result.lastSeenAt })
       showToast(t('บันทึกแล้วว่าคุณเจอ{name}', { name: cat.name }))
       return true
     } catch (e) {
-      showToast(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ'))
+      showToast(errorText(e, t, lang))
       return false
     }
   }

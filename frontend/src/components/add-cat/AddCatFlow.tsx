@@ -224,11 +224,13 @@ export function AddCatFlow({ origin, start, onClose, onAdded, onMatched }: Props
     setMatching(true)
     setMatchError(null)
     let sighting: { sightings: number; lastSeenAt: string } | null = null
+    const fix = gps ?? (await (gpsPromise.current ?? getCurrentPosition(10_000)))
     try {
-      sighting = await recordSighting(cat.id)
+      sighting = await recordSighting(cat.id, fix)
     } catch (e) {
-      // เพิ่งกดเจอไปไม่ถึง 10 นาที — ไม่เป็นไร ยังเพิ่มรูปได้
-      if (!(e instanceof ApiError && e.status === 429)) {
+      // เพิ่งกดเจอไปไม่ถึง 10 นาที / ไม่ได้อยู่ใกล้น้อง — ไม่เป็นไร ยังเพิ่มรูปได้
+      const nearIssue = e instanceof ApiError && ['too_far', 'gps_inaccurate', 'location_required'].includes(e.code ?? '')
+      if (!(e instanceof ApiError && e.status === 429) && !nearIssue) {
         setMatchError(t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'))
         setMatching(false)
         return
@@ -236,7 +238,7 @@ export function AddCatFlow({ origin, start, onClose, onAdded, onMatched }: Props
     }
     if (addPhoto) {
       try {
-        await uploadCatPhoto(cat.id, draft.photo, undefined, draft.catCheck === 'user')
+        await uploadCatPhoto(cat.id, draft.photo, undefined, draft.catCheck === 'user', fix)
       } catch {
         // รูปไม่ผ่าน/อัปไม่สำเร็จ ก็ยังนับว่าเจอน้องแล้ว
       }

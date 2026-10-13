@@ -112,7 +112,7 @@ function ZoneTab({ bounds, onClose }: { bounds: Bounds; onClose: () => void }) {
       </div>
 
       <p className="mt-3 mb-2 text-xs text-stone-500">
-        {t('"เจอ" = ปักหมุด กดเจอ รีวิว ถ่ายรูป หรือให้อาหารน้อง นับตัวละครั้ง · อันดับ 1 ที่เจออย่างน้อย {n} ตัวได้เป็นเจ้าถิ่น', { n: MAYOR_MIN })}
+        {t('"เจอ" = ปักหมุด กดเจอ ถ่ายรูป หรือให้อาหารน้องตอนอยู่ที่น้อง นับตัวละครั้ง (รีวิวไม่นับ) · อันดับ 1 ที่เจออย่างน้อย {n} ตัวได้เป็นเจ้าถิ่น', { n: MAYOR_MIN })}
       </p>
       {board.isPending && <p className="py-6 text-center text-sm text-stone-500">{t('กำลังโหลด…')}</p>}
       {data && data.top.length === 0 && <p className="py-6 text-center text-sm text-stone-500">{t('ยังไม่มีใครเจอน้องในโซนนี้ เป็นคนแรกเลยสิ')}</p>}

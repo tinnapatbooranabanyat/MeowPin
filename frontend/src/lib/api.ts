@@ -463,9 +463,38 @@ export interface SightingResult {
   lastSeenAt: string
 }
 
-export async function recordSighting(catId: string): Promise<SightingResult> {
-  const { data, error } = await db().rpc('record_sighting', { p_cat_id: catId })
+/** กดเจอ/ให้อาหารต้องอยู่ใกล้น้อง — แปลงข้อผิดพลาดจากฐานข้อมูลเป็นข้อความให้ผู้ใช้ */
+function nearCatError(message: string): ApiError | null {
+  if (message.includes('location_required'))
+    return new ApiError('เปิดสิทธิ์ตำแหน่งก่อนนะ ต้องอยู่ใกล้น้องถึงจะกดได้ (ถ้าเพิ่งอัปเดตแอป ลองรีเฟรชหน้า)', 400, 'location_required')
+  if (message.includes('gps_inaccurate')) return new ApiError('GPS ยังไม่แม่นพอ ลองใหม่อีกครั้งตอนอยู่ที่โล่ง', 400, 'gps_inaccurate')
+  const far = message.match(/too_far:(\d+)/)
+  if (far) {
+    const m = Number(far[1])
+    const distance = m >= 1000 ? `${(m / 1000).toFixed(1)} กม.` : `${m} ม.`
+    return new ApiError(`ต้องอยู่ใกล้น้อง (ไม่เกิน 300 ม.) ถึงจะกดได้ ตอนนี้ห่างประมาณ ${distance}`, 403, 'too_far', `You need to be within 300 m of this cat. You're about ${m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`} away.`)
+  }
+  return null
+}
+
+/** ข้อความผิดพลาดตามภาษาของแอป (บางข้อความมีตัวเลข แปลผ่าน t() ไม่ได้ → ใช้ messageEn) */
+export function errorText(e: unknown, t: (key: string) => string, lang: string): string {
+  if (e instanceof ApiError && lang === 'en' && e.messageEn) return e.messageEn
+  return t(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')
+}
+
+const gpsParams = (fix: GpsFix | null) => ({
+  p_lat: fix?.position.lat ?? null,
+  p_lng: fix?.position.lng ?? null,
+  p_accuracy: fix?.accuracy ?? null,
+})
+
+/** กดเจอ — ต้องส่งตำแหน่งตอนนี้ ฐานข้อมูลเช็กว่าอยู่ใกล้หมุด (ไม่เก็บพิกัด) */
+export async function recordSighting(catId: string, fix: GpsFix | null): Promise<SightingResult> {
+  const { data, error } = await db().rpc('record_sighting', { p_cat_id: catId, ...gpsParams(fix) })
   if (error) {
+    const near = nearCatError(error.message)
+    if (near) throw near
     if (error.message.includes('login_required')) throw new ApiError('เข้าสู่ระบบก่อนนะ', 401)
     if (error.message.includes('too_soon')) throw new ApiError('เพิ่งบันทึกการเจอน้องตัวนี้ไป รอสัก 10 นาทีนะ', 429)
     throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)
@@ -795,11 +824,18 @@ export function uploadCatPhoto(
   photo: File,
   reviewId?: string,
   confirmCat = false,
+  fix: GpsFix | null = null,
 ): Promise<{ id: string }> {
   const form = new FormData()
   form.append('photo', photo)
   if (reviewId) form.append('review_id', reviewId)
   if (confirmCat) form.append('confirm_cat', 'true')
+  // อยู่ใกล้น้องตอนอัปโหลด → นับเข้าสมุดสะสม
+  if (fix) {
+    form.append('lat', String(fix.position.lat))
+    form.append('lng', String(fix.position.lng))
+    form.append('accuracy', String(fix.accuracy))
+  }
   return callBackend<{ id: string }>('POST', `/cats/${catId}/photos`, form)
 }
 
@@ -1252,9 +1288,11 @@ export async function fetchFeedingsToday(catId: string): Promise<FeedingsToday |
   return { feedings: row?.feedings ?? 0, lastFedAt: row?.last_fed_at ?? null, mine: row?.mine ?? false }
 }
 
-export async function recordFeeding(catId: string, food: FoodKind): Promise<void> {
-  const { error } = await db().rpc('record_feeding', { p_cat_id: catId, p_food: food })
+export async function recordFeeding(catId: string, food: FoodKind, fix: GpsFix | null): Promise<void> {
+  const { error } = await db().rpc('record_feeding', { p_cat_id: catId, p_food: food, ...gpsParams(fix) })
   if (error) {
+    const near = nearCatError(error.message)
+    if (near) throw near
     if (error.message.includes('too_soon')) throw new ApiError('คุณเพิ่งบันทึกการให้อาหารน้องตัวนี้ไป รอสัก 2 ชั่วโมงนะ', 429)
     if (error.message.includes('login_required')) throw new ApiError('เข้าสู่ระบบก่อนนะ', 401)
     throw new ApiError('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 500)

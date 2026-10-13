@@ -47,6 +47,9 @@ check_user_limiter = RateLimiter("check_user", 40, 3600, "ตรวจรูป�
 post_user_limiter = RateLimiter("post_user", 5, 86400, "ลงประกาศได้วันละ 5 ครั้ง พรุ่งนี้ลองใหม่นะ")
 photo_search_limiter = RateLimiter("photo_search", 10, 3600, "ค้นหาด้วยรูปได้ชั่วโมงละ 10 ครั้ง พักสักครู่แล้วลองใหม่")
 MAX_PHOTOS_PER_REVIEW = 4
+# อยู่ใกล้หมุดแค่ไหนถึงนับว่า "อยู่ที่น้อง" (ตรงกับ public.is_near_cat / require_near_cat)
+NEAR_CAT_M = 300
+NEAR_ACCURACY_M = 150
 
 
 @asynccontextmanager
@@ -494,6 +497,10 @@ def add_cat_photo(
     photo: UploadFile,
     review_id: Annotated[UUID | None, Form()] = None,
     confirm_cat: Annotated[bool, Form()] = False,
+    # ตำแหน่งเครื่องตอนอัปโหลด — อยู่ใกล้น้องถึงจะนับเข้าสมุดสะสม (ไม่เก็บพิกัด)
+    lat: Annotated[float | None, Form(ge=-90, le=90)] = None,
+    lng: Annotated[float | None, Form(ge=-180, le=180)] = None,
+    accuracy: Annotated[float | None, Form(ge=0)] = None,
 ):
     """เพิ่มรูปเข้าอัลบั้มของแมว (แนบกับรีวิวของตัวเองได้ สูงสุด 4 รูปต่อรีวิว)"""
     client = get_client()
@@ -502,6 +509,10 @@ def add_cat_photo(
 
     if not client.table("cats").select("id").eq("id", str(cat_id)).limit(1).execute().data:
         raise HTTPException(status_code=404, detail="ไม่พบน้องแมวตัวนี้")
+    near_cat = False
+    if lat is not None and lng is not None and accuracy is not None and accuracy <= NEAR_ACCURACY_M:
+        pos = client.table("cats_public").select("lat, lng").eq("id", str(cat_id)).limit(1).execute().data
+        near_cat = bool(pos) and distance_m(pos[0]["lat"], pos[0]["lng"], lat, lng) <= NEAR_CAT_M
     if review_id:
         review = (
             client.table("reviews").select("user_id, cat_id").eq("id", str(review_id)).limit(1).execute().data
@@ -530,9 +541,10 @@ def add_cat_photo(
         "photo_path": photo_path,
         "cat_confidence": round(cat_score, 4),
         "cat_check": cat_check,
+        "near_cat": near_cat,
     }
     try:
-        insert_tolerant(client, "cat_photos", row, ("cat_check",))
+        insert_tolerant(client, "cat_photos", row, ("cat_check", "near_cat"))
     except APIError:
         bucket.remove([photo_path])
         log.exception("insert cat photo failed")

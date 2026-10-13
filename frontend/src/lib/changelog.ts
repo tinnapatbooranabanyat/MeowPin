@@ -16,6 +16,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-onsite',
+    date: '2026-10-13',
+    title: { th: '"เจอ" ต้องอยู่ที่น้องจริง', en: '"Found" means you were really there' },
+    items: [
+      { th: 'กด "ฉันเจอด้วย" และบันทึกการให้อาหาร ต้องอยู่ใกล้น้องไม่เกิน 300 ม. (ไม่เก็บพิกัดของคุณ)', en: '"I saw it too" and feeding logs need you to be within 300 m of the cat (your location isn’t stored)' },
+      { th: 'สมุดสะสมนับเฉพาะสิ่งที่ทำตอนอยู่ที่น้อง รีวิวไม่นับแล้ว ของที่สะสมไว้ก่อนหน้านี้ยังอยู่ครบ', en: 'Your collection only counts things done at the cat; reviews no longer count. Everything you collected before stays.' },
+    ],
+  },
+  {
     id: '2026-10-13-collection',
     date: '2026-10-13',
     title: { th: 'สมุดสะสมน้องแมว และเจ้าถิ่น', en: 'Cat collection and Local Legends' },

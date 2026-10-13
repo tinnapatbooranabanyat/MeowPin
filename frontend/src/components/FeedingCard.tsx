@@ -3,7 +3,8 @@ import { LoaderCircle, TriangleAlert, Utensils } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
-import { fetchFeedingsToday, fetchFoodInfo, recordFeeding, setFeedingReaction } from '../lib/api'
+import { errorText, fetchFeedingsToday, fetchFoodInfo, recordFeeding, setFeedingReaction } from '../lib/api'
+import { getCurrentPosition } from '../lib/geo'
 import type { Cat, Eaten, FoodInfo, FoodKind } from '../types'
 
 const FOODS: { value: FoodKind; label: string }[] = [
@@ -47,7 +48,8 @@ export function FeedingCard({ cat }: { cat: Cat }) {
   })
   const info = useQuery({ queryKey: ['foodInfo', cat.id], queryFn: () => fetchFoodInfo(cat.id), staleTime: 60_000 })
   const record = useMutation({
-    mutationFn: (food: FoodKind) => recordFeeding(cat.id, food),
+    // ต้องอยู่ใกล้น้อง — ฐานข้อมูลเช็กระยะเอง
+    mutationFn: async (food: FoodKind) => recordFeeding(cat.id, food, await getCurrentPosition(10_000)),
     onSuccess: () => {
       setAsking(true)
       setThanks(false)
@@ -141,7 +143,7 @@ export function FeedingCard({ cat }: { cat: Cat }) {
       ) : (
         <>
           {thanks && <p className="mt-2 text-xs text-emerald-700">{t('ขอบคุณที่บอกนะ ข้อมูลนี้ช่วยคนที่มาให้อาหารครั้งหน้า')}</p>}
-          <p className="mt-2 text-xs text-stone-500">{t('เพิ่งให้อาหารน้อง? กดบันทึกให้คนอื่นรู้:')}</p>
+          <p className="mt-2 text-xs text-stone-500">{t('เพิ่งให้อาหารน้อง? กดบันทึกให้คนอื่นรู้ (ต้องอยู่ใกล้น้อง):')}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {FOODS.map((food) => (
               <button
@@ -162,7 +164,7 @@ export function FeedingCard({ cat }: { cat: Cat }) {
           </div>
         </>
       )}
-      {record.error && <p className="mt-2 text-xs text-red-700">{t(record.error.message)}</p>}
+      {record.error && <p className="mt-2 text-xs text-red-700">{errorText(record.error, t, lang)}</p>}
     </section>
   )
 }

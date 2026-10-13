@@ -3,6 +3,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { ApiError, uploadCatPhoto } from '../lib/api'
 import { UPLOAD_ACCEPT } from '../lib/device'
 import { confirmAction } from '../lib/dialogs'
+import { getCurrentPosition } from '../lib/geo'
 import { compressPhoto } from '../lib/photo'
 import type { Cat } from '../types'
 import { useAuth } from './useAuth'
@@ -31,11 +32,13 @@ export function useAddCatPhotos(cat: Cat) {
     setProgress({ done: 0, total: files.length })
     let added = 0
     let lastError: string | null = null
+    // ตำแหน่งตอนนี้ (ไม่บังคับ) — อยู่ใกล้น้องถึงจะนับเข้าสมุดสะสม
+    const fix = await getCurrentPosition(8000)
     for (const [i, file] of files.entries()) {
       try {
         const photo = await compressPhoto(file)
         try {
-          await uploadCatPhoto(cat.id, photo)
+          await uploadCatPhoto(cat.id, photo, undefined, false, fix)
           added++
         } catch (err) {
           if (!(err instanceof ApiError && err.code === 'not_cat')) throw err
@@ -46,7 +49,7 @@ export function useAddCatPhotos(cat: Cat) {
             confirmLabel: t('เป็นแมวจริง อัปโหลดเลย'),
           })
           if (ok) {
-            await uploadCatPhoto(cat.id, photo, undefined, true)
+            await uploadCatPhoto(cat.id, photo, undefined, true, fix)
             added++
           }
         }

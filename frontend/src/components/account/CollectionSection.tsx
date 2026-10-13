@@ -86,7 +86,7 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
           ))}
         </div>
       )}
-      {isMe && !s.cats && <p className="mt-2 text-xs text-stone-500">{t('ปักหมุด กดเจอ รีวิว ถ่ายรูป หรือให้อาหารน้อง แล้วน้องจะเข้ามาอยู่ในสมุดสะสม')}</p>}
+      {isMe && !s.cats && <p className="mt-2 text-xs text-stone-500">{t('ปักหมุด กดเจอ ถ่ายรูป หรือให้อาหารน้องตอนอยู่ที่น้อง แล้วน้องจะเข้ามาอยู่ในสมุดสะสม')}</p>}
     </section>
   )
 }
