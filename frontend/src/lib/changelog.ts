@@ -16,6 +16,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-share-card',
+    date: '2026-10-13',
+    title: { th: 'แชร์ลง IG story ได้', en: 'Share to your story' },
+    items: [
+      { th: 'โปรไฟล์ → สมุดสะสม → "แชร์ลง story" สร้างรูปเจอน้องมาแล้วกี่ตัว พร้อมรูปน้องและป้ายเจ้าถิ่น', en: 'Profile → Cat collection → "Share to story" makes an image with how many cats you found, their photos and your Local Legend titles' },
+      { th: 'ปุ่มแชร์ในหน้าน้องทำเป็นรูป story ได้ด้วย หรือจะแชร์ลิงก์แบบเดิมก็ได้', en: 'The share button on a cat page can make a story image too, or share the link as before' },
+    ],
+  },
+  {
     id: '2026-10-13-swipe-close',
     date: '2026-10-13',
     title: { th: 'ปัดลงเพื่อปิดการ์ดน้อง', en: 'Swipe down to close the cat card' },

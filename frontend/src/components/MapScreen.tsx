@@ -1,6 +1,6 @@
 import { Map, useMap } from '@vis.gl/react-google-maps'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Footprints, Hand, LocateFixed, X } from 'lucide-react'
+import { Footprints, Hand, Link2, LocateFixed, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { snapBounds, useCat, useCatsInView, useUpsertCat } from '../hooks/useCats'
@@ -10,7 +10,8 @@ import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
 import { deleteCat, errorText, fetchAdminCounts, fetchFedToday, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
-import { matchesQuery, seenWithin } from '../lib/cat'
+import { furLabel, matchesQuery, seenWithin } from '../lib/cat'
+import { drawCatCard } from '../lib/shareCard'
 import { getCurrentPosition } from '../lib/geo'
 import type { Cat, FurColor, LatLng, MoveRequest } from '../types'
 import { AccountMenu } from './account/AccountMenu'
@@ -31,6 +32,7 @@ import { PostsDialog } from './PostsDialog'
 import { CatSheet } from './CatSheet'
 import { DroppedPin } from './DroppedPin'
 import { PlaceMarker } from './PlaceMarker'
+import { ShareCardDialog } from './ShareCardDialog'
 import { LocationPicker } from './add-cat/LocationPicker'
 import { usePlaceSearch, type FoundPlace, type PlaceSuggestion } from '../hooks/usePlaceSearch'
 import { FilterChips } from './FilterChips'
@@ -105,6 +107,7 @@ type Dialog =
   | { kind: 'posts' }
   | { kind: 'nearby' }
   | { kind: 'photoSearch' }
+  | { kind: 'shareCat'; cat: Cat }
   | null
 
 export function MapScreen({ mapId }: Props) {
@@ -438,7 +441,10 @@ export function MapScreen({ mapId }: Props) {
     if (requireLogin(t('เข้าสู่ระบบเพื่อรายงานหมุดนี้'))) setDialog({ kind: 'catReport', cat })
   }
 
-  const shareCat = async (cat: Cat) => {
+  // ปุ่มแชร์ในหน้าน้อง → เลือกได้ว่าจะแชร์เป็นรูป story หรือแชร์ลิงก์
+  const shareCat = (cat: Cat) => setDialog({ kind: 'shareCat', cat })
+
+  const shareCatLink = async (cat: Cat) => {
     // /c/:id = หน้าที่มีรูปตัวอย่างให้ LINE/Facebook (คนกดจะถูกส่งต่อไปหน้าน้องเอง — ดู api/share.ts)
     const url = `${window.location.origin}/c/${cat.id}`
     const data = {
@@ -732,6 +738,37 @@ export function MapScreen({ mapId }: Props) {
               setSelectedId(cat.id)
               focusCat(cat)
             }}
+          />
+        )}
+        {dialog?.kind === 'shareCat' && (
+          <ShareCardDialog
+            title={t('แชร์น้อง{name}', { name: dialog.cat.name })}
+            fileName={`meowpin-${dialog.cat.name}.png`}
+            text={t('มาดู{name}บน MeowPin', { name: dialog.cat.name })}
+            onClose={() => setDialog(null)}
+            make={() =>
+              drawCatCard(
+                {
+                  name: dialog.cat.name,
+                  photoUrl: dialog.cat.photoUrl,
+                  place: dialog.cat.placeName,
+                  zone: null,
+                  sightings: dialog.cat.sightings,
+                  furLabel: t('แมว{fur}', { fur: t(furLabel(dialog.cat)) }),
+                },
+                lang,
+              )
+            }
+            extra={
+              <button
+                type="button"
+                onClick={() => shareCatLink(dialog.cat)}
+                className="flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium text-stone-700 ring-1 ring-stone-300 hover:bg-stone-100"
+              >
+                <Link2 size={16} aria-hidden="true" />
+                {t('แชร์ลิงก์ (มีรูปตัวอย่างใน LINE/Facebook)')}
+              </button>
+            }
           />
         )}
         {dialog?.kind === 'leaderboard' && bounds && (

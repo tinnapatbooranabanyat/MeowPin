@@ -1,8 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { BookOpenCheck, Crown } from 'lucide-react'
+import { BookOpenCheck, Crown, Share2 } from 'lucide-react'
+import { useState } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
 import { fetchCollectionStats, fetchMyCollectedCats, fetchMyZoneProgress } from '../../lib/api'
+import { drawCollectionCard } from '../../lib/shareCard'
 import { provinceLabel, zoneLabel } from '../../lib/zones'
+import { ShareCardDialog } from '../ShareCardDialog'
 import { CatAvatar } from '../CatAvatar'
 
 /** สมุดสะสมน้องแมว: เจอมาแล้วกี่ตัว / กี่โซน / เป็นเจ้าถิ่นที่ไหน (+ โซนของฉันและน้องที่เจอ เฉพาะโปรไฟล์ตัวเอง) */
@@ -11,6 +15,8 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
   const stats = useQuery({ queryKey: ['collection', userId], queryFn: () => fetchCollectionStats(userId) })
   const zones = useQuery({ queryKey: ['myZones', userId], queryFn: fetchMyZoneProgress, enabled: isMe })
   const cats = useQuery({ queryKey: ['myCollected', userId], queryFn: fetchMyCollectedCats, enabled: isMe })
+  const { profile } = useAuth()
+  const [sharing, setSharing] = useState(false)
 
   // ยังไม่ได้รัน migration 0026
   if (!stats.data) return null
@@ -19,10 +25,22 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
 
   return (
     <section>
-      <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-stone-700">
-        <BookOpenCheck size={16} className="text-orange-500" aria-hidden="true" />
-        {t('สมุดสะสมน้องแมว')}
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+          <BookOpenCheck size={16} className="text-orange-500" aria-hidden="true" />
+          {t('สมุดสะสมน้องแมว')}
+        </h3>
+        {isMe && s.cats > 0 && (
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200 hover:bg-orange-50"
+          >
+            <Share2 size={13} aria-hidden="true" />
+            {t('แชร์ลง story')}
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         {(
           [
@@ -85,6 +103,28 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
             </button>
           ))}
         </div>
+      )}
+      {sharing && (
+        <ShareCardDialog
+          title={t('แชร์สมุดสะสม')}
+          fileName="meowpin-collection.png"
+          text={t('ฉันเจอน้องแมวมาแล้ว {n} ตัวบน MeowPin', { n: s.cats })}
+          onClose={() => setSharing(false)}
+          make={() =>
+            drawCollectionCard(
+              {
+                name: profile?.displayName ?? '',
+                avatarUrl: profile?.avatarUrl ?? null,
+                cats: s.cats,
+                zones: s.zones,
+                completed: s.completed,
+                mayorZones: s.mayor.map((z) => (lang === 'en' ? z.en : z.th)),
+                recentCats: (cats.data ?? []).filter((c) => c.photoUrl).slice(0, 4),
+              },
+              lang,
+            )
+          }
+        />
       )}
       {isMe && !s.cats && <p className="mt-2 text-xs text-stone-500">{t('ปักหมุด กดเจอ ถ่ายรูป หรือให้อาหารน้องตอนอยู่ที่น้อง แล้วน้องจะเข้ามาอยู่ในสมุดสะสม')}</p>}
     </section>
