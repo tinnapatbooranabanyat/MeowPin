@@ -16,6 +16,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-missions',
+    date: '2026-10-13',
+    title: { th: 'ภารกิจประจำสัปดาห์', en: 'Weekly missions' },
+    items: [
+      { th: 'ทุกสัปดาห์มี 3 ภารกิจ (เหมือนกันทุกคน) ทำครบได้เหรียญ ทำครบติดกันหลายสัปดาห์ได้นับต่อเนื่อง', en: 'Three missions every week (the same for everyone). Finish them for a badge and keep your streak going.' },
+      { th: 'กดภารกิจแล้วแผนที่จะกรองน้องที่ใช่ให้เลย เช่น น้องที่ไม่มีใครเจอนาน หรือน้องที่รูปยังน้อย', en: 'Tap a mission and the map filters to the right cats, e.g. not seen lately or few photos' },
+      { th: 'ตัวกรองใหม่บนแผนที่: "ไม่มีใครเจอนาน" และ "รูปยังน้อย"', en: 'New map filters: "Not seen lately" and "Few photos"' },
+    ],
+  },
+  {
     id: '2026-10-13-leaderboards',
     date: '2026-10-13',
     title: { th: 'อันดับหลายหมวด และแชมป์ประจำสัปดาห์', en: 'More rankings and weekly champions' },

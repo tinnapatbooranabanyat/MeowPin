@@ -9,7 +9,7 @@ import { MapActionsContext, type MapActions } from '../hooks/useMapActions'
 import { useMapLongPress } from '../hooks/useMapLongPress'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
-import { deleteCat, errorText, fetchAdminCounts, fetchFedToday, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
+import { deleteCat, errorText, fetchAdminCounts, fetchFedToday, fetchFewPhotos, moveCat, recordSighting, requestMove, wakeBackend, type Bounds } from '../lib/api'
 import { furLabel, matchesQuery, seenWithin } from '../lib/cat'
 import { drawCatCard } from '../lib/shareCard'
 import { getCurrentPosition } from '../lib/geo'
@@ -130,6 +130,9 @@ export function MapScreen({ mapId }: Props) {
   const [needsHelp, setNeedsHelp] = useState(false)
   // น้องที่ยังไม่มีใครบันทึกว่าให้อาหารวันนี้ (ไม่นับน้องมีเจ้าของ เจ้าของให้อยู่แล้ว)
   const [notFedToday, setNotFedToday] = useState(false)
+  // ไม่มีใครเจอเกิน 14 วัน / มีรูปไม่ถึง 2 รูป (ใช้กับภารกิจประจำสัปดาห์)
+  const [staleOnly, setStaleOnly] = useState(false)
+  const [fewPhotosOnly, setFewPhotosOnly] = useState(false)
   const [userPosition, setUserPosition] = useState<LatLng | null>(null)
   // เปิดแอปใหม่ → ไปที่ตำแหน่งของเรา (ยกเว้นเปิดจากลิงก์น้องแมว หรือรีโหลดในแท็บเดิมที่จำมุมกล้องไว้แล้ว)
   const [startAtUser] = useState(() => !new URLSearchParams(window.location.search).get('cat') && readSavedCamera() === null)
@@ -174,6 +177,15 @@ export function MapScreen({ mapId }: Props) {
     placeholderData: (prev) => prev,
   })
 
+  const allIds = useMemo(() => cats.map((c) => c.id), [cats])
+  const fewPhotos = useQuery({
+    queryKey: ['fewPhotos', allIds],
+    queryFn: () => fetchFewPhotos(allIds),
+    enabled: fewPhotosOnly,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  })
+
   const visibleCats = useMemo(
     () =>
       cats.filter(
@@ -183,9 +195,11 @@ export function MapScreen({ mapId }: Props) {
           (!friendlyOnly || cat.isFriendly) &&
           (!needsHelp || cat.helpKinds.length > 0) &&
           (!notFedToday || (cat.ownerStatus !== 'owned' && !(fedToday.data?.has(cat.id) ?? false))) &&
+          (!staleOnly || !seenWithin(cat, 14 * 24)) &&
+          (!fewPhotosOnly || (fewPhotos.data?.has(cat.id) ?? !cat.photoUrl)) &&
           matchesQuery(cat, query),
       ),
-    [cats, furColors, seenToday, friendlyOnly, needsHelp, notFedToday, fedToday.data, query],
+    [cats, furColors, seenToday, friendlyOnly, needsHelp, notFedToday, fedToday.data, staleOnly, fewPhotosOnly, fewPhotos.data, query],
   )
   const suggestions = useMemo(() => cats.filter((cat) => matchesQuery(cat, query)).slice(0, 6), [cats, query])
   const placeSearch = usePlaceSearch(query)
@@ -340,6 +354,8 @@ export function MapScreen({ mapId }: Props) {
     setFriendlyOnly(false)
     setNeedsHelp(false)
     setNotFedToday(false)
+    setStaleOnly(false)
+    setFewPhotosOnly(false)
     setSelectedId(cat.id)
     focusCat(cat)
     showToast(t('ปักหมุด{name}แล้ว', { name: cat.name }))
@@ -479,6 +495,14 @@ export function MapScreen({ mapId }: Props) {
       editCat: (cat) => setDialog({ kind: 'editCat', cat }),
       moveCat: (cat, request) => startMovingRef.current(cat, 'move', request),
       suggestMove: (cat) => startMovingRef.current(cat, 'suggest'),
+      applyFilter: (filter) => {
+        setDialog(null)
+        setSelectedId(null)
+        if (filter === 'stale') setStaleOnly(true)
+        if (filter === 'fewPhotos') setFewPhotosOnly(true)
+        if (filter === 'notFed') setNotFedToday(true)
+        if (filter === 'needsHelp') setNeedsHelp(true)
+      },
     }),
     [openCatById],
   )
@@ -575,6 +599,10 @@ export function MapScreen({ mapId }: Props) {
                   onNeedsHelpChange={setNeedsHelp}
                   notFedToday={notFedToday}
                   onNotFedTodayChange={setNotFedToday}
+                  staleOnly={staleOnly}
+                  onStaleOnlyChange={setStaleOnly}
+                  fewPhotosOnly={fewPhotosOnly}
+                  onFewPhotosOnlyChange={setFewPhotosOnly}
                 />
               </div>
             </div>

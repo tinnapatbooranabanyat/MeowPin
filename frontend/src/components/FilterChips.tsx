@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Clock, Heart, HeartPulse, Palette, Utensils, X } from 'lucide-react'
+import { Camera, Check, ChevronDown, Clock, EyeOff, Heart, HeartPulse, Palette, Utensils, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../hooks/useI18n'
 import { FUR_COLORS } from '../lib/cat'
@@ -16,6 +16,10 @@ interface Props {
   onNeedsHelpChange: (value: boolean) => void
   notFedToday: boolean
   onNotFedTodayChange: (value: boolean) => void
+  staleOnly: boolean
+  onStaleOnlyChange: (value: boolean) => void
+  fewPhotosOnly: boolean
+  onFewPhotosOnlyChange: (value: boolean) => void
 }
 
 const chipBase =
@@ -34,6 +38,10 @@ export function FilterChips({
   onNeedsHelpChange,
   notFedToday,
   onNotFedTodayChange,
+  staleOnly,
+  onStaleOnlyChange,
+  fewPhotosOnly,
+  onFewPhotosOnlyChange,
 }: Props) {
   const { t } = useI18n()
   const [palette, setPalette] = useState<{ top: number; left: number } | null>(null)
@@ -145,6 +153,24 @@ export function FilterChips({
       >
         <Utensils size={15} aria-hidden="true" />
         {t('ยังไม่ได้กินวันนี้')}
+      </button>
+      <button
+        type="button"
+        aria-pressed={staleOnly}
+        onClick={() => onStaleOnlyChange(!staleOnly)}
+        className={`${chipBase} ${staleOnly ? chipOn : chipOff}`}
+      >
+        <EyeOff size={15} aria-hidden="true" />
+        {t('ไม่มีใครเจอนาน')}
+      </button>
+      <button
+        type="button"
+        aria-pressed={fewPhotosOnly}
+        onClick={() => onFewPhotosOnlyChange(!fewPhotosOnly)}
+        className={`${chipBase} ${fewPhotosOnly ? chipOn : chipOff}`}
+      >
+        <Camera size={15} aria-hidden="true" />
+        {t('รูปยังน้อย')}
       </button>
 
       {palette && (

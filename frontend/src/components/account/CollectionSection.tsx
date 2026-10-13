@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { BadgeCheck, BookOpenCheck, Crown, Share2, Trophy } from 'lucide-react'
+import { BadgeCheck, BookOpenCheck, Crown, Share2, Target, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../hooks/useI18n'
-import { fetchChampionTitles, fetchCollectionStats, fetchMyCollectedCats, fetchMyZoneProgress } from '../../lib/api'
+import { fetchChampionTitles, fetchCollectionStats, fetchMissionStats, fetchMyCollectedCats, fetchMyZoneProgress } from '../../lib/api'
 import { categoryOf } from '../../lib/leaderboard'
 import { drawCollectionCard } from '../../lib/shareCard'
 import { provinceLabel, zoneLabel } from '../../lib/zones'
@@ -17,6 +17,8 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
   const zones = useQuery({ queryKey: ['myZones', userId], queryFn: fetchMyZoneProgress, enabled: isMe })
   const cats = useQuery({ queryKey: ['myCollected', userId], queryFn: fetchMyCollectedCats, enabled: isMe })
   const titles = useQuery({ queryKey: ['championTitles', userId], queryFn: () => fetchChampionTitles(userId) })
+  const missionStats = useQuery({ queryKey: ['missionStats', userId], queryFn: () => fetchMissionStats(userId) })
+  const missionWeeks = missionStats.data?.weeks ?? 0
   const { profile } = useAuth()
   const weekFmt = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short' })
   const [sharing, setSharing] = useState(false)
@@ -59,8 +61,14 @@ export function CollectionSection({ userId, isMe, onOpenCat }: { userId: string;
         ))}
       </div>
 
-      {(s.mayor.length > 0 || (s.completed_zones?.length ?? 0) > 0 || (titles.data?.length ?? 0) > 0) && (
+      {(s.mayor.length > 0 || (s.completed_zones?.length ?? 0) > 0 || (titles.data?.length ?? 0) > 0 || missionWeeks > 0) && (
         <ul className="mt-2 flex flex-wrap gap-1.5">
+          {missionWeeks > 0 && (
+            <li className="flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-800 ring-1 ring-sky-200">
+              <Target size={12} aria-hidden="true" />
+              {t('ทำภารกิจครบ {n} สัปดาห์', { n: missionWeeks })}
+            </li>
+          )}
           {s.mayor.map((z) => (
             <li key={`m-${z.key}`} className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
               <Crown size={12} aria-hidden="true" />

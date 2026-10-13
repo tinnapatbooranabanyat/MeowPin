@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { MissionFilter } from '../lib/missions'
 import type { Cat, MoveRequest } from '../types'
 
 /** คำสั่งที่ component ลึกๆ (รีวิว หน้าโปรไฟล์) ใช้สั่งหน้าแผนที่ได้ โดยไม่ต้องส่ง prop ต่อกันหลายชั้น */
@@ -10,6 +11,8 @@ export interface MapActions {
   moveCat: (cat: Cat, request?: MoveRequest) => void
   /** คนอื่นเสนอตำแหน่งใหม่ให้คนปักหมุด */
   suggestMove: (cat: Cat) => void
+  /** เปิดตัวกรองบนแผนที่ (จากภารกิจ) แล้วปิดหน้าต่างที่เปิดอยู่ */
+  applyFilter: (filter: MissionFilter) => void
 }
 
 export const MapActionsContext = createContext<MapActions>({
@@ -18,6 +21,7 @@ export const MapActionsContext = createContext<MapActions>({
   editCat: () => {},
   moveCat: () => {},
   suggestMove: () => {},
+  applyFilter: () => {},
 })
 
 export const useMapActions = () => useContext(MapActionsContext)

@@ -9,6 +9,7 @@ import { bangkokWeek, CATEGORIES, categoryOf, PERIODS, type BoardCategory, type 
 import { provinceLabel, zoneLabel } from '../lib/zones'
 import type { ZoneInfo } from '../types'
 import { UserAvatar } from './account/UserAvatar'
+import { MissionsCard } from './MissionsCard'
 import { Modal } from './ui/Modal'
 
 const MEDALS = ['bg-amber-400 text-amber-950', 'bg-slate-300 text-slate-900', 'bg-orange-300 text-orange-950']
@@ -49,6 +50,8 @@ export function LeaderboardDialog({ bounds, onClose }: { bounds: Bounds; onClose
 
   return (
     <Modal title={t('ทาสแมวแถวนี้')} onClose={onClose}>
+      <MissionsCard />
+
       {/* โซน / ทั้งประเทศ */}
       <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('เลือกโซน')}>
         {list.map((z) => (

@@ -1315,6 +1315,37 @@ export async function fetchChampionTitles(userId: string): Promise<ChampionTitle
   }))
 }
 
+// ═══════════════ ภารกิจประจำสัปดาห์ ═══════════════
+export interface WeeklyMissions {
+  weekStart: string
+  missions: { key: string; goal: number; progress: number; done: boolean }[]
+  allDone: boolean
+  /** ทำครบติดกันกี่สัปดาห์ */
+  streak: number
+}
+
+/** null = ยังไม่ได้รัน migration 0029 */
+export async function fetchMyMissions(): Promise<WeeklyMissions | null> {
+  const { data, error } = await db().rpc('my_weekly_missions')
+  if (error || !data) return null
+  const raw = data as { week_start: string; missions: WeeklyMissions['missions']; all_done: boolean; streak: number }
+  return { weekStart: raw.week_start, missions: raw.missions, allDone: raw.all_done, streak: raw.streak }
+}
+
+export async function fetchMissionStats(userId: string): Promise<{ weeks: number } | null> {
+  const { data, error } = await db().rpc('user_mission_stats', { p_user_id: userId })
+  if (error || !data) return null
+  return data as { weeks: number }
+}
+
+/** น้องตัวไหนในรายการนี้มีรูป (รวมรูปหลัก) ไม่ถึง 2 รูป */
+export async function fetchFewPhotos(catIds: string[]): Promise<Set<string>> {
+  if (!catIds.length) return new Set()
+  const { data, error } = await db().rpc('cat_ids_few_photos', { p_cat_ids: catIds.slice(0, 1000) })
+  if (error || !data) throw new ApiError('โหลดข้อมูลรูปไม่สำเร็จ', 500)
+  return new Set(data as string[])
+}
+
 // ═══════════════ บันทึกการให้อาหาร ═══════════════
 /** null = ยังไม่ได้รัน migration 0014 (ไม่ต้องแสดงการ์ด) */
 export async function fetchFeedingsToday(catId: string): Promise<FeedingsToday | null> {
