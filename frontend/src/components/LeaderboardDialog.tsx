@@ -95,7 +95,8 @@ export function LeaderboardDialog({ bounds, onClose }: { bounds: Bounds; onClose
       )}
 
       {/* หมวด */}
-      <div className="no-scrollbar -mx-5 mt-3 flex gap-1.5 overflow-x-auto px-5 pb-1" role="radiogroup" aria-label={t('หมวด')}>
+      {/* ขึ้นบรรทัดใหม่แทนการเลื่อนข้าง — แถวที่เลื่อนข้างได้จะตัดขอบปุ่มด้านบน/ล่าง */}
+      <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('หมวด')}>
         {CATEGORIES.map((c) => {
           const Icon = c.icon
           return (
