@@ -5,6 +5,7 @@ import type {
   BugReport,
   Cat,
   CatPhoto,
+  CollectionStats,
   CatPost,
   CatReport,
   CatReportReason,
@@ -19,6 +20,9 @@ import type {
   HelpKind,
   HelpRequest,
   LeaderboardRow,
+  ZoneBoard,
+  ZoneInfo,
+  ZoneProgress,
   MoveRequest,
   PhotoReport,
   PhotoReportReason,
@@ -1171,6 +1175,72 @@ export async function fetchAreaLeaderboard(bounds: Bounds): Promise<LeaderboardR
   return (data as { user_id: string; display_name: string; avatar_url: string | null; avatar_path: string | null; points: number }[]).map(
     (r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), points: r.points }),
   )
+}
+
+// ═══════════════ สมุดสะสม + โซน ═══════════════
+interface ZoneRow {
+  zone_key: string
+  name_th: string
+  name_en: string
+  province_th: string
+  province_en: string
+}
+const toZone = (r: ZoneRow): ZoneInfo => ({
+  key: r.zone_key,
+  nameTh: r.name_th,
+  nameEn: r.name_en,
+  provinceTh: r.province_th,
+  provinceEn: r.province_en,
+})
+
+/** null = ยังไม่ได้รัน migration 0026 */
+export async function fetchCollectionStats(userId: string): Promise<CollectionStats | null> {
+  const { data, error } = await db().rpc('user_collection_stats', { p_user_id: userId })
+  if (error || !data) return null
+  return data as CollectionStats
+}
+
+export async function fetchMyZoneProgress(): Promise<ZoneProgress[]> {
+  const { data, error } = await db().rpc('my_zone_progress')
+  if (error || !data) return []
+  return (data as (ZoneRow & { collected: number; total: number })[]).map((r) => ({ ...toZone(r), collected: r.collected, total: r.total }))
+}
+
+/** น้องที่ฉันเจอแล้ว (ล่าสุดก่อน) */
+export async function fetchMyCollectedCats(): Promise<Cat[]> {
+  const { data, error } = await db().rpc('my_collected_cats', { p_limit: 60 })
+  if (error || !data?.length) return []
+  const ids = (data as { cat_id: string }[]).map((r) => r.cat_id)
+  const cats = await db().from('cats_public').select('*').in('id', ids)
+  if (cats.error || !cats.data) return []
+  const byId = new Map((cats.data as CatRow[]).map((row) => [row.id, rowToCat(row)]))
+  return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []))
+}
+
+export async function fetchZonesInView(bounds: Bounds): Promise<(ZoneInfo & { catsInView: number })[]> {
+  const { data, error } = await db().rpc('zones_in_view', {
+    min_lat: bounds.minLat,
+    min_lng: bounds.minLng,
+    max_lat: bounds.maxLat,
+    max_lng: bounds.maxLng,
+  })
+  if (error || !data) return []
+  return (data as (ZoneRow & { cats_in_view: number })[]).map((r) => ({ ...toZone(r), catsInView: r.cats_in_view }))
+}
+
+export async function fetchZoneBoard(zoneKey: string): Promise<ZoneBoard | null> {
+  const { data, error } = await db().rpc('zone_board', { p_zone_key: zoneKey })
+  if (error || !data) return null
+  const raw = data as {
+    total: number
+    mine: number | null
+    top: { user_id: string; display_name: string; avatar_url: string | null; avatar_path: string | null; collected: number }[]
+  }
+  return {
+    total: raw.total,
+    mine: raw.mine,
+    top: raw.top.map((r) => ({ userId: r.user_id, name: r.display_name, avatarUrl: effectiveAvatar(r), collected: r.collected })),
+  }
 }
 
 // ═══════════════ บันทึกการให้อาหาร ═══════════════

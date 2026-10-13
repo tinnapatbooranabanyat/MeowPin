@@ -44,6 +44,35 @@ export interface UserStats {
   helps: number
 }
 
+/** เขต/อำเภอ ที่หมุดอยู่ */
+export interface ZoneInfo {
+  key: string
+  nameTh: string
+  nameEn: string
+  provinceTh: string
+  provinceEn: string
+}
+
+/** สมุดสะสมของผู้ใช้ (ดูได้ทุกคน — มีแค่ตัวเลข + โซนที่เป็นเจ้าถิ่น) */
+export interface CollectionStats {
+  cats: number
+  zones: number
+  completed: number
+  mayor: { key: string; th: string; en: string }[]
+}
+
+export interface ZoneProgress extends ZoneInfo {
+  collected: number
+  total: number
+}
+
+export interface ZoneBoard {
+  total: number
+  /** null = ยังไม่ได้ล็อกอิน หรือยังไม่เจอน้องในโซนนี้ */
+  mine: number | null
+  top: { userId: string; name: string; avatarUrl: string | null; collected: number }[]
+}
+
 export interface LeaderboardRow {
   userId: string
   name: string

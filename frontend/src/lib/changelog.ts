@@ -16,6 +16,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13-collection',
+    date: '2026-10-13',
+    title: { th: 'สมุดสะสมน้องแมว และเจ้าถิ่น', en: 'Cat collection and Local Legends' },
+    items: [
+      { th: 'หมุดถูกจัดเข้าโซนตามเขต/อำเภอให้เอง', en: 'Pins are sorted into zones by district automatically' },
+      {
+        th: 'โปรไฟล์มีสมุดสะสม: เจอน้องมาแล้วกี่ตัว กี่โซน และแต่ละโซนเจอครบหรือยัง',
+        en: 'Your profile shows your collection: how many cats and zones, and how close you are to finding every cat in each zone',
+      },
+      { th: 'ใครเจอน้องในโซนมากที่สุดได้ฉายา "เจ้าถิ่น" ดูได้ที่ ทาสแมวแถวนี้ → นักสะสมในโซน', en: 'Whoever finds the most cats in a zone becomes its "Local Legend" (see Zone collectors)' },
+      {
+        th: 'คิดแต้มใหม่: ช่วยน้องสำเร็จได้แต้มเยอะสุด เจอหรือให้อาหารตัวเดิมได้แต้มวันละครั้ง และแจ้งเรื่องอย่างเดียวไม่ได้แต้ม',
+        en: 'New scoring: helping a cat earns the most, spotting or feeding the same cat counts once a day, and just reporting earns nothing',
+      },
+    ],
+  },
+  {
     id: '2026-10-13-sheet-scroll',
     date: '2026-10-13',
     title: { th: 'เลื่อนดูข้อมูลน้องบนมือถือได้ลื่นขึ้น', en: 'Smoother scrolling on phones' },

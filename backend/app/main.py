@@ -15,7 +15,7 @@ from PIL import Image, ImageOps
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
-from . import catcheck, photosearch, push, summary
+from . import catcheck, photosearch, push, summary, zones
 from .auth import current_user_id, is_admin, require_admin, sync_admin_emails
 from .config import settings
 from .db import NotConfigured, get_client, public_photo_url
@@ -102,6 +102,7 @@ def not_configured(_request: Request, exc: NotConfigured):
 def health():
     # cron ปลุก server ทุก 10 นาที → ถือโอกาสส่งแจ้งเตือนที่ค้าง (เช่นตอน server หลับ)
     push.dispatch_pending()
+    zones.backfill_pending()
     return {
         "ok": True,
         "model": settings.model_path.exists(),
@@ -312,6 +313,8 @@ def create_cat(
         raise HTTPException(status_code=500, detail="บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")
     if cat_check == "user":
         flag_unconfirmed_cat(client, cat_id, user_id, "รูปหมุดนี้")
+    # หาเขต/อำเภอให้หมุดเบื้องหลัง (สมุดสะสม + เจ้าถิ่น)
+    zones.assign_later(str(cat_id), lat, lng)
 
     profile = client.table("profiles").select("display_name").eq("id", user_id).limit(1).execute().data
     return {
@@ -466,6 +469,7 @@ def move_cat(cat_id: UUID, body: CatMove, request: Request):
                     "actor_name": actor[0].get("display_name") if actor else None,
                 }.items() if v},
             }).execute()
+    zones.assign_later(str(cat_id), lat, lng)
     return {"lat": lat, "lng": lng, "verification": verification}
 
 

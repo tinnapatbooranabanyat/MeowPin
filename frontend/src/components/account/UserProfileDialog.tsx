@@ -10,6 +10,7 @@ import { CatAvatar } from '../CatAvatar'
 import { PawRating } from '../reviews/PawRating'
 import { Modal } from '../ui/Modal'
 import { BadgeList } from './BadgeList'
+import { CollectionSection } from './CollectionSection'
 import { UserAvatar } from './UserAvatar'
 import { promptText } from '../../lib/dialogs'
 
@@ -125,6 +126,8 @@ export function UserProfileDialog({ userId, onClose, onEditProfile }: Props) {
             {ban.error && <p className="mt-1 text-sm text-red-700">{t(ban.error.message)}</p>}
           </div>
         )}
+
+        <CollectionSection userId={userId} isMe={isMe} onOpenCat={goToCat} />
 
         <BadgeList userId={userId} isMe={isMe} />
 
